@@ -40,12 +40,18 @@ def test_replace_templates_accounts(engine):
     with engine.begin() as conn:
         sid = shop_store.create(conn, "A", NOW)
         base_data_store.replace_templates(
-            conn, sid, [TemplateDTO("t1", "sf", "模板", True, {"x": 1})], NOW)
+            conn, sid,
+            [TemplateDTO("t1", "sf", "模板", True, {"x": 1}),
+             TemplateDTO("t2", "sf", "官方", False, {})],
+            NOW)
         base_data_store.replace_ebill_accounts(
             conn, sid,
             [EbillAccountDTO("sf", "10", "n1", "网点", 1, 5, True, {}),
              EbillAccountDTO("sf", "10", "n2", "网点2", 1, 0, False, {})], NOW)
-        assert _count(conn, "waybill_template") == 1
+        flags = conn.execute(
+            sa.text("SELECT template_code, is_custom FROM waybill_template ORDER BY 1")
+        ).all()
+        assert [tuple(r) for r in flags] == [("t1", 1), ("t2", 0)]
         assert _count(conn, "ebill_account") == 2
         base_data_store.replace_ebill_accounts(
             conn, sid, [EbillAccountDTO("sf", "10", "n1", "网点", 1, 9, True, {})], LATER)

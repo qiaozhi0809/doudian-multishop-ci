@@ -74,7 +74,7 @@ def replace_templates(
     data = [
         {
             "template_code": t.template_code, "courier_code": t.courier_code, "name": t.name,
-            "raw_json": _raw(t.raw),
+            "is_custom": int(t.is_custom), "raw_json": _raw(t.raw),
         }
         for t in rows
     ]

@@ -162,6 +162,7 @@ def upgrade() -> None:
         sa.Column("courier_code", sa.Text),
         sa.Column("name", sa.Text),
         sa.Column("is_default", sa.Integer, nullable=False, server_default="0"),
+        sa.Column("is_custom", sa.Integer, nullable=False, server_default="0"),
         sa.Column("raw_json", sa.Text),
         _synced(),
         sa.UniqueConstraint("shop_id", "template_code"),

@@ -162,6 +162,7 @@ waybill_template = sa.Table(
     sa.Column("courier_code", sa.Text),
     sa.Column("name", sa.Text),
     sa.Column("is_default", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("is_custom", sa.Integer, nullable=False, server_default="0"),
     sa.Column("raw_json", sa.Text),
     sa.Column("synced_at", _NOW, nullable=False),
     sa.UniqueConstraint("shop_id", "template_code"),
