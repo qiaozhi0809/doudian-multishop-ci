@@ -115,9 +115,7 @@ CREATE TABLE orders (
   receiver_name   TEXT,                      -- 列表返回的脱敏值
   receiver_phone  TEXT,                      -- 列表返回的脱敏值
   receiver_region TEXT,
-  receiver_address TEXT,                     -- 解密后的明文地址（仅按需解密时写入；存储与清除见 gaps DM-11）
-  address_encrypted INTEGER NOT NULL DEFAULT 0,
-  address_decrypted_at TEXT,
+  -- 收件人明文不入库：按需解密的结果只在后端内存中保留到平台 expire_time（flows 7.3）
   amount_cents    INTEGER,
   pay_time        TEXT,
   create_time     TEXT,
@@ -446,7 +444,7 @@ CREATE TABLE margin_account (
    `uq_waybill_no` 再从数据库层防止同一运单入库两次。
 6. `raw_json` 保留完整平台报文，用于排障与重放解析。
 7. 地址、模板、快递均按 `(shop_id, code)` 唯一，**禁止跨店复用**。
-8. 取号与官方组件打印**不依赖**收货地址解密（DEC-06）；`receiver_address` 为空的订单照常进入取号批次。
+8. 取号与官方组件打印**不依赖**收货地址解密（DEC-06）。收件人明文**不写入数据库**，只在内存中短暂缓存。
 
 ### 6.4 只读聚合与存储说明（DM-06 ~ DM-09）
 

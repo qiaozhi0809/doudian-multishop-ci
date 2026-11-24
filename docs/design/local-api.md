@@ -33,7 +33,7 @@
 | | `GET /api/orders/counts` | 跨店 tab 计数 |
 | | `GET /api/orders/{id}` | 详情（含商品行、面单历史） |
 | | `POST /api/orders/sync` | 立即拉单 |
-| | `POST /api/orders/{id}/receiver` | 按需解密单个订单的收件人（用户查看时；不在取号链路，DEC-06；受额度与限速约束，见 [flows.md](flows.md) 7.3） |
+| | `POST /api/orders/{id}/receiver` | 按需解密单个订单的收件人，结果只返回给前端、不入库（用户查看时；不在取号链路，DEC-06；受额度与限速约束，见 [flows.md](flows.md) 7.3） |
 | 取号 | `POST /api/labels/preview` · `POST /api/labels/execute` | 两步提交取号（打面单） |
 | | `POST /api/labels/fetch-and-ship/preview` · `POST /api/labels/fetch-and-ship/execute` | 两步提交「打单并发货」（一体接口） |
 | | `POST /api/labels/void/preview` · `POST /api/labels/void/execute` | 两步提交作废 |

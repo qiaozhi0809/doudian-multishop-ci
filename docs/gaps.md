@@ -85,7 +85,7 @@
 | DM-08 | P1 | 会话存储两处并存 | `session.cookies` 与 `cookies/` 目录二选一；存储需加密（overall-design 2.3 建议 DPAPI） | | ✅ 6.4 已定（DPAPI） |
 | DM-09 | P2 | 迁移机制 | 表结构变更的迁移方式（overall-design 建议 Alembic）与初始迁移脚本 | | ✅ 6.4 已定（Alembic） |
 | DM-10 | P2 | 改物流后的本地状态 | 已发货订单换运单号后：旧面单标 `void` 还是新增 `replaced`；新运单如何入 `waybills`；订单状态是否保持 `shipped`；对账如何避免误报 `waybill_mismatch`。写进 6.1 / 6.2（阶段二，依赖 API-18） | | ⏳ |
-| DM-11 | P1 | 解密后明文地址的存储与清除 | `receiveinfo` 返回 `expire_time`，明文有有效期；现设计把明文长期存 `orders.receiver_address` 并据此判断「已解密」（7.3 约束 2）。需定：加密存储方式、按 `expire_time` 清除、到期后不再视为已解密、日志与导出中不出现明文。DEC-06 已定为按需解密，明文只来自用户查看，存储量很小 | | ⏳ |
+| DM-11 | P1 | 解密后明文地址的存储与清除 | `receiveinfo` 返回 `expire_time`，明文有有效期；现设计把明文长期存 `orders.receiver_address` 并据此判断「已解密」（7.3 约束 2）。需定：加密存储方式、按 `expire_time` 清除、到期后不再视为已解密、日志与导出中不出现明文。DEC-06 已定为按需解密，明文只来自用户查看，存储量很小 | | ✅ 2026-11-25 改为明文不入库：只在后端内存中缓存到 `expire_time`（flows 7.3），无需加密存储与清除逻辑 |
 
 ---
 
