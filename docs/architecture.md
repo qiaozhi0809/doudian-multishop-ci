@@ -1411,13 +1411,13 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 发货前检查 | POST | `/api/order/sendcheck` | ✅ **已验证**（见 A.2.3） |
 | 发货（打单台） | POST | `/api/order/batchDeliverGoodsByEES` | ✅ **已验证**（见 A.2.4） |
 | 发货（订单页） | POST | `/order/torder/batchsend` | ⏳ 待定（打单台不走这条） |
-| 取号+发货一体 | POST | `/api/order/batchFetchTrackingNosAndDeliverGoods` | 🔶 源码发现，未验证 |
+| 取号+发货一体 | POST | `/api/order/batchFetchTrackingNosAndDeliverGoods` | ✅ **已验证**（见 A.2.5） |
 | 改物流 | POST | `/order/torder/modifyLogistic` | ⏳ 待定 |
 | 售后同意退款 | POST | 未抓（按钮 code `refund_audit`） | ⏳ 待定 |
 | 售后代填运单号 | POST | 未抓（按钮 code `fill_logistics`） | ⏳ 待定 |
 | 售后延长收货 | POST | 未抓（按钮 code `exchange_logistics_extend`） | ⏳ 待定 |
 | 商品创建提交 | POST | 未抓（表单提交，需建测试商品） | ⏳ 待定 |
-| 面单作废 | POST | 未抓 | ⏳ 待定 |
+| 面单作废 | POST | `/api/order/batchCancelTrackingNos` | ✅ **已验证**（见 A.2.6） |
 | 库存修改 | POST | 未抓 | ⏳ 待定 |
 
 ### A.2.1 批量备注（已验证）
@@ -1628,7 +1628,7 @@ Content-Type: application/json
 2. POST /api/order/batchDeliverGoodsByEES    按运单号发货
 ```
 
-### A.2.5 取号 + 发货一体（源码结构已知，未验证）
+### A.2.5 取号 + 发货一体（已验证）
 
 打单台「待打单」行的「**打单并发货**」按钮调用：
 
@@ -1637,32 +1637,86 @@ POST /api/order/batchFetchTrackingNosAndDeliverGoods
 Content-Type: application/json
 ```
 
-**请求体**（源码 2245\.\*.js 第 3881-3894 行）：
+**请求体**（2026-11-25 实测成功）：
 
 ```json
 {
   "send_type": "3",
-  "fetch_type": 0,
+  "fetch_type": 1,
   "logistics_company_code": "zhongtong",
   "logistics_template_code": "C1m77ow4c2qrrd",
   "address": { 同取号 },
   "transport": "{\"expType\":\"defaultProductType\"}",
-  "...dynamicValues 展开",
+  "net_code": "47530",
+  "ebill_id": "16103369",
   "added_services": [],
   "shop_order_list": [ 同取号 ],
   "is_davinci": true,
   "version": 0,
-  "printer": "<打印机名>"
+  "printer": "Microsoft Print to PDF"
 }
 ```
 
 即：**取号字段 + `send_type`（发货枚举）+ `added_services`**。
 
-**价值**：一次请求完成「取号 + 发货」，省掉 `batchFetchTrackingNos` + `batchDeliverGoodsByEES` 两次调用，
-也避免了中间态（已取号未发货）。
+**响应**（实测）：
 
-**未验证原因**：需要一笔待发货订单；样本店当前待打单为 0。
-**注意**：该接口一次完成不可逆的发货动作，验证时应先用测试单确认响应结构。
+```json
+{"code":0,"data":{
+  "success_deliver_list":[{
+    "logistics_company_code":"zhongtong",
+    "tracking_no":"79209905665503",
+    "shop_order_list":[...],
+    "sign":"..."
+  }]
+}}
+```
+
+注意：响应字段是 `success_deliver_list`，与单独发货的 `success_package_list` 不同。
+
+**价值**：一次请求完成「取号 + 发货」，省掉 `batchFetchTrackingNos` +
+`batchDeliverGoodsByEES` 两次调用，也避免中间态（已取号未发货）。
+
+**已验证**（2026-11-25，测试单 `6919938455108398936`）：作废旧面单后调用，
+返回新运单号并直接发货成功。
+
+### A.2.6 面单作废（已验证）
+
+打单台「已打单」行的「**回收单号**」按钮调用：
+
+```
+POST /api/order/batchCancelTrackingNos
+Content-Type: application/json
+```
+
+**请求体**（2026-11-25 实测成功）：
+
+```json
+{
+  "cancel_list": [{
+    "tracking_no": "79209905279026",
+    "logistics_company_code": "zhongtong"
+  }],
+  "appid": 1, "__token": "...", "_bid": "ffa_order", "aid": 4272, "_lid": "..."
+}
+```
+
+**响应**：
+
+```json
+{"code":0,"data":{
+  "success_list":[{"logistics_company_code":"zhongtong","tracking_no":"79209905279026","fail_msg":""}],
+  "fail_list":[],
+  "fail_msg":""
+}}
+```
+
+**关键点**：
+
+1. 按「运单号 + 快递编码」作废，与发货接口对称
+2. 作废后面单失效，**同一订单可重新取号**（实测：作废 `79209905279026` 后
+   重取得到 `79209907035270`）
+3. 失败明细在 `fail_list`，整体错误在 `fail_msg`
 
 **写接口的一般性判断**：抖店只读接口全部免签名（已验证 20+ 个），
 写接口属于未知区域。若某写接口强制签名，方案是用 Playwright 在页面内执行 fetch
