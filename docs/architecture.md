@@ -298,9 +298,11 @@ class Signer(Protocol):
 - 处理原则：取号请求超时或收到「不存在可取号商品」时，**不得**把订单转 `exception`，
   而是保持 `pending_label`、把该取号任务标为待核实，去平台查询该订单当前的运单号，
   查到则补写 `waybills(active)` 并转 `label_obtained`
-- 待补：用哪个接口查「已取号未发货订单的运单号」（候选：`searchCombineOrder` 已打单列表、订单详情）
+- **查回运单号的接口（2026-11-25 实测）**：`GET /api/order/getOrderLogistics?order_id=<shop_order_id>`
+  → `data.logistics[].logistics_code` 即运单号（详见 A.1）。
+  **`orderDetail` 不含运单号**，不要用它做恢复。
 - 一体接口 `batchFetchTrackingNosAndDeliverGoods` 有同样问题；它已完成发货，可从订单列表的
-  `latest_logistic_info.tracking_no` 查回
+  `latest_logistic_info.tracking_no` 查回（待实测），或同样用 `getOrderLogistics`
 
 ### 5.6 发货回传器（`service/shipping.py`）
 
@@ -1406,6 +1408,8 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 合单灰度 | GET | `/api/order/queryCombineOrderGrayShopStatus` | |
 | 公告 | GET | `/api/order/getNotice` | |
 | 收货信息解密 | GET | `/api/order/receiveinfo` | 参数名 `order_id`，**值传 `shop_order_id`**；返回明文 |
+| 订单物流 | GET | `/api/order/getOrderLogistics?order_id=<shop_order_id>` | 返回 `logistics[]`：`logistics_name` / **`logistics_code`（运单号）** / `logistics_send_time` / `send_type` / `send_method_name` / `items[]` / `trace[]`（轨迹）；`data` 另有 `logistics_list[]`（按包裹分组）。**API-19 取号恢复的关键接口**；无 `deliverId` |
+| 订单详情 | GET | `/api/order/orderDetail?order_id=<shop_order_id>&source=shop_order_view_upgrade` | 返回 `order_base` / `receiver` / `delivery` / `product` / `action_map` / `url_map` 等；**不含运单号**（`delivery.labels` 只有「送货方式」） |
 | 店铺资质画像 | GET | `/center/qualification/shop/info` | 资质 ID / 地址 / 类目 / 审核状态 |
 | 店铺管理人 | GET | `/byteshop/shopuser/getAdminV2` | 手机号脱敏 |
 | 绑定账号 | GET | `/byteshop/accountbind/getbindlist` | |
@@ -1810,8 +1814,11 @@ Content-Type: application/json
 **关键点**：
 
 1. **`deliverId` 是原包裹 ID**，不是订单号，替换前要先查到。
-   ⏳ **来源未确认（gaps API-18）**：候选 `getOrderLogistics` / `orderDetail` 均未收录 A.1，
-   实测用的是哪个未记录；本地表也没有存它的列（与 `packages.package_no` 是否同一个值未知）
+   ⏳ **来源仍未确认（gaps API-18）**：`getOrderLogistics` 与 `orderDetail` 已实测并收录 A.1，
+   **两者都不含 `deliverId`**（`getOrderLogistics` 只有 `logistics_code` 运单号，
+   `orderDetail.delivery` 只有 `labels`）。
+   后续候选：`searchPackageList`（已打单列表，需签名）、改物流弹窗的详情请求。
+   本地表也没有存它的列（与 `packages.package_no` 是否同一个值未知）
 2. `companyCode` + `logisticsCode` 是新物流信息
 3. `sendType: "1"`（字符串）。⏳ **含义未确认（gaps API-18）**：样本的新单号来自作废后重取
    （A.2.6），疑似「自行寄件」方式；用「打单发货」方式重新发货时取值可能不同，需补枚举

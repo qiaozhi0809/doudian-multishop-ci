@@ -42,8 +42,8 @@
 | API-15 | P2 | 资金金额字段校准 | 资金账单 `CHARGE_BILL_ITEM` 金额字段名未知；保证金 `payable` / `balance` 单位（元/分）未知 | 用有账单、有保证金的店铺取样本，更新附录 F.4 | | 🔶 保证金单位：分（F.1c / F.4），`margin_account` 已改 `*_cents`；**待补对照依据**（50000 = 500 元是否与页面显示核对）；资金账单字段仍待有账单的店铺 |
 | API-16 | P2 | 阶段二写接口 | 售后（同意退款 / 代填运单号 / 延长收货）、商品创建提交、库存修改、改物流 | 按附录 A.2 的「必查项」逐个验证；不阻塞 MVP | | 🔶 改物流 ✅（`modifyLogistic`，A.2.8）；售后 / 商品创建 / 库存修改待验证 |
 | API-17 | P1 | 增值服务与产品类型接口 `POST /api/order/query_added_services_and_product_types` | 订单页「打单发货」链路第 3 步（A.2.7），只记了用途；一体接口的 `added_services`、`transport.expType` 可能取自这里 | 记录请求体与响应；确认是否必经、`added_services` / `expType` 取值怎么传 | | ⏳ |
-| API-18 | P2 | 改物流 `modifyLogistic` 的两个参数 | A.2.8：`deliverId`（原包裹 ID）来源未确认，候选 `getOrderLogistics` / `orderDetail` 都没收录；`sendType: "1"` 含义未写，样本疑似「自行寄件」方式 | ① 确认 `deliverId` 来源接口并收录 A.1，说明与 `packages.package_no` 的关系；② 补 `sendType` 枚举，至少覆盖「自行寄件」与「打单发货」两种重新发货方式 | | ⏳ |
-| API-19 | P0 | 取号超时 / 响应丢失后的恢复 | 平台拒绝对已取号订单再次取号（A.2.2 第 8 条），取号成功但响应丢失时，重试拿不回运单号（5.5） | 找到查询「已取号未发货订单的当前运单号」的接口（候选 `searchCombineOrder` 已打单列表 / 订单详情），确认免签名并收录 A.1；一体接口可用订单列表 `latest_logistic_info.tracking_no` 查回，需实测 | | ⏳ |
+| API-18 | P2 | 改物流 `modifyLogistic` 的两个参数 | A.2.8：`deliverId`（原包裹 ID）来源未确认，候选 `getOrderLogistics` / `orderDetail` 都没收录；`sendType: "1"` 含义未写，样本疑似「自行寄件」方式 | ① 确认 `deliverId` 来源接口并收录 A.1，说明与 `packages.package_no` 的关系；② 补 `sendType` 枚举，至少覆盖「自行寄件」与「打单发货」两种重新发货方式 | | 🔶 `deliverId` 来源仍未找到：`getOrderLogistics` / `orderDetail` 均已实测**不含**，下一候选 `searchPackageList`（需签名）；`sendType` 枚举待补 |
+| API-19 | P0 | 取号超时 / 响应丢失后的恢复 | 平台拒绝对已取号订单再次取号（A.2.2 第 8 条），取号成功但响应丢失时，重试拿不回运单号（5.5） | 找到查询「已取号未发货订单的当前运单号」的接口（候选 `searchCombineOrder` 已打单列表 / 订单详情），确认免签名并收录 A.1；一体接口可用订单列表 `latest_logistic_info.tracking_no` 查回，需实测 | | 🔶 **查回运单号已确认**：`getOrderLogistics` 的 `logistics[].logistics_code`（5.5 / A.1）；`orderDetail` 不含运单号。一体接口的 `latest_logistic_info` 待实测 |
 
 ---
 
