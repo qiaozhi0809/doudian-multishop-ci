@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: 依赖
+        working-directory: backend
+        run: uv sync
+      - name: ruff
+        working-directory: backend
+        run: uv run ruff check .
+      - name: pytest
+        working-directory: backend
+        run: uv run pytest -q
+      - name: 守门脚本
+        run: |
+          bash scripts/ci/check-file-length.sh
+          bash scripts/ci/check-secrets.sh
+          bash scripts/ci/check-backend-layers.sh
+
+  backend-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: 依赖
+        working-directory: backend
+        run: uv sync
+      - name: pytest（含 DPAPI）
+        working-directory: backend
+        run: uv run pytest -q

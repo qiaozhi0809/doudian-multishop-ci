@@ -51,7 +51,7 @@
 | 页面 | Arc 组件 / blocks | 模块依据 |
 |---|---|---|
 | **App Shell**（侧边栏 + 顶栏） | `workspace-sidebar` 或 `sidebar-rail`（Pro） | — |
-| 管理员登录 / 创建管理员 | `login-split`（Pro）/ `sign-in`（Free block） | backend 5.16 |
+| 管理员登录 / 创建管理员 | `card` + `input` + `password-field` + `button` + `alert`（Free）组合的居中表单。不用 `sign-in` / `login-split` 区块：它们只支持邮箱 / SSO 演示流程，没有账号密码提交与错误提示的接口 | backend 5.16 |
 | 首页仪表盘 | `metrics-dashboard`（Pro）+ `metric-card` + `bar-chart` | 多店经营概览 |
 | 订单管理 | `sortable-data-table` + `filter-toolbar` + `pagination` | [附录 C](../api/order-page.md) |
 | 打单台 / 发货台 | `sortable-data-table` + `hold-to-confirm`（危险操作确认） | flows 7.3 / 7.5 |
@@ -68,15 +68,15 @@ Pro 组件API 以源码导出的 TypeScript interface 为准，不猜 props。
 
 ### 7. Arc 安装
 
-```bash
-# Free 组件
-npx shadcn@latest add @uiarc/<id>
+Arc 官方 registry（`npx shadcn add @uiarc/...`）已停止免费访问、需要授权码，**本项目不走 registry**，
+改为从本机的授权源码副本 `uiarc-system` 复制：
 
-# Pro 组件（本地源码可直接复制到 components/arc）
-npx shadcn@latest add @uiarc-pro/<id>
-```
+| 机器 | 源码位置 |
+|---|---|
+| macOS 开发机 | `~/Desktop/uiarc-system` |
+| Windows | `C:\Users\Administrator\.claude\skills\uiarc-system` |
 
-- 组件库源码在 `C:\Users\Administrator\.claude\skills\uiarc-system\`（`vendor/uiarc`、`vendor/uiarc-pro`）
-- 组件目录索引：`references/catalog-free.md`、`references/catalog-pro.md`
-- 不要把 uiarc-system 仓库作为运行时 import 路径，安装进项目后从 `components/arc` 引用
-- 不改 `vendor/` 源码来适配项目；需要调整时在 `components/custom` 里组合
+- 目录：Free `vendor/uiarc/registry/`（`foundation.css`、`motion-tokens.ts`、`components/<id>/`、`blocks/<id>/`）与 `vendor/uiarc/lib/`；Pro 在 `vendor/uiarc-pro/` 下同样结构
+- 索引：`references/catalog-free.md`、`catalog-pro.md`；Free 选型说明 `vendor/uiarc/skills/arc/components.md`；Pro 以源码导出的 TypeScript interface 为准
+- 只复制用到的条目到 `frontend/src/components/arc/`，保持相对 import 可解析；在 `components/arc/SOURCE.md` 记录来源版本与复制清单
+- 不把 uiarc-system 作为运行时 import 路径；不改复制进来的源码，调整写在 `components/custom/`
