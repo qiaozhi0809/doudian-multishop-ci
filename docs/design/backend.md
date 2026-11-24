@@ -32,9 +32,11 @@
 | 浏览器通道（扫码 / 需签名接口 / 借页面打印） | 每店持久化用户目录 `data/profiles/<shop_id>/`（`launch_persistent_context` + 系统 Edge） | 浏览器自身的完整登录态与指纹；登录态和指纹天然隔离，重登只需重开该目录 |
 | 协议通道（curl_cffi 直连） | `session` 表（[data-model.md](data-model.md) 6.2 ②），DPAPI 加密 | `context.cookies()` 导出的**全量** cookie（含 HttpOnly）、`__token`、设备参数 |
 
+两个通道都经该店的固定出口发出（5.17）。
+
 **行为**：
 
-- 首次添加店铺：打开该店的浏览器用户目录，人工扫码；登录成功后导出 cookie 与 `__token` 写入 `session` 表。
+- 首次添加店铺：先配置并检查该店出口（5.17），再打开该店的浏览器用户目录（经同一出口），人工扫码；登录成功后导出 cookie 与 `__token` 写入 `session` 表。
 - 探测：每 30 分钟 `GET /api/order/tabcnt`（未登录返回 `code:10008`）；协议响应若下发新 cookie 则回写（⏳ 是否会下发未验证，gaps API-02）。
 - 会话失效 → 标记 `needs_login`，暂停该店队列并通知界面；重登后从断点继续。
 
@@ -386,3 +388,27 @@ class Signer(Protocol):
 | 改密 | 已登录时 `POST /api/auth/password`（需旧密码）；改密后该账号的其他会话全部失效 |
 | 忘记密码 | 只能在出单机命令行执行 `python -m app.cli reset-admin` 重设，不提供网页找回 |
 | 审计 | 登录成功 / 失败、登出、改密写入 `audit_log`（`action=auth.*`）；写操作的 `audit_log` / `tasks` 记录操作人 `actor` |
+
+### 5.17 每店独立环境：浏览器 profile + 固定独立出口（`service/egress.py`）
+
+**决定（DEC-11，所有者）**：每家店一个独立浏览器 profile，加一个**固定、独立**的出口 IP。
+
+| 项 | 规则 |
+|---|---|
+| 浏览器 profile | 每店一个持久化用户目录 `data/profiles/<shop_id>/`（5.1），cookie 与登录态互不串号 |
+| 出口方式 | `direct`（商家自有宽带直连）或 `proxy`（独享静态 IP，HTTP / SOCKS5）；**不使用轮换代理池** |
+| 独立性 | 以**实际出口 IP** 判重：启用中的店铺两两不同。直连本身也是一个 IP，所以**最多一家店**用 `direct` |
+| 一致性 | 同一家店的扫码浏览器、协议通道（curl_cffi）、浏览器兜底通道**都走同一出口** |
+| 先配出口再扫码 | 店铺出口未配置或未通过检查时，不允许扫码登录；会话在哪个出口建立，就只在那个出口使用 |
+| 更换出口 | 改代理地址 → 该店转 `needs_login`，必须重新扫码 |
+| 出口检查 | 经该出口请求 IP 回显地址（设置项 `egress_echo_url`，默认 `https://api.ipify.org`），记录 `egress_ip`。时机：配置后、扫码前、每轮该店任务开始前（同一轮内缓存 10 分钟） |
+| 出口不通 | 该店 `egress_status=unreachable`，暂停该店全部请求并提示；**绝不自动退回直连** |
+| 出口 IP 变化 | 与上次记录不同 → `egress_status=changed`，暂停该店，界面提示人工确认后才继续 |
+| 出口 IP 重复 | 与其他启用店铺相同 → `egress_status=duplicate`，暂停后加入的那家店 |
+| 代理凭证 | 代理 URL（含账号密码）与 cookie 一样用 `SecretBox` 加密存库；日志只显示主机与端口 |
+| 设备参数 | 不伪造。各店 profile 使用本机真实浏览器参数；协议通道的 UA 等与该店扫码浏览器保持一致（参数前后不一致本身就是风控信号） |
+
+**数据去向**：配置代理的店铺，请求经代理商隧道转发（HTTPS CONNECT，代理商看不到内容，只看到目标域名）；
+cookie、订单数据等仍只存本机。
+
+**平台规则风险**：每店独立出口的作用之一是降低店铺被平台关联判定的概率。是否符合平台规则由所有者判断并承担（gaps DEC-11）。

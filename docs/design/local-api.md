@@ -26,6 +26,8 @@
 | | `POST /api/shops/{id}/sync-base` | 同步地址 / 模板 / 快递 / 面单账户 |
 | | `GET /api/shops/{id}/base` | 查看本店基础数据 |
 | | `PATCH /api/shops/{id}` | 改名、停用、切换通道、默认打印机 |
+| | `PUT /api/shops/{id}/egress {mode: direct\|proxy, proxy_url?}` | 设置固定出口；修改已登录店铺的出口会使其转 `needs_login`（backend 5.17） |
+| | `POST /api/shops/{id}/egress/check` | 经该出口检查连通并取出口 IP → `{egress_ip, egress_status}`；重复 / 变化时给出原因 |
 | 订单 | `GET /api/orders` | 跨店列表（筛选、排序、分页） |
 | | `GET /api/orders/counts` | 跨店 tab 计数 |
 | | `GET /api/orders/{id}` | 详情（含商品行、面单历史） |

@@ -48,9 +48,19 @@ CREATE TABLE shop (
   channel       TEXT NOT NULL DEFAULT 'protocol',  -- protocol | browser
   status        TEXT NOT NULL DEFAULT 'needs_login',
                 -- active | needs_login | disabled
+  egress_mode   TEXT,                       -- direct | proxy；NULL = 未配置（不允许扫码，backend 5.17）
+  proxy_url     BLOB,                       -- SecretBox 加密的代理 URL（含账号密码）
+  proxy_display TEXT,                       -- 仅主机:端口，用于界面与日志
+  egress_ip     TEXT,                       -- 最近一次检查得到的出口 IP
+  egress_status TEXT NOT NULL DEFAULT 'unchecked',
+                -- unchecked | ok | unreachable | changed | duplicate
+  egress_checked_at TEXT,
   created_at    TEXT NOT NULL,
   updated_at    TEXT NOT NULL
 );
+-- 最多一家店直连；启用店铺的出口 IP 两两不同（服务层同时校验，backend 5.17）
+CREATE UNIQUE INDEX uq_shop_direct ON shop(egress_mode) WHERE egress_mode = 'direct' AND status != 'disabled';
+CREATE UNIQUE INDEX uq_shop_egress_ip ON shop(egress_ip) WHERE egress_ip IS NOT NULL AND status != 'disabled';
 
 -- ①-b 店铺画像（取自已验证的资质/管理员/绑定接口，随会话同步刷新）
 CREATE TABLE shop_profile (
