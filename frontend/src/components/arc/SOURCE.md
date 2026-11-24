@@ -15,7 +15,7 @@
 |---|---|---|
 | `foundation.css` | Free | `uiarc/registry/foundation.css` |
 | `motion-tokens.ts` | Free | `uiarc/registry/motion-tokens.ts` |
-| `lib/arc-provider.tsx`、`lib/media.ts`、`lib/motion-tokens.ts`、`lib/use-copy-feedback.ts`、`lib/use-today.ts` | Free | `uiarc/lib/` |
+| `lib/arc-provider.tsx`、`lib/motion-tokens.ts`、`lib/use-copy-feedback.ts`、`lib/use-today.ts` | Free | `uiarc/lib/` |
 | `lib/clamp.ts` | Pro | `uiarc-pro/lib/clamp.ts` |
 
 随任务增加，在此表追加。
