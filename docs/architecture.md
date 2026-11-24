@@ -278,7 +278,7 @@ class Signer(Protocol):
 
 流程：
 
-1. 预检：会话有效 / 发货地址已配置 / 面单模板存在 / 地址已解密 / 订单状态允许取号。
+1. 预检：会话有效 / 发货地址已配置 / 面单模板存在 / 地址已解密（⏳ 是否必需待 DEC-06，见 7.3）/ 订单状态允许取号。
 2. 按店分组，逐店串行执行取号（`POST /api/order/batchFetchTrackingNos`）。
 3. 写入 `waybills`（`status=active`），订单转 `label_obtained`。
 4. 按「店 + 快递」分组生成打印批次。
@@ -300,6 +300,8 @@ class Signer(Protocol):
   查到则补写 `waybills(active)` 并转 `label_obtained`
 - **查回运单号的接口（2026-11-25 实测）**：`GET /api/order/getOrderLogistics?order_id=<shop_order_id>`
   → `data.logistics[].logistics_code` 即运单号（详见 A.1）。
+  ⏳ **关键情形未验证（gaps API-19）**：返回字段含发货时间 / 发货方式，疑似只列**已发货**物流；
+  恢复要查的是「**已取号、未发货**」订单，须用这种订单实测能否查到运单号，否则恢复方案不成立。
   **`orderDetail` 不含运单号**，不要用它做恢复。
 - 一体接口 `batchFetchTrackingNosAndDeliverGoods` 有同样问题；它已完成发货，可从订单列表的
   `latest_logistic_info.tracking_no` 查回（待实测），或同样用 `getOrderLogistics`
@@ -812,6 +814,7 @@ CREATE TABLE margin_account (
 6. `raw_json` 保留完整平台报文，用于排障与重放解析。
 7. 地址、模板、快递均按 `(shop_id, code)` 唯一，**禁止跨店复用**。
 8. 收货地址未解密（`address_encrypted=1` 且 `receiver_address` 为空）的订单不得进入取号批次。
+   ⏳ 是否保留待 DEC-06（见 7.3「取号是否需要先解密」）。
 
 ### 6.4 只读聚合与存储说明（DM-06 ~ DM-09）
 
@@ -936,7 +939,16 @@ CREATE TABLE margin_account (
 1. 会话有效；
 2. 该店已配置默认发货地址（`shop_address.is_default`，平台侧标位为 `is_send_default=1`）；
 3. 已选择快递公司，且存在对应面单模板（`waybill_template`）；
-4. 收货地址已解密。
+4. 收货地址已解密。（⏳ 待 DEC-06，见下）
+
+> ⏳ **取号是否需要先解密（DEC-06，待所有者决定）**：现有证据都指向「不需要」——
+> ① 取号请求体（A.2.2）没有任何收件人字段，只有订单 ID 与**发货**地址；
+> ② 官方订单页「打单发货」链路（A.2.7 四步）全程没有调用 `receiveinfo`；
+> ③ 官方组件打印用的 `print_data` 是平台加密数据，收件人由组件渲染。
+> 而解密按次消耗当日额度并会触发风控（见下方「地址解密额度」）。
+> **建议**：取号与官方组件打印都不解密；只在用户手动查看收件人、或打印走自渲染 PDF（第 10 节方案 B）时解密。
+> 若采纳，需同步修改：5.5 预检、6.3 第 8 条、本节第 4 条与流程图、第 12 节测试项、第 14 节验收第 9 条、A.4、
+> 以及下方实现约束第 4、5 条。
 
 第 2~4 项可由 `GET /api/order/getAftersaleAddressAndLogisticsTemplate` 一次性预检
 （`has_aftersale_address` / `has_template` / `has_logistics_service`）；
@@ -959,17 +971,22 @@ CREATE TABLE margin_account (
 - 每次 `receiveinfo` 成功返回明文计 1 次；**重复解密同一订单每次都计**
 - 多次解密「已取消 / 已发货 / 已完成」订单会触发官方警告：
   「请停止非必要的解密（包含但不限于多次解密已取消、已发货、已完成等状态订单）」
-- 触发后 **3 小时自动恢复**（实测：连续约 13 次、间隔 0.5~0.8s 返回
-  `602502151`「您的账户存在安全风险，请稍后再试」）
+- **频率风控**（实测）：连续约 13 次、间隔 0.5~0.8s 返回 `602502151`「您的账户存在安全风险，请稍后再试」。
+  这是**调用过快**触发的，与「当日额度用完」是两种限制
+- 「3 小时自动恢复」：⏳ **出处待注明（gaps API-10）**——两次提交只隔 2 分钟，不可能是等待实测，
+  应注明来自官方页面还是推断
+- ⏳ **额度用完时的返回**（错误码 / 提示）未知（gaps API-10）
 
 **实现约束（必须遵守）**：
 
 1. **解密前判状态**：只对「待发货 / 待打单」订单解密；已发货 / 已完成 / 已取消不解密
-2. **解密结果必须缓存**：`orders.receiver_address` 非空即视为已解密，不再调 `receiveinfo`
-3. **限速**：单店连续解密间隔 ≥ 2 秒
-4. **额度感知**：捕获 `602502151` 后标记店铺「解密冷却中」，暂停该店取号队列，
+2. **解密结果必须缓存**：`orders.receiver_address` 非空即视为已解密，不再调 `receiveinfo`。
+   ⏳ **合规待定（gaps DM-11）**：响应带 `expire_time`，明文有有效期；明文须加密存储，
+   并在 `expire_time` 到期后清除，到期后不能再当作「已解密」
+3. **限速**：单店连续解密间隔 ≥ 2 秒（⏳ 2 秒为估计值，未验证安全；只知 0.5~0.8s 会触发）
+4. **额度感知**：捕获 `602502151` 后标记店铺「解密冷却中」，暂停该店取号队列（⏳ 若 DEC-06 采纳「取号不解密」，则只暂停解密、不暂停取号），
    提示用户「约 3 小时后恢复」或引导到官方页面申请提额
-5. **不预解密**：拉单时不批量解密，只在取号批次真正执行前解密
+5. **不预解密**：拉单时不批量解密，只在取号批次真正执行前解密（⏳ 时机待 DEC-06）
 
 ### 7.4 打印流程
 
@@ -1317,7 +1334,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 - 会话失效时只影响该店。
 - 面单作废后订单能回到 `pending_label`。
 - 对账能发现人为制造的三类异常。
-- 地址未解密的订单不会进入取号批次。
+- 地址未解密的订单不会进入取号批次。（⏳ 待 DEC-06）
 - 模板/地址缺失时，取号前即被拦截。
 - 打印组件未启动时，订单不会被标记为已打印。
 
@@ -1348,7 +1365,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 6. 所有外部调用均可在审计日志中追溯。
 7. 软件在出单机上双击启动即可使用，无需命令行操作。
 8. 基础数据（地址 / 模板 / 快递）能自动同步，并在取号时正确匹配到本店配置。
-9. 加密收货地址能自动解密，面单上打印出完整明文地址。
+9. 加密收货地址能自动解密，面单上打印出完整明文地址。（⏳ 待 DEC-06：走官方组件打印时由 `print_data` 渲染，不需本地解密）
 10. 打印组件未启动时，界面明确提示，且**不会**把订单标记为已打印。
 11. 演练模式（dry-run）下不产生任何真实取号或发货请求。
 
@@ -1446,6 +1463,10 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 绑定账号 | GET | `/byteshop/accountbind/getbindlist` | |
 | 菜单 | GET | `/byteshop/menu/list/v2` | |
 | 登录校验 | GET | `/ecomauth/loginv1/session_check` | ⚠️ **不可用**：无 cookie 也返回 `check_code:0` |
+
+> ⏳ **签名状态未注明（gaps API-20）**：`getOrderLogistics`、`orderDetail`、`get_manual_send_order_info`、
+> `query_added_services_and_product_types` 是浏览器内调用还是浏览器外无签名直连验证的，未写明。
+> 按 5.3「逐接口验证」规则，需补无签名直连结果。
 
 ### A.2 写接口（部分已验证）
 
@@ -1925,7 +1946,7 @@ Content-Type: application/json
 - 会话探测用 `/api/order/tabcnt`（未登录 = `code:10008`）；
   `/ecomauth/loginv1/session_check` 不可用（无 cookie 也返回 `check_code:0`）。
 - 分页基准不统一：`searchlist` 为 0-based，`getAfterSaleList` 为 1-based。
-- 列表返回的收货信息为**脱敏值**（`辛*` / `1**********`），取号/打印前必须调 `receiveinfo` 解密。
+- 列表返回的收货信息为**脱敏值**（`辛*` / `1**********`），取号/打印前必须调 `receiveinfo` 解密。（⏳ 已被后续验证质疑，待 DEC-06，见 7.3）
 - 写接口鉴权强度：待真实订单验证。
 - 打印：官方组件本地 WebSocket（默认 13999）。
 

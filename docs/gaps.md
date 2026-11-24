@@ -34,7 +34,7 @@
 | API-07 | P1 | 打印数据转换 | 取号返回的 `print_data` + `sign` 是加密数据，转成打印组件 `documents` 的逻辑在前端 SDK 的 `mW()` 里，未搞清；打印链路目前不通 | 二选一给出结论：① 「借页面打印」（见 overall-design 第 2.6 节）可行性验证；② `mW()` 转换逻辑说明。另需在出单机用真实热敏打印机打出一张面单 | | 🔶 10 章 print 消息已验证；数据转换待解 |
 | API-08 | P1 | 面单作废接口 | 状态机「作废重取」依赖它；附录 A.2 标「未抓」 | 抓到路径、请求体、响应；说明作废后能否对同一订单重新取号 | | ✅ `batchCancelTrackingNos` 已验证（A.2.6）；作废后可重取号 |
 | API-09 | P1 | 发货扩展验证 | 目前只验证过 1 个包裹 | 覆盖：一批多包裹、部分失败时 `fail_package_list` 结构；**同一运单重复发货**的平台行为 | | 🔶 重复发货已测（返回 success，服务端不阻止）；多包裹 / 部分失败待测 |
-| API-10 | P1 | 地址解密的风控限制 | `receiveinfo` 返回 `verify_type`，说明有风控通道；多店批量解密是最容易触发风控的环节 | 实测：单店连续解密多少单会触发验证、触发后的返回形态、是否有日配额 | | 🔶 **连续约 13 次（间隔 0.5-0.8s）触发 `602502151`**「账户存在安全风险」；触发后恢复时长、日配额未测 |
+| API-10 | P1 | 地址解密的风控限制 | `receiveinfo` 返回 `verify_type`，说明有风控通道；多店批量解密是最容易触发风控的环节 | 实测：单店连续解密多少单会触发验证、触发后的返回形态、是否有日配额 | | 🔶 额度制度已写入 7.3（样本店当日剩 8 次）；频率风控：连续约 13 次 / 间隔 0.5~0.8s 触发 `602502151`。**待补**：①「3 小时恢复」出处（官方页面还是推断）；② 额度用完时的错误码；③ 安全间隔（2 秒为估计值） |
 | API-11 | P1 | 写接口被风控拦截时的表现 | 错误分类（见 overall-design 2.2）需要知道「风控拦截」长什么样，才能和业务拒绝、会话失效区分 | 记录至少一种风控拦截的 `code` / `msg` / 是否要求验证码 | | 🔶 已记录风控样本 `10001010A`，但来自**只读**接口 `searchPackageList`；补完标准要求的写接口风控样本仍缺 |
 | API-12 | P1 | 拉单增量与分页上限 | 5.4 写了「cursor/时间窗减少重复拉取」，但 `searchlist` 的增量参数没验证；`pageSize` 上限只知道 100 可用 | 确认按 `create_time` / `update_time` 窗口拉取的参数；`pageSize` 上限；订单号多值输入的格式（拼接串还是数组） | | 🔶 pageSize 上限 200 已确认（201 报 602502051）；增量时间窗 / 订单号多值待测 |
 | API-13 | P2 | 取号 + 发货一体 `batchFetchTrackingNosAndDeliverGoods` | 打单台「打单并发货」按钮；源码结构已知，未真实调用 | 用测试单验证一次，记录请求与响应 | | 🔶 成功路径已实测（A.2.5，`success_deliver_list`）；**失败结构未记录；响应是否含 `print_data` 未确认**（不含则「打单并发货」后无法打印） |
@@ -43,7 +43,8 @@
 | API-16 | P2 | 阶段二写接口 | 售后（同意退款 / 代填运单号 / 延长收货）、商品创建提交、库存修改、改物流 | 按附录 A.2 的「必查项」逐个验证；不阻塞 MVP | | 🔶 改物流 ✅（`modifyLogistic`，A.2.8）；售后 / 商品创建 / 库存修改待验证 |
 | API-17 | P1 | 增值服务与产品类型接口 `POST /api/order/query_added_services_and_product_types` | 订单页「打单发货」链路第 3 步（A.2.7），只记了用途；一体接口的 `added_services`、`transport.expType` 可能取自这里 | 记录请求体与响应；确认是否必经、`added_services` / `expType` 取值怎么传 | | ✅ A.2.7 已补完整请求/响应；`selectedValue` 即 `transport.expType` 来源 |
 | API-18 | P2 | 改物流 `modifyLogistic` 的两个参数 | A.2.8：`deliverId`（原包裹 ID）来源未确认，候选 `getOrderLogistics` / `orderDetail` 都没收录；`sendType: "1"` 含义未写，样本疑似「自行寄件」方式 | ① 确认 `deliverId` 来源接口并收录 A.1，说明与 `packages.package_no` 的关系；② 补 `sendType` 枚举，至少覆盖「自行寄件」与「打单发货」两种重新发货方式 | | 🔶 `deliverId` ✅ 来源 `get_manual_send_order_info`（A.1 / A.2.8，实测值 147767673767714066）；`sendType` 枚举仍待补 |
-| API-19 | P0 | 取号超时 / 响应丢失后的恢复 | 平台拒绝对已取号订单再次取号（A.2.2 第 8 条），取号成功但响应丢失时，重试拿不回运单号（5.5） | 找到查询「已取号未发货订单的当前运单号」的接口（候选 `searchCombineOrder` 已打单列表 / 订单详情），确认免签名并收录 A.1；一体接口可用订单列表 `latest_logistic_info.tracking_no` 查回，需实测 | | 🔶 **查回运单号已确认**：`getOrderLogistics` 的 `logistics[].logistics_code`（5.5 / A.1）；`orderDetail` 不含运单号。一体接口的 `latest_logistic_info` 待实测 |
+| API-19 | P0 | 取号超时 / 响应丢失后的恢复 | 平台拒绝对已取号订单再次取号（A.2.2 第 8 条），取号成功但响应丢失时，重试拿不回运单号（5.5） | 找到查询「已取号未发货订单的当前运单号」的接口（候选 `searchCombineOrder` 已打单列表 / 订单详情），确认免签名并收录 A.1；一体接口可用订单列表 `latest_logistic_info.tracking_no` 查回，需实测 | | 🔶 候选接口 `getOrderLogistics`（5.5 / A.1）；**关键情形未验证**：它疑似只列已发货物流，须用「已取号、未发货」订单实测能否查到运单号；一体接口的 `latest_logistic_info` 待实测 |
+| API-20 | P1 | 新收录接口的签名状态 | `getOrderLogistics`、`orderDetail`、`get_manual_send_order_info`、`query_added_services_and_product_types` 未写明是否免签名；5.3 已规定逐接口验证（`searchPackageList` 就是例外） | 对 4 个接口各做一次浏览器外无签名直连，结果写进 A.1 备注 | | ⏳ |
 
 ---
 
@@ -81,6 +82,7 @@
 | DM-08 | P1 | 会话存储两处并存 | `session.cookies` 与 `cookies/` 目录二选一；存储需加密（overall-design 2.3 建议 DPAPI） | | ✅ 6.4 已定（DPAPI） |
 | DM-09 | P2 | 迁移机制 | 表结构变更的迁移方式（overall-design 建议 Alembic）与初始迁移脚本 | | ✅ 6.4 已定（Alembic） |
 | DM-10 | P2 | 改物流后的本地状态 | 已发货订单换运单号后：旧面单标 `void` 还是新增 `replaced`；新运单如何入 `waybills`；订单状态是否保持 `shipped`；对账如何避免误报 `waybill_mismatch`。写进 6.1 / 6.2（阶段二，依赖 API-18） | | ⏳ |
+| DM-11 | P1 | 解密后明文地址的存储与清除 | `receiveinfo` 返回 `expire_time`，明文有有效期；现设计把明文长期存 `orders.receiver_address` 并据此判断「已解密」（7.3 约束 2）。需定：加密存储方式、按 `expire_time` 清除、到期后不再视为已解密、日志与导出中不出现明文。依赖 DEC-06 | | ⏳ |
 
 ---
 
@@ -109,3 +111,4 @@
 | DEC-03 | 前端交付节奏 | 集中在 M6 / 随各里程碑交付对应页面 | 随里程碑交付（见 overall-design 第 6 节） |
 | DEC-04 | 面单作废是否进 MVP | 是 / 否 | 是（见 DOC-08） |
 | DEC-05 | 同一快递多个面单账户时选哪个 | 见 architecture 5.9 建议稿：用户指定 → `isDefault` → `balance` 最大 | 按建议稿；如有网点 / 结算上的业务考虑需调整 |
+| DEC-06 | 取号前是否必须先解密收货地址 | 保留「先解密」/ 取号与官方组件打印都不解密，仅在查看收件人或自渲染 PDF 时解密 | **不解密**：取号请求无收件人字段（A.2.2）；官方「打单发货」链路不调 `receiveinfo`（A.2.7）；`print_data` 由组件渲染。解密按次耗额度且有风控。采纳后需同步改 7.3 callout 列出的 8 处 |
