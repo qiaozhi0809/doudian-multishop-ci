@@ -55,6 +55,10 @@ CREATE TABLE shop (
   egress_status TEXT NOT NULL DEFAULT 'unchecked',
                 -- unchecked | ok | unreachable | changed | duplicate
   egress_checked_at TEXT,
+  egress_ip_pending TEXT,                   -- changed / duplicate 时检查到的新 IP，人工确认后转正
+  proxy_expires_at TEXT,                    -- 代理到期日（粘贴导入或手填）
+  paused_reason TEXT,                       -- 风控暂停原因（如 risk_blocked:602502151）；NULL = 未暂停
+  paused_at     TEXT,
   created_at    TEXT NOT NULL,
   updated_at    TEXT NOT NULL
 );

@@ -370,7 +370,7 @@ class Signer(Protocol):
 
 ### 5.15 实时推送
 
-`GET /api/events` 用 SSE 推送：任务进度、店铺会话状态变化、打印回执、告警。前端收到后让对应查询失效重取。不用 WebSocket，因为只需服务端单向推送。
+`GET /api/events` 用 SSE 推送：任务进度（`sync_progress`）、店铺状态变化（`shop_status_changed`，含会话、出口、风控暂停）、扫码失败（`shop_login_failed`）、打印回执、告警。前端收到后让对应查询失效重取。不用 WebSocket，因为只需服务端单向推送。
 
 ### 5.16 本机管理员登录（`service/auth.py`、`api/auth.py`）
 
@@ -396,17 +396,24 @@ class Signer(Protocol):
 | 项 | 规则 |
 |---|---|
 | 浏览器 profile | 每店一个持久化用户目录 `data/profiles/<shop_id>/`（5.1），cookie 与登录态互不串号 |
-| 出口方式 | `direct`（商家自有宽带直连）或 `proxy`（独享静态 IP，HTTP / SOCKS5）；**不使用轮换代理池** |
+| 出口方式 | `direct`（商家自有宽带直连）或 `proxy`（独享静态 IP）；**不使用轮换代理池** |
+| 代理协议 | 一律按 `http://账号:密码@主机:端口` 配置。Chromium / Edge 不支持带账号密码的 SOCKS5，扫码浏览器无法使用；带凭证的 `socks5://` 在配置时即拒绝 |
+| 粘贴导入 | 出口设置可直接粘贴代理商格式 `IP\|端口\|账号\|密码\|到期日`，解析为 `http://` URL 与到期日 |
+| 代理到期 | 记录 `proxy_expires_at`；到期前 7 天提醒；到期后该店暂停（同「出口不通」）。续费后 IP 若变化按「出口 IP 变化」处理 |
 | 独立性 | 以**实际出口 IP** 判重：启用中的店铺两两不同。直连本身也是一个 IP，所以**最多一家店**用 `direct` |
 | 一致性 | 同一家店的扫码浏览器、协议通道（curl_cffi）、浏览器兜底通道**都走同一出口** |
 | 先配出口再扫码 | 店铺出口未配置或未通过检查时，不允许扫码登录；会话在哪个出口建立，就只在那个出口使用 |
-| 更换出口 | 改代理地址 → 该店转 `needs_login`，必须重新扫码 |
-| 出口检查 | 经该出口请求 IP 回显地址（设置项 `egress_echo_url`，默认 `https://api.ipify.org`），记录 `egress_ip`。时机：配置后、扫码前、每轮该店任务开始前（同一轮内缓存 10 分钟） |
+| 更换出口 | 改代理地址 → 清空 `egress_ip`、状态复位为 `unchecked`，该店转 `needs_login`，必须重新扫码 |
+| 出口检查 | 经该出口请求 IP 回显地址（设置项 `egress_echo_url`，默认 `https://api.ipify.org`）。**只有结果为 `ok` 时才写入 `egress_ip`**；`changed` / `duplicate` 时新 IP 写入 `egress_ip_pending`。时机：配置后、扫码前、每轮该店任务开始前（同一轮内缓存 10 分钟） |
 | 出口不通 | 该店 `egress_status=unreachable`，暂停该店全部请求并提示；**绝不自动退回直连** |
-| 出口 IP 变化 | 与上次记录不同 → `egress_status=changed`，暂停该店，界面提示人工确认后才继续 |
-| 出口 IP 重复 | 与其他启用店铺相同 → `egress_status=duplicate`，暂停后加入的那家店 |
+| 出口 IP 变化 | 与 `egress_ip` 不同 → `egress_status=changed`，新 IP 存 `egress_ip_pending`，暂停该店；人工确认后 pending 转正、状态 `ok` |
+| 出口 IP 重复 | 与其他启用店铺的 `egress_ip` 相同 → **`created_at` 较晚**的那家店 `egress_status=duplicate`（新 IP 存 `egress_ip_pending`），暂停 |
 | 代理凭证 | 代理 URL（含账号密码）与 cookie 一样用 `SecretBox` 加密存库；日志只显示主机与端口 |
-| 设备参数 | 不伪造。各店 profile 使用本机真实浏览器参数；协议通道的 UA 等与该店扫码浏览器保持一致（参数前后不一致本身就是风控信号） |
+| 设备参数 | 不伪造。各店 profile 使用本机真实浏览器参数；扫码时记录该浏览器的 `User-Agent` 与 `sec-ch-ua*` 头，协议通道发请求时使用同一组值（参数前后不一致本身就是风控信号） |
+| 统一入口 | 凡是会请求抖店的操作（定时任务、手动同步 / 探测 / 计数、扫码），都经 `ShopRunner.run`：先出口检查，再进该店串行队列（5.7） |
+
+**风控暂停**：任一请求遇到 `RiskBlocked`（[flows.md](flows.md) 第 8 节）→ 该店写入 `paused_reason`，`ShopRunner` 跳过该店，
+界面提示人工检查；人工点「恢复」（`POST /api/shops/{id}/resume`）后清除。出口异常与风控暂停都只影响该店。
 
 **数据去向**：配置代理的店铺，请求经代理商隧道转发（HTTPS CONNECT，代理商看不到内容，只看到目标域名）；
 cookie、订单数据等仍只存本机。

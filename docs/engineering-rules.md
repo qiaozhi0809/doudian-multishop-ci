@@ -78,7 +78,7 @@ backend/app/
 
 **禁令**：
 - `domain/` 内禁止 `import fastapi` / `import sqlalchemy` / `import curl_cffi` / 任何 IO
-- `api/` 内禁止直接 SQL，必须经 service
+- `api/` 内禁止直接 SQL，必须经 service（不得 import sqlalchemy 或 `app.store`）
 - `adapter/` 不写业务判断（不做「这单该不该发货」这类决策），只翻译外部世界
 - `store/` 内禁止业务判断（不能写 `if order.status == 'stock_up':`）
 
