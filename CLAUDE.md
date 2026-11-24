@@ -7,6 +7,9 @@
 
 不直接公开主仓库的原因：已合并 PR 的只读引用 `refs/pull/*` 仍含历史中的真实个人信息（gaps DOC-13），无法删除。
 
+工作流里每个 job 都带 `if: github.repository == 'qiaozhi0809/doudian-multishop-ci'`：在主仓库只显示「已跳过」，不再因账单报红；
+新增工作流或 job 时必须同样加上。账单恢复后想在主仓库跑，删掉这些条件即可。
+
 跑 CI 的步骤：
 
 1. 推送前检查要推的分支：`bash scripts/ci/check-secrets.sh` 通过；
