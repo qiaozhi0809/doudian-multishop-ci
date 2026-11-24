@@ -101,13 +101,64 @@ describe("useEvents", () => {
     expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.shops() });
   });
 
-  it("sync_progress 失效订单与订单计数", () => {
-    const { spy, wrapper } = setup();
-    renderHook(() => useEvents(), { wrapper });
-    spy.mockClear();
-    act(() => latest().emit("sync_progress", { shop_id: 1, kind: "orders", fetched: 10 }));
-    expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.ordersRoot() });
-    expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.orderCountsRoot() });
+  describe("sync_progress 尾部节流", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("1 秒后失效订单与订单计数", () => {
+      const { spy, wrapper } = setup();
+      renderHook(() => useEvents(), { wrapper });
+      spy.mockClear();
+      act(() => latest().emit("sync_progress", { shop_id: 1, kind: "orders", fetched: 10 }));
+      expect(spy).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(1000));
+      expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.ordersRoot() });
+      expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.orderCountsRoot() });
+    });
+
+    it("sync_progress_throttled: 1 秒内连续 5 次只触发 1 次失效", () => {
+      const { spy, wrapper } = setup();
+      renderHook(() => useEvents(), { wrapper });
+      spy.mockClear();
+      for (let i = 0; i < 5; i++) {
+        act(() => latest().emit("sync_progress", { shop_id: 1, kind: "orders", fetched: i * 200 }));
+        act(() => vi.advanceTimersByTime(100));
+      }
+      act(() => vi.advanceTimersByTime(1000));
+      const roots = spy.mock.calls.filter(([f]) => f?.queryKey?.[0] === "orders");
+      expect(roots).toHaveLength(1);
+      expect(spy).toHaveBeenCalledTimes(2); // orders + orderCounts 各一次
+    });
+
+    it("窗口过后的下一次 sync_progress 再次触发", () => {
+      const { spy, wrapper } = setup();
+      renderHook(() => useEvents(), { wrapper });
+      spy.mockClear();
+      act(() => latest().emit("sync_progress", {}));
+      act(() => vi.advanceTimersByTime(1000));
+      act(() => latest().emit("sync_progress", {}));
+      act(() => vi.advanceTimersByTime(1000));
+      expect(spy).toHaveBeenCalledTimes(4);
+    });
+
+    it("卸载后取消待执行的失效", () => {
+      const { spy, wrapper } = setup();
+      const { unmount } = renderHook(() => useEvents(), { wrapper });
+      spy.mockClear();
+      act(() => latest().emit("sync_progress", {}));
+      unmount();
+      act(() => vi.advanceTimersByTime(2000));
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it("shop_status_changed 与 open 不被节流，立即失效", () => {
+      const { spy, wrapper } = setup();
+      renderHook(() => useEvents(), { wrapper });
+      spy.mockClear();
+      act(() => latest().emit("shop_status_changed", { shop_id: 1, status: "active" }));
+      act(() => latest().emit("open"));
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("连接 open（含重连）时失效全部", () => {

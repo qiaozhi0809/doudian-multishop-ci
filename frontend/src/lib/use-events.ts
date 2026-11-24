@@ -4,6 +4,8 @@ import { queryKeys } from "./query-keys";
 
 type Handler = (data: unknown) => void;
 
+const SYNC_PROGRESS_THROTTLE_MS = 1000;
+
 /** 全应用共用一个 EventSource：有订阅者时建立，最后一个订阅者退订后关闭。 */
 const hub = {
   source: null as EventSource | null,
@@ -64,9 +66,21 @@ export function useEvents(): void {
   useEventSubscription("shop_status_changed", () => {
     void client.invalidateQueries({ queryKey: queryKeys.shops() });
   });
+  // 订单同步每入库一页就发一次 sync_progress：尾部节流，窗口内合并为一次失效。
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
   useEventSubscription("sync_progress", () => {
-    void client.invalidateQueries({ queryKey: queryKeys.ordersRoot() });
-    void client.invalidateQueries({ queryKey: queryKeys.orderCountsRoot() });
+    if (timer.current) return;
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      void client.invalidateQueries({ queryKey: queryKeys.ordersRoot() });
+      void client.invalidateQueries({ queryKey: queryKeys.orderCountsRoot() });
+    }, SYNC_PROGRESS_THROTTLE_MS);
   });
   useEventSubscription("open", () => {
     void client.invalidateQueries();
