@@ -26,3 +26,15 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
+
+# M1 后端运行产物
+logs/
+*.db
+*.db-wal
+*.db-shm
+frontend/dist/
+.pytest_cache/
+.ruff_cache/
+
+# 其他会话的 worktree
+.claude/worktrees/
