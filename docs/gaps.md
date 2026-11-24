@@ -38,9 +38,11 @@
 | API-11 | P1 | 写接口被风控拦截时的表现 | 错误分类（见 overall-design 2.2）需要知道「风控拦截」长什么样，才能和业务拒绝、会话失效区分 | 记录至少一种风控拦截的 `code` / `msg` / 是否要求验证码 | | ✅ 已记录 `10001010A`（searchPackageList 无签名直连触发） |
 | API-12 | P1 | 拉单增量与分页上限 | 5.4 写了「cursor/时间窗减少重复拉取」，但 `searchlist` 的增量参数没验证；`pageSize` 上限只知道 100 可用 | 确认按 `create_time` / `update_time` 窗口拉取的参数；`pageSize` 上限；订单号多值输入的格式（拼接串还是数组） | | 🔶 pageSize 上限 200 已确认（201 报 602502051）；增量时间窗 / 订单号多值待测 |
 | API-13 | P2 | 取号 + 发货一体 `batchFetchTrackingNosAndDeliverGoods` | 打单台「打单并发货」按钮；源码结构已知，未真实调用 | 用测试单验证一次，记录请求与响应 | | ✅ `batchFetchTrackingNosAndDeliverGoods` 实测成功（A.2.5，运单号 79209905665503） |
-| API-14 | P2 | `/order/torder/batchsend` 去留 | 打单台发货已确认走 `batchDeliverGoodsByEES`；`batchsend` 是否还需要不明确 | 确认订单页发货是否走它；不需要就从设计里移除 | | ✅ 结论：订单页「打单发货」也走一体接口，batchsend 不需要（A.2.7） |
+| API-14 | P2 | `/order/torder/batchsend` 去留 | 打单台发货已确认走 `batchDeliverGoodsByEES`；`batchsend` 是否还需要不明确 | 确认订单页发货是否走它；不需要就从设计里移除 | | ✅ 电子面单场景不需要 batchsend（A.2.7），已从 5.2 / 7.5 移除；订单页「自行寄件发货」是否走它未核查，不影响 MVP |
 | API-15 | P2 | 资金金额字段校准 | 资金账单 `CHARGE_BILL_ITEM` 金额字段名未知；保证金 `payable` / `balance` 单位（元/分）未知 | 用有账单、有保证金的店铺取样本，更新附录 F.4 | | 🔶 保证金单位已确认（分：basic_balance 50000=500元）；账单字段仍待有账单店铺；`margin_account` 暂存原始值（`payable` / `balance`），校准后迁移为 `*_cents` |
 | API-16 | P2 | 阶段二写接口 | 售后（同意退款 / 代填运单号 / 延长收货）、商品创建提交、库存修改、改物流 | 按附录 A.2 的「必查项」逐个验证；不阻塞 MVP | | 🔶 改物流 ✅（`modifyLogistic`，A.2.8）；售后 / 商品创建 / 库存修改待验证 |
+| API-17 | P1 | 增值服务与产品类型接口 `POST /api/order/query_added_services_and_product_types` | 订单页「打单发货」链路第 3 步（A.2.7），只记了用途；一体接口的 `added_services`、`transport.expType` 可能取自这里 | 记录请求体与响应；确认是否必经、`added_services` / `expType` 取值怎么传 | | ⏳ |
+| API-18 | P2 | 改物流 `modifyLogistic` 的两个参数 | A.2.8：`deliverId`（原包裹 ID）来源未确认，候选 `getOrderLogistics` / `orderDetail` 都没收录；`sendType: "1"` 含义未写，样本疑似「自行寄件」方式 | ① 确认 `deliverId` 来源接口并收录 A.1，说明与 `packages.package_no` 的关系；② 补 `sendType` 枚举，至少覆盖「自行寄件」与「打单发货」两种重新发货方式 | | ⏳ |
 
 ---
 
@@ -77,6 +79,7 @@
 | DM-07 | P1 | 只读聚合模块无表 | 补 `aftersale`（附录 E.7 已给字段）、`product_snapshot`、`stock_snapshot`、`fund_unsettled`、`margin_account` | | ✅ 6.2 ⑯~⑳ 已建表（`stock_snapshot` 含 `future_stock_num`；`aftersale` 时间存 ISO、枚举存数字；`fund_unsettled` 唯一键列非空） |
 | DM-08 | P1 | 会话存储两处并存 | `session.cookies` 与 `cookies/` 目录二选一；存储需加密（overall-design 2.3 建议 DPAPI） | | ✅ 6.4 已定（DPAPI） |
 | DM-09 | P2 | 迁移机制 | 表结构变更的迁移方式（overall-design 建议 Alembic）与初始迁移脚本 | | ✅ 6.4 已定（Alembic） |
+| DM-10 | P2 | 改物流后的本地状态 | 已发货订单换运单号后：旧面单标 `void` 还是新增 `replaced`；新运单如何入 `waybills`；订单状态是否保持 `shipped`；对账如何避免误报 `waybill_mismatch`。写进 6.1 / 6.2（阶段二，依赖 API-18） | | ⏳ |
 
 ---
 

@@ -224,7 +224,9 @@ class ShopChannel(Protocol):
 
     # 发货
     def precheck_ship(shop, orders) -> PrecheckResult      # sendcheck
-    def ship_orders(shop, orders, send_type, deliver_type) -> ShipResult
+    def ship_packages(shop, packages) -> ShipResult         # batchDeliverGoodsByEES：[(courier_code, tracking_no)]
+    def fetch_and_ship(shop, orders, courier_code, template_code, address_id) -> ShipResult
+                                                           # batchFetchTrackingNosAndDeliverGoods（一体）
 ```
 
 **两个实现**：
@@ -965,14 +967,11 @@ CREATE TABLE margin_account (
 - 响应按 package 维度返回 `success_package_list` / `fail_package_list`
 - 验证样本：订单 `6919920097284206086` 用中通运单 `79209902836406` 发货成功
 
-**备用路径（未验证）**：`/order/torder/batchsend`
+**一体路径**：「打单并发货」（打单台）与订单页「打单发货」都走
+`batchFetchTrackingNosAndDeliverGoods`，一步完成取号与发货（见 A.2.5 / A.2.7）。
 
-```
-{ send_type, deliverType: "1" | "2", send_list: [{ order_id, ... }] }
-```
-
-可能是订单页发货的路径（与打单台不同）；`deliverType` 语义待已确认。
-实现时优先用已验证的 `batchDeliverGoodsByEES`。
+**`/order/torder/batchsend`**：电子面单的两条发货路径上都未出现，**本工具不使用**。
+订单页「自行寄件发货」（手填运单号）是否走它未核查；本工具只做电子面单，不影响 MVP（gaps API-14）。
 
 ### 7.6 对账流程
 
@@ -1354,7 +1353,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 模块 | 只读接口 | 写接口 | 数据样本 |
 |---|---|---|---|
 | 会话 | ✅ 探测 / cookie 导出 | — | ✅ |
-| 订单 | ✅ 列表 / 筛选（8 项）/ 计数 / 地址解密 | ✅ 取号 / 发货前检查 / 发货 / 批量备注；⏳ 改物流 / 面单作废 | ✅ 18 单 + 新店 529 单 |
+| 订单 | ✅ 列表 / 筛选（8 项）/ 计数 / 地址解密 | ✅ 取号 / 发货前检查 / 发货 / 取号发货一体 / 批量备注 / 面单作废 / 改物流 | ✅ 18 单 + 新店 529 单 |
 | 商品 | ✅ 列表 / 计数 / 分组 / 类目树 | ⏳ 创建提交 | ✅ 6 个商品 |
 | 库存 | ✅ 列表 / 仓库列表 | ⏳ 库存修改 | ✅ |
 | 售后 | ✅ 列表 / 计数 / 详情 | ⏳ 同意退款 / 填运单号 / 延长收货 | ✅ 8 单 |
@@ -1410,7 +1409,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 取号 | POST | `/api/order/batchFetchTrackingNos` | ✅ **已验证**（运单号 `79209902836406`，见 A.2.2） |
 | 发货前检查 | POST | `/api/order/sendcheck` | ✅ **已验证**（见 A.2.3） |
 | 发货（打单台） | POST | `/api/order/batchDeliverGoodsByEES` | ✅ **已验证**（见 A.2.4） |
-| 发货（订单页） | POST | `batchFetchTrackingNosAndDeliverGoods`（同一体接口） | ✅ 已验证；batchsend 不需要（见 A.2.7） |
+| 发货（订单页） | POST | `/api/order/batchFetchTrackingNosAndDeliverGoods`（同一体接口） | ✅ 已验证；batchsend 不需要（见 A.2.7） |
 | 取号+发货一体 | POST | `/api/order/batchFetchTrackingNosAndDeliverGoods` | ✅ **已验证**（见 A.2.5） |
 | 改物流（重新发货） | POST | `/order/torder/modifyLogistic` | ✅ **已验证**（见 A.2.8） |
 | 售后同意退款 | POST | 未抓（按钮 code `refund_audit`） | ⏳ 待定 |
@@ -1577,7 +1576,7 @@ Content-Type: application/json
 ### A.2.4 发货（已验证）
 
 **重要**：打单台的「发货」按钮实际调用的是 `batchDeliverGoodsByEES`，
-**不是** M0 笔记里记录的 `/order/torder/batchsend`（后者可能是订单页发货的路径，待对比）。
+**不是** M0 笔记里记录的 `/order/torder/batchsend`（订单页「打单发货」也不走它，见 A.2.7）。
 
 ```
 POST /api/order/batchDeliverGoodsByEES
@@ -1730,9 +1729,14 @@ Content-Type: application/json
 | 4 | `POST /api/order/batchFetchTrackingNosAndDeliverGoods` | **取号 + 发货**（同一体接口） |
 
 **关键结论**：订单页「打单发货」与打单台「打单并发货」调用的是**同一个一体接口**。
-`/order/torder/batchsend` 在两条主要发货路径上都未出现 → **判定不需要**，从设计中移除。
+`/order/torder/batchsend` 在两条电子面单发货路径上都未出现 → **电子面单场景不需要**，从设计中移除。
+订单页「自行寄件发货」（手填运单号）未核查是否走 `batchsend`；本工具只做电子面单，不影响 MVP。
 
 `is_tracking_no_and_logistics_company_match` 是可选校验，自行寄件场景有用。
+
+> ⏳ **待补（gaps API-17）**：第 3 步 `query_added_services_and_product_types` 只记了用途，
+> 缺请求体与响应。一体接口里的 `added_services` 与 `transport.expType`（产品类型）可能来自这里，
+> 需确认是否为必经步骤、取值怎么传。
 
 ### A.2.8 重新发货 / 改物流（已验证）
 
@@ -1773,15 +1777,21 @@ Content-Type: application/json
 
 **关键点**：
 
-1. **`deliverId` 是原包裹 ID** —— 来自订单详情接口（`getOrderLogistics` / `orderDetail`），
-   不是订单号，替换前要先查到
+1. **`deliverId` 是原包裹 ID**，不是订单号，替换前要先查到。
+   ⏳ **来源未确认（gaps API-18）**：候选 `getOrderLogistics` / `orderDetail` 均未收录 A.1，
+   实测用的是哪个未记录；本地表也没有存它的列（与 `packages.package_no` 是否同一个值未知）
 2. `companyCode` + `logisticsCode` 是新物流信息
-3. `sendType: "1"`（字符串）
+3. `sendType: "1"`（字符串）。⏳ **含义未确认（gaps API-18）**：样本的新单号来自作废后重取
+   （A.2.6），疑似「自行寄件」方式；用「打单发货」方式重新发货时取值可能不同，需补枚举
 4. `delivery_source_page`：入口页面标识（`order_detail` / 其他）
 5. 响应成功看 `failedNum: 0`；失败明细在 `sendFailList`
 
 **弹窗结构**（已验证）：发货地址 / 发货方式（打单发货 / 在线寄件 / 自行寄件）/
 选择重发包裹（原单号） / 自行寄件时填新单号 + 物流公司。
+
+> ⏳ **本地状态待设计（gaps DM-10，阶段二）**：已发货订单改物流后，旧面单如何处理（标 `void` 或新增
+> `replaced` 状态）、新运单如何入 `waybills`、订单状态是否保持 `shipped`，6.1 / 6.2 均未覆盖。
+> 不处理的话，每日对账会把它报成 `waybill_mismatch`。
 
 **写接口的一般性判断**：抖店只读接口全部免签名（已验证 20+ 个），
 写接口属于未知区域。若某写接口强制签名，方案是用 Playwright 在页面内执行 fetch
