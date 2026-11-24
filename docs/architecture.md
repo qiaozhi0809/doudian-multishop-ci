@@ -5,12 +5,12 @@
 
 
 
-- 日期：2026-11-03（初版）；2026-11-24（第一轮验证 + 技术栈修订）
+- 日期：2026-11-03（初版）；2026-11-24（第一轮验证 + 技术栈修订）；2026-11-25（写接口与打印协议验证）
 - 状态：已评审（设计阶段）；2026-11-24 更新只读接口清单与技术栈（React 19 + Arc 组件库）
 - 参考产品：抖小宝（douxiaobao.com）
 - 项目目录：`E:\抖店多店铺管理`
 - UI 组件库：`uiarc-system`（Arc Free 122 + Arc Pro 121 + Pro blocks 130+）
-- 研究证据：`case/notes/M0-order-api.md`、`case/notes/M0-logistics-api.md`、`case/notes/A-readonly-api-verified.md`
+- 研究证据：`artifacts/`（本地留存，不入库）
 
 ---
 
@@ -51,7 +51,7 @@
 | 批量打印 | 按店铺/快递分组打印，面单与店铺对应关系零错误 |
 | 发货回传 | 人工确认后一次点击，全部订单回写平台为"已发货" |
 | 安全可控 | 取号与发货分离；重复取号/重复发货为 0 |
-| 可维护 | 抖店接口变化时，只改 `channels/` 与 `signing/` |
+| 可维护 | 抖店接口变化时，只改 `adapter/doudian/`（含签名子目录） |
 
 ### 1.3 已确认的业务前提
 
@@ -76,9 +76,9 @@
 - 多店订单聚合池（筛选、勾选）
 - 收货地址解密（`/api/order/receiveinfo`）
 - 批量取电子面单号
-- 面单打印（官方打印组件 `ws://127.0.0.1:13999`；自渲染兜底）
+- 面单打印（官方打印组件 `wss://localhost:13999`；自渲染兜底）
 - 发货前检查 + 发货回传（人工确认）
-- 面单作废与重打
+- 面单作废与重打（依赖作废接口验证，见 gaps API-08）
 - 每日对账
 - 操作审计日志、限速、演练模式
 
@@ -113,7 +113,7 @@
 | 阶段 | 范围 |
 |---|---|
 | **MVP** | 会话管理、基础数据、拉单、取号、打印、发货、对账 + 售后/商品/库存/资金只读聚合 + 完整前端后台 |
-| **阶段二** | 售后处理动作、商品写操作、物流轨迹、改物流、批量备注、面单作废/重打、合单发货、通知通道 |
+| **阶段二** | 售后处理动作、商品写操作、物流轨迹、改物流、批量备注、合单发货、通知通道 |
 | **阶段三** | 营销活动、客服 IM、评价管理、包裹中心、电子面单余额 |
 
 ---
@@ -171,7 +171,7 @@
 
 ## 5. 模块设计
 
-### 5.1 店铺会话管理器（`services/session_manager.py`）
+### 5.1 店铺会话管理器（`service/session_manager.py`）
 
 **职责**：维护每个店的登录态，是所有模块获取会话的唯一入口。
 
@@ -185,6 +185,13 @@
 - 定期（默认 30 分钟）调用 `GET /api/order/tabcnt` 探测会话有效性（未登录返回 `code:10008`）。
 - 会话失效时标记 `needs_login`，暂停该店队列并通知界面。
 
+**会话有效期（API-02）**：
+
+- `sid_guard` 解码后的有效期：**60 天**（`5184000` 秒）；两个样本店均为扫码后 60 天到期
+- 界面在到期前 7 天提示重新扫码
+- 平台是否通过响应 `Set-Cookie` 刷新会话：未验证；实现按「不刷新」保守处理
+  （从扫码时刻起算 60 天），到期前必须重扫
+
 **接口**：
 
 ```python
@@ -193,7 +200,7 @@ refresh(shop_id) -> Session              # 强制重新登录（弹浏览器）
 probe(shop_id) -> Health                 # healthy | expiring | expired
 ```
 
-### 5.2 渠道适配层（`channels/`）
+### 5.2 渠道适配层（`adapter/doudian/`）
 
 **职责**：把"对抖店做的动作"抽象成最少的一组原语，屏蔽协议差异。
 
@@ -229,7 +236,7 @@ class ShopChannel(Protocol):
 
 通道选择：全局默认 `protocol`，可按店覆盖；单次任务失败后自动降级一次。
 
-### 5.3 签名引擎（`signing/`，按需启用）
+### 5.3 签名引擎（`adapter/doudian/signing/`，按需启用）
 
 **M0 / 第一轮验证结论**：只读接口在只带 Cookie + `__token` 时可正常返回（Python + curl_cffi 已在浏览器外验证）。已验证免签名的只读接口：订单列表、状态计数、快递公司（POST）、面单模板、发货地址、收货地址解密、店铺画像。`a_bogus` / `msToken` / `verifyFp` 属于风控打分参数，不是这类接口的鉴权必需项。
 
@@ -245,9 +252,9 @@ class Signer(Protocol):
 - 实现：`JsSigner`，用 `py_mini_racer` 在 V8 中执行提取出的 JS。
 - 抖店签名由构建产物后的 `bdms` SDK（`rc-client-security/web/stable/1.0.1.20/bdms.js`）生成，静态提取成本较高。
 - 启用条件：某接口在无签名时返回风控错误，且已用「带签名 / 不带签名」双对照确认。
-- `signing/js/` 存放 JS 快照与版本号；抖店更新后替换文件即可。
+- `adapter/doudian/signing/js/` 存放 JS 快照与版本号；抖店更新后替换文件即可。
 
-### 5.4 订单同步器（`services/order_sync.py`）
+### 5.4 订单同步器（`service/order_sync.py`）
 
 **职责**：按店拉取待发货订单并归一化入库。
 
@@ -257,7 +264,7 @@ class Signer(Protocol):
 - 幂等：按 `(shop_id, order_no)` upsert；本地状态机字段不被平台数据覆盖。
 - 单店失败不影响其他店。
 
-### 5.5 打单编排器（`services/labeling.py`）
+### 5.5 打单编排器（`service/labeling.py`）
 
 **职责**：把"勾选的订单"变成"已打印的面单"。
 
@@ -275,19 +282,19 @@ class Signer(Protocol):
 - 会话失效 → 暂停该店，提示重登，重登后从断点继续。
 - 瞬时故障 → 退避重试。
 
-### 5.6 发货回传器（`services/shipping.py`）
+### 5.6 发货回传器（`service/shipping.py`）
 
 **职责**：在人工确认后，把运单号回写平台。
 
-- 入口：界面「确认发货」，携带 `order_ids` 列表。
+- 入口：界面「确认发货」，携带「快递编码 + 运单号」列表。
 - 先调用 `POST /api/order/sendcheck` 做发货前检查；不通过则整批拦截并展示原因。
-- 通过后调用 `POST /order/torder/batchsend`：
-  - `send_type`：电子面单枚举（待已确认）
-  - `deliverType`：全部发货 `"1"`；部分发货或多订单 `"2"`
-  - `send_list`：`[{ order_id, ... }]`
-- 幂等：`tasks.idempotency_key = ship:{shop_id}:{order_no}:{waybill_no}`。
+- 通过后调用 `POST /api/order/batchDeliverGoodsByEES`：
+  - `send_type`：电子面单枚举，已验证为字符串 `"3"`
+  - `batch_deliver_packages`：`[{ logistics_company_code, tracking_no }]`
+  - 按「运单号」发货，不需要 `deliverType` / `send_list`
+- 幂等：`tasks.idempotency_key = ship:{shop_id}:{courier_code}:{tracking_no}`。
 - 成功：`orders.status=shipped`；失败：退避重试 3 次，之后转人工。
-- 记录平台返回的完整报文摘要。
+- 记录平台返回的完整报文摘要（`success_package_list` / `fail_package_list`）。
 
 ### 5.7 调度队列（`core/scheduler.py`）
 
@@ -297,7 +304,7 @@ class Signer(Protocol):
 - 可配置"工作时段"，非时段内不执行定时任务。
 - 失败任务进入重试队列，指数退避。
 
-### 5.8 审计与对账（`services/reconcile.py`）
+### 5.8 审计与对账（`service/reconcile.py`）
 
 - 每次外部调用记录 `audit_log`：动作、请求摘要、响应摘要、结果、耗时。
 - 每日定时对账：
@@ -309,16 +316,23 @@ class Signer(Protocol):
      - 运单号不一致 → 需人工核对。
 - 对账结果落库并在界面展示，支持导出。
 
-### 5.9 基础数据同步器（`services/base_data.py`）
+### 5.9 基础数据同步器（`service/base_data.py`）
 
 **职责**：登录成功后同步「取号 / 发货所必需」的店铺配置，并缓存到本地。
 
 | 数据 | 来源 | 落库 |
 |---|---|---|
-| 发货地址 | `GET /shopuser/tshopuser/getAfterSaleList`（page **1-based**；`is_send_default=1` 标默认发货地址） | `shop_address` |
+| 发货地址（含行政区 ID） | `GET /shopuser/tshopuser/getAfterSaleList`（page **1-based**；`is_send_default=1` 标默认发货地址） | `shop_address` |
+| 面单账户（`net_code` / `ebill_id`） | `GET /shopuser/power/getEbillAccountListByExpress` | `ebill_account` |
 | 面单模板 | `GET /shopuser/power/searchTemplates`（返回 parentTempList / customTempList） | `waybill_template` |
 | 快递公司 | `POST /api/order/expressList`（**必须 POST**，无业务参数） | `courier` |
 
+- **地址行政区 ID（API-05）**：`getAfterSaleList` 的 `address_list[]` 已包含
+  `province_id` / `city_id` / `town_id` / `street_id` 及对应名称，
+  取号与 `sendcheck` 的 `address` 可直接复用，无需额外查询。
+- **面单账户（API-03）**：每个「快递公司 × 模板」对应一个面单账户；
+  `net_code`（网点编码）与 `ebill_id`（电子面单账户 ID）取自该接口。
+  一个快递有多个账户时，优先选余额充足且与模板匹配的账户。
 - 刷新时机：首次登录后、店铺配置变更提示、每日首次同步前。
 - 失效策略：取号失败且错误指向模板/地址时，强制刷新一次再重试。
 - **取号必须使用本店已配置的 `address_id` 与 `template_code`**，不能跨店复用。
@@ -329,10 +343,10 @@ class Signer(Protocol):
 
 | 子模块 | 服务模块 | 接口依据 |
 |---|---|---|
-| 售后聚合 | `services/aftersale.py` | 附录 E |
-| 商品 / 库存 | `services/catalog.py` | 附录 D |
-| 资金看板 | `services/fund.py` | 附录 F |
-| 跨店对账 | `services/reconcile.py` | 第 5.8 节 + 附录 G |
+| 售后聚合 | `service/aftersale.py` | 附录 E |
+| 商品 / 库存 | `service/catalog.py` | 附录 D |
+| 资金看板 | `service/fund.py` | 附录 F |
+| 跨店对账 | `service/reconcile.py` | 第 5.8 节 + 附录 G |
 
 **共同约束**：
 
@@ -367,17 +381,24 @@ class Signer(Protocol):
           ┌──────────── 作废重取 ────────────┐
           ▼                                  │
  synced → pending_label → label_obtained → printed → shipped → closed
-   │            │              │
+   │            │              │                        ▲
+   │            │              └──► print_failed ───────┘（重试打印）
    │            └──► exception ┘   （地址异常 / 超区 / 库存不足 / 余额不足）
    │                  │
    └─ 取消/退款 ──────► cancelled
+
+ 快捷路径：pending_label ──「打单并发货」──► shipped
 ```
 
 - `synced`：订单刚从平台同步入库，尚未做取号预检（会话/快递/地址）。
 - `pending_label`：预检通过，允许进入取号批次。
 - `label_obtained`（已取号未发货）是关键中间态，保证取号与发货可分离、可回滚。
+- `print_failed`：打印任务失败（组件不可达 / 模板渲染失败），可无限重试；
+  不影响订单的发货状态，只体现在 `waybills.status=failed` 与打印任务表。
 - `exception` 必须记录 `exception_reason`，人工处理后回到 `pending_label`。
 - 面单作废后，`waybills.status=void`，订单回到 `pending_label`。
+- **快捷路径**：`batchFetchTrackingNosAndDeliverGoods` 一步完成取号与发货，
+  `pending_label` 直接转 `shipped`，跳过 `label_obtained` / `printed`。
 
 ### 6.2 表结构
 
@@ -440,6 +461,7 @@ CREATE TABLE orders (
   shop_id         INTEGER NOT NULL REFERENCES shop(id),
   order_no        TEXT NOT NULL,             -- 平台店铺订单号
   platform_order_id TEXT,                    -- 平台内部订单 ID（部分接口使用）
+  combine_id      TEXT,                      -- 合单 ID（取号必需，可空）
   status          TEXT NOT NULL,
   exception_reason TEXT,
   buyer_nick      TEXT,
@@ -464,13 +486,15 @@ CREATE INDEX idx_orders_paytime ON orders(pay_time);
 
 -- ④ 订单商品行
 CREATE TABLE order_items (
-  id           INTEGER PRIMARY KEY,
-  order_id     INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  sku_id       TEXT,
-  product_name TEXT,
-  sku_spec     TEXT,
-  quantity     INTEGER NOT NULL,
-  price_cents  INTEGER
+  id            INTEGER PRIMARY KEY,
+  order_id      INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  sku_order_id  TEXT,                       -- 取号必需（子订单 ID）
+  sku_id        TEXT,
+  product_id    TEXT,                       -- 取号必需
+  product_name  TEXT,
+  sku_spec      TEXT,
+  quantity      INTEGER NOT NULL,
+  price_cents   INTEGER
 );
 CREATE INDEX idx_items_order ON order_items(order_id);
 
@@ -483,6 +507,11 @@ CREATE TABLE waybills (
   waybill_no    TEXT,
   label_url     TEXT,
   label_payload TEXT,                       -- 打印组件所需完整参数（JSON）
+  print_data    TEXT,                       -- 取号返回的加密打印数据（base64）
+  sign          TEXT,                       -- 打印签名
+  logistics_template_code TEXT,             -- 面单模板编码（取号请求用）
+  ebill_id      TEXT,                       -- 面单账户 ID
+  net_code      TEXT,                       -- 网点编码
   status        TEXT NOT NULL,              -- active | printed | void | failed
   obtained_at   TEXT,
   printed_at    TEXT,
@@ -491,6 +520,20 @@ CREATE TABLE waybills (
 CREATE INDEX idx_waybills_order ON waybills(order_id, status);
 CREATE UNIQUE INDEX uq_active_waybill
   ON waybills(order_id) WHERE status = 'active';
+
+-- ⑤-b 打印任务（每次打印尝试一条）
+CREATE TABLE print_job (
+  id            INTEGER PRIMARY KEY,
+  waybill_id    INTEGER NOT NULL REFERENCES waybills(id),
+  printer_name  TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'queued',  -- queued | success | failed
+  result_code   TEXT,
+  result_detail TEXT,                       -- 组件回执（notifyPrintResult）
+  attempts      INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL,
+  finished_at   TEXT
+);
+CREATE INDEX idx_print_job_waybill ON print_job(waybill_id, created_at DESC);
 
 -- ⑥ 任务队列
 CREATE TABLE tasks (
@@ -550,10 +593,34 @@ CREATE TABLE shop_address (
   phone         TEXT,
   region        TEXT,
   detail        TEXT,
+  province_id   INTEGER,                     -- 行政区 ID（取号 / sendcheck 必需）
+  province_name TEXT,
+  city_id       INTEGER,
+  city_name     TEXT,
+  town_id       INTEGER,
+  town_name     TEXT,
+  street_id     INTEGER,
+  street_name   TEXT,
   is_default    INTEGER NOT NULL DEFAULT 0,
   raw_json      TEXT,
   synced_at     TEXT NOT NULL,
   UNIQUE(shop_id, address_id)
+);
+
+-- ⑩-b 面单账户（取号必需：net_code / ebill_id）
+CREATE TABLE ebill_account (
+  id            INTEGER PRIMARY KEY,
+  shop_id       INTEGER NOT NULL REFERENCES shop(id),
+  courier_code  TEXT NOT NULL,
+  ebill_id      TEXT NOT NULL,
+  net_code      TEXT NOT NULL,
+  net_name      TEXT,
+  template_code TEXT,
+  balance_cents INTEGER,                     -- 余额（平台返回时才有）
+  is_default    INTEGER NOT NULL DEFAULT 0,
+  raw_json      TEXT,
+  synced_at     TEXT NOT NULL,
+  UNIQUE(shop_id, courier_code, ebill_id)
 );
 
 -- ⑪ 面单模板（取号必需）
@@ -619,6 +686,29 @@ CREATE INDEX idx_logistics_waybill ON logistics_events(waybill_no, event_time);
 7. 地址、模板、快递均按 `(shop_id, code)` 唯一，**禁止跨店复用**。
 8. 收货地址未解密（`address_encrypted=1` 且 `receiver_address` 为空）的订单不得进入取号批次。
 
+### 6.4 只读聚合与存储说明（DM-06 ~ DM-09）
+
+**只读聚合模块的表**（结构分别在对应附录）：
+
+| 表 | 用途 | 结构位置 |
+|---|---|---|
+| `orders_snapshot` | 跨店对账快照 | 附录 G.2 |
+| `aftersale` | 售后聚合 | 附录 E.7 |
+| `product_snapshot` / `stock_snapshot` | 商品与库存快照 | 附录 D |
+| `fund_unsettled` / `margin_account` | 资金待结算与保证金 | 附录 F |
+
+**会话存储（DM-08）**：以 SQLite `session` 表为唯一来源，`cookies/` 目录仅作导出备份。
+
+- `session.cookies` 用 **DPAPI**（Windows）加密后存库，密钥随用户账户绑定
+- `cookies/` 目录不入库、不提交、不同步
+- `storage_state`（Playwright 格式）同样加密存储
+
+**迁移机制（DM-09）**：使用 **Alembic** 管理表结构变更。
+
+- 初始迁移脚本随第一次实现提交
+- 迁移脚本只前进不后退（SQLite 的 ALTER 能力有限，必要时重建表）
+- 每次发布前在副本库上演练迁移
+
 ---
 
 ## 7. 核心流程
@@ -636,6 +726,21 @@ CREATE INDEX idx_logistics_waybill ON logistics_events(waybill_no, event_time);
         → 同步基础数据：发货地址 / 面单模板 / 快递公司
         → shop.status = active
 ```
+
+**公共参数（API-01）**：
+
+每个请求都要带，来源如下：
+
+| 参数 | 来源 | 有效期 |
+|---|---|---|
+| `appid` | 固定 `1` | 永久 |
+| `aid` | 固定 `4272` | 永久 |
+| `_bid` | 按业务域选：`ffa_order`（订单）/ `ffa_goods`（商品）/ `ffa_aftersale`（售后） | 永久 |
+| `__token` | 登录后从页面请求 URL 提取，每店一个；随会话文件持久化（`token` 字段） | 跟随会话（约 60 天） |
+| `_lid` | 每次请求随机生成的 13 位数字 | 单次请求 |
+
+- `__token` 在扫码登录成功后即可获取并保存，浏览器外协议直连时从会话文件读取
+- `_lid` 无需预先获取，客户端每次请求现生成
 
 ### 7.2 拉单流程
 
@@ -693,7 +798,7 @@ CREATE INDEX idx_logistics_waybill ON logistics_events(waybill_no, event_time);
 
 ```
 按「店 + 快递」分组生成打印批次
-  → 连接本地打印组件 ws://127.0.0.1:13999（HTTP 13888）
+  → 连接本地打印组件 wss://localhost:13999（HTTP 13888）
   → 发送 { printer, printConfig: "waybill", documents: [...], env, preview }
   → 等待组件回执
   → 成功：waybills.printed，订单 → printed
@@ -931,7 +1036,7 @@ CREATE INDEX idx_logistics_waybill ON logistics_events(waybill_no, event_time);
 | HTTP 协议层 | `curl_cffi`（Chrome TLS 指纹） | 浏览器外调抖店接口 |
 | 签名执行（按需） | `py_mini_racer`（V8） | 仅当写接口强制 `a_bogus` 时启用 |
 | 登录/兜底 | Playwright（Python） | 扫码登录、导出全量 cookie |
-| 打印 | `websockets` 连接本地打印组件（`ws://127.0.0.1:13999`） | |
+| 打印 | `websockets` 连接本地打印组件（`wss://localhost:13999`） | |
 | 存储 | SQLite（WAL 模式） | 单机 5~50 店足够 |
 | 调度 | asyncio + 每店串行队列 | 不引入重框架 |
 | 打包 | 启动脚本；后续可做 PyInstaller/Nuitka | |
@@ -964,12 +1069,14 @@ E:\抖店多店铺管理\
 │   ├── app/
 │   │   ├── main.py              # FastAPI 入口、静态资源托管
 │   │   ├── api/                 # shops / orders / aftersale / fund / reconcile / labels / shipping
-│   │   ├── core/                # 配置、日志、调度队列、限速
-│   │   ├── models/              # 数据表定义与 DTO
-│   │   ├── services/            # session_manager / base_data / order_sync / labeling / printing / shipping / reconcile
-│   │   ├── channels/            # base.py / fxg_client.py（统一抖店客户端）
-│   │   ├── signing/             # signer.py + js/（JS 快照与版本）
-│   │   └── db/                  # 连接、迁移、仓储
+│   │   ├── service/             # 业务编排：session_manager / base_data / order_sync / labeling / printing / shipping / reconcile
+│   │   ├── adapter/             # 外部世界的薄封装，无业务逻辑
+│   │   │   ├── doudian/         # client.py / endpoints.py / error_codes.py / enums.py / signing/（按需启用）
+│   │   │   ├── print/           # 打印组件 WebSocket 客户端（端口常量 ports.py）
+│   │   │   └── browser/         # Playwright 登录与兜底渠道
+│   │   ├── store/               # SQLite 连接、迁移、仓储
+│   │   ├── domain/              # 状态机、枚举、纯函数，无 IO
+│   │   └── shared/              # 跨模块工具（必须配单测）
 │   ├── tests/
 │   └── pyproject.toml
 ├── frontend/
@@ -983,11 +1090,14 @@ E:\抖店多店铺管理\
 │   │   └── main.tsx
 │   ├── tailwind.config.ts
 │   └── package.json
-├── artifacts/                   # 接口记录样本、面单样本、JS 快照
+├── artifacts/                   # 接口记录样本、面单样本（不入库）
 ├── cookies/                     # 每店会话（不入库、不提交）
-├── docs/superpowers/specs/      # 设计文档
+├── docs/                        # 设计文档与工程规范
 └── scripts/                     # 启动、备份、部署脚本
 ```
+
+> 目录命名以 `engineering-rules.md` 2.2 为准；本文档其余章节出现的
+> `service/`、`adapter/`、`store/`、`domain/` 均对应此结构。
 
 ### 11.5 Arc 安装
 
@@ -1036,7 +1146,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | **M0 技术验证** | 拉单接口已跑通（浏览器外免签名）；只读接口 第一轮验证 7 项已验证；打印协议已识别；取号/发货写接口待真实订单验证 | **部分完成** |
 | **M1 登录 + 基础数据 + 拉单** | 扫码登录、Cookie 导出、地址/模板/快递同步、订单入库 | 待开始 |
 | **M2 订单池 + 地址解密 + 取号** | 聚合界面、筛选勾选、批量取号 | 待开始 |
-| **M3 打印** | 官方组件 `ws://127.0.0.1:13999` 接通；PDF 兜底 | 待开始 |
+| **M3 打印** | 官方组件 `wss://localhost:13999` 接通；PDF 兜底 | 待开始 |
 | **M4 发货前检查 + 发货 + 对账** | `sendcheck`、`batchsend`、每日对账 | 待开始 |
 | **M5 多店聚合（只读）** | 售后 / 商品 / 库存 / 资金四类聚合服务与数据表 | 待开始 |
 | **M6 前端后台** | Arc 组件搭完整后台，九个页面（见 11.3） | 待开始 |
@@ -1064,11 +1174,11 @@ npx shadcn@latest add @uiarc-pro/<id>
 
 | 风险 | 影响 | 对策 |
 |---|---|---|
-| 写接口强制签名 | 取号/发货需分析 bdms SDK | 先做双对照验证；必要时启用 `signing/` 或降级浏览器渠道 |
+| 写接口强制签名 | 取号/发货需分析 bdms SDK | 先做双对照验证；必要时启用签名引擎或降级浏览器渠道 |
 | 平台风控关联判定 | 账号受限 | 限速、独立指纹、工作时段、操作留痕；异常即停 |
 | 官方打印组件接口变化 | 打印失败 | 保留 PDF 兜底（方案 B）与手动打印（方案 C） |
 | 地址解密接口变更 | 无法打印明文地址 | 保留原始密文；解密失败转 `exception` 并提示 |
-| 抖店后台改版 | 接口失效 | `channels/` 与 `signing/` 隔离，替换适配器 |
+| 抖店后台改版 | 接口失效 | `adapter/doudian/` 与 `adapter/doudian/signing/` 隔离，替换适配器 |
 | 登录频繁过期 | 运维负担 | 重登流程简化（一键弹窗）+ 到期提醒 |
 | 开发机无打印机/打印组件 | 无法本地验证打印 | 打印在出单机验证；开发期用 dry-run + PDF 预览 |
 
@@ -1083,16 +1193,16 @@ npx shadcn@latest add @uiarc-pro/<id>
 - [x] 确认 `a_bogus` / `msToken` / `verifyFp` 非只读接口鉴权必需（三组对照）
 - [x] 拉取待发货订单列表（含完整响应结构）
 - [x] 识别取号接口与请求体（`/api/order/batchFetchTrackingNos`）
-- [x] 识别发货接口与请求体（`/order/torder/batchsend`）
-- [x] 探明官方打印组件协议（`ws://127.0.0.1:13999`）
-- [x] 请求/响应样本落盘（`case/forensic/`、`case/notes/`）
-- [ ] 为真实订单取号（需待发货订单）
-- [ ] 执行真实发货回传（需一笔测试订单）
-- [ ] 确认 `send_type` 枚举值（真实发货请求接口记录）
-- [ ] 确认写接口是否强制签名
-- [ ] 在出单机验证打印组件
+- [x] 识别发货接口与请求体（`/api/order/batchDeliverGoodsByEES`，按运单号发货）
+- [x] 探明官方打印组件协议（`wss://localhost:13999`）
+- [x] 请求/响应样本落盘（`artifacts/`，不入库）
+- [x] 为真实订单取号（2026-11-25，运单号 `79209902836406`）
+- [x] 执行真实发货回传（2026-11-25，订单状态转「已发货」）
+- [x] 确认 `send_type` 枚举值（电子面单 = `"3"`）
+- [x] 确认写接口是否强制签名（批量备注 / 取号 / sendcheck / 发货 均不强制）
+- [ ] 在出单机验证打印组件（开发机已验证 `getPrinters`；真实热敏打印机待出单机验证）
 
-### 第一轮验证补充验证（2026-11-24 完成，详见 `case/notes/A-readonly-api-verified.md`）
+### 第一轮验证补充验证（2026-11-24 完成）
 
 - [x] 发货地址 / 面单模板 / 快递公司 三个基础数据接口的路径、方法与返回结构
 - [x] 收货地址解密接口的参数约定与明文返回
@@ -1105,7 +1215,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 
 ## 附录 A：接口清单（只读已验证 / 写接口待定）
 
-> 详细证据：`case/notes/M0-order-api.md`、`case/notes/M0-logistics-api.md`
+> 详细证据：`artifacts/`（本地留存，不入库）
 
 ### A.0 验证状态总览（2026-11-24）
 
@@ -1119,7 +1229,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 资金 | ✅ 待结算 / 账单 / 保证金 | — | ⚠️ 待结算 7 条；账单 0 条 |
 | 对账 | ✅ 基于订单列表 | — | ✅ 18 单 |
 | 店铺 | ✅ 画像 / 管理人 / 绑定账号 | — | ✅ |
-| 打印 | — | ⏳ 组件协议（ws://127.0.0.1:13999） | ❌ 需出单机 |
+| 打印 | — | ⏳ 组件协议（wss://localhost:13999） | ❌ 需出单机 |
 
 **仍未确认的三项（客观条件卡住，非技术难点）**：
 
@@ -1149,11 +1259,13 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 菜单 | GET | `/byteshop/menu/list/v2` | |
 | 登录校验 | GET | `/ecomauth/loginv1/session_check` | ⚠️ **不可用**：无 cookie 也返回 `check_code:0` |
 
-### A.2 写接口（全部待定，均未真实调用）
+### A.2 写接口（部分已验证）
 
-> ⚠️ **下面所有写接口都未验证**。路径来自只读代码/按钮文案识别，请求体结构未确认，是否强制签名未知。
-> 验证写接口时的必查项：
-> 1. 是否强制 `a_bogus` / `msToken` 签名（只读接口已确认不强制）
+> 批量备注、取号、发货前检查、发货（打单台）四项已于 2026-11-25 完成真实调用验证，
+> 请求体结构与响应见下方各小节。其余接口（订单页发货、改物流、售后处理等）仍待验证。
+>
+> 未验证接口的必查项：
+> 1. 是否强制 `a_bogus` / `msToken` 签名（已验证的 4 个写接口均不强制）
 > 2. 完整请求体字段（各字段的枚举/格式）
 > 3. 售后写操作是否需要详情接口返回的 `token` 字段
 > 4. 风控拦截的表现形式（错误码、是否需要二次验证）
@@ -1288,7 +1400,7 @@ Content-Type: application/json
 2. GET  /shopuser/power/getEbillAccountListByExpress ← 面单账户与网点（取 ebill_id / net_code）
 3. POST /api/order/sendcheck                         ← 发货前检查（含保证金/地址）
 4. POST /api/order/batchFetchTrackingNos             ← 取号
-5. 本地打印组件 ws://127.0.0.1:13999                 ← 打印（协议层可跳过）
+5. 本地打印组件 wss://localhost:13999                 ← 打印（协议层可跳过）
 ```
 
 ### A.2.3 发货前检查（已验证）

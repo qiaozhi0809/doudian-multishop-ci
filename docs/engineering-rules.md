@@ -122,7 +122,7 @@ backend/app/
 
 | 文件 | 行数 | 处理 |
 |---|---|---|
-| `docs/superpowers/specs/2026-11-03-...-design.md` | ~1790 | 超出 600 行硬上限 → 按附录拆成多文件（A~G 各自独立） |
+| `docs/architecture.md` | ~2100 | 超出 600 行硬上限 → 按附录拆成多文件（A~G 各自独立） |
 
 新增文档一律从第一天就按 600 行规划；存量文档拆分为独立任务，不阻塞功能开发。
 
@@ -227,7 +227,9 @@ CI 扫 import 图。
   1. 人工二次确认（界面 `hold-to-confirm` 或等价交互）
   2. 幂等键去重（`idempotency_key`）
   3. 完整记录请求/响应到审计日志
-- 写接口的签名要求未验证前，一律走 `adapter/browser` 兜底渠道，不得假设免签名
+- 签名要求**逐接口声明**，在 `adapter/doudian/endpoints.py` 标注：
+  - 已验证免签名（批量备注 / 取号 / sendcheck / 发货）→ 协议直连
+  - 未验证的 → 走 `adapter/browser` 兜底渠道，不得假设免签名
 - 演练模式（dry-run）下禁止发出任何写请求
 
 ### 8.4 数据口径
