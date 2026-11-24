@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.adapter.doudian.errors import EgressUnavailable
+from app.domain.errors import NotFound
 from app.service.egress import EgressConflict, EgressNotReady, EgressService
 from app.service.events import EventBus
 from app.shared.logging_setup import configure_logging
@@ -67,7 +68,7 @@ def test_set_egress_validates(env):
         env.svc.set_egress(sid, "proxy")
     with pytest.raises(ValueError):
         env.svc.set_egress(sid, "bogus")
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFound):
         env.svc.set_egress(999, "direct")
 
 

@@ -9,6 +9,7 @@ import sys
 from collections.abc import Callable
 
 from app.config import Settings
+from app.domain.errors import NotFound
 from app.service.auth import AuthService, PasswordRejected
 from app.store.db import DB_FILE_NAME, make_engine
 from app.store.migrate import upgrade_to_head
@@ -30,7 +31,7 @@ def reset_admin(username: str, settings: Settings, prompt: Callable[[str], str])
     except PasswordRejected as e:
         print(str(e), file=sys.stderr)
         return 1
-    except LookupError as e:
+    except NotFound as e:
         print(str(e), file=sys.stderr)
         return 1
     finally:

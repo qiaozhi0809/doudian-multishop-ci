@@ -9,6 +9,7 @@ from sqlalchemy import Engine
 from app.adapter.browser.login import LoginResult
 from app.adapter.doudian.client import ShopCredentials
 from app.adapter.doudian.errors import SessionExpired
+from app.domain.errors import NotFound
 from app.domain.session_health import health_from_expiry
 from app.service.events import SHOP_STATUS_CHANGED, EventBus
 from app.shared.secret_box import SecretBox
@@ -55,7 +56,7 @@ class SessionManager:
         )
         with self._engine.begin() as conn:
             if shop_store.get(conn, shop_id) is None:
-                raise LookupError(f"店铺不存在: {shop_id}")
+                raise NotFound(f"店铺不存在: {shop_id}", shop_id)
             session_store.save(conn, row, now_iso)
             shop_store.set_status(conn, shop_id, ACTIVE, now_iso)
         self._events.publish(SHOP_STATUS_CHANGED, {

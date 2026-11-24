@@ -11,6 +11,7 @@ from app.adapter.doudian.errors import (
     TransientError,
 )
 from app.api.errors import install_error_handlers
+from app.domain.errors import NotFound
 from app.service.egress import EgressConflict, EgressNotReady
 from app.service.shop_runner import ShopPaused
 
@@ -24,7 +25,7 @@ CASES = [
     (TransientError("x"), 503),
     (EgressUnavailable("x"), 503),
     (ParseError("x"), 502),
-    (LookupError("x"), 404),
+    (NotFound("x"), 404),
 ]
 
 
@@ -66,3 +67,27 @@ def test_unexpected_error_is_500_without_leaking():
     r = TestClient(app, raise_server_exceptions=False).get("/boom")
     assert r.status_code == 500
     assert "secret" not in r.text and r.json()["error"]["type"] == "InternalError"
+
+
+def test_key_error_is_500_not_404():
+    app = FastAPI()
+    install_error_handlers(app)
+
+    @app.get("/boom")
+    def boom():
+        return {}["missing"]  # 代码缺陷，不能被当成「不存在」
+
+    r = TestClient(app, raise_server_exceptions=False).get("/boom")
+    assert r.status_code == 500 and r.json()["error"]["type"] == "InternalError"
+
+
+def test_not_found_carries_shop_id():
+    app = FastAPI()
+    install_error_handlers(app)
+
+    @app.get("/boom")
+    def boom():
+        raise NotFound("店铺不存在: 9", 9)
+
+    r = TestClient(app).get("/boom")
+    assert r.status_code == 404 and r.json()["error"]["shop_id"] == 9

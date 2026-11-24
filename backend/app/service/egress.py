@@ -20,6 +20,7 @@ from app.domain.egress_rules import (
     parse_provider_line,
     validate_proxy_url,
 )
+from app.domain.errors import NotFound
 from app.service.egress_probe import FetchIp
 from app.service.events import SHOP_STATUS_CHANGED, EventBus
 from app.service.session_manager import ACTIVE, DISABLED, NEEDS_LOGIN
@@ -98,7 +99,7 @@ class EgressService:
             with self._engine.begin() as conn:
                 shop = shop_store.get(conn, shop_id)
                 if shop is None:
-                    raise LookupError(f"店铺不存在: {shop_id}")
+                    raise NotFound(f"店铺不存在: {shop_id}", shop_id)
                 if mode == "direct":
                     self._ensure_no_other_direct(conn, shop)
                 shop_store.set_egress(
@@ -215,7 +216,7 @@ class EgressService:
         with self._engine.connect() as conn:
             shop = shop_store.get(conn, shop_id)
         if shop is None:
-            raise LookupError(f"店铺不存在: {shop_id}")
+            raise NotFound(f"店铺不存在: {shop_id}", shop_id)
         return shop
 
     @staticmethod

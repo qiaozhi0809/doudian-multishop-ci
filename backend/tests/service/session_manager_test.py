@@ -3,6 +3,7 @@ import sqlalchemy as sa
 
 from app.adapter.browser.login import LoginResult
 from app.adapter.doudian.errors import SessionExpired
+from app.domain.errors import NotFound
 from app.service.events import EventBus
 from app.service.session_manager import SessionManager
 from app.shared.secret_box import DevKeyBox
@@ -90,7 +91,7 @@ def test_get_credentials_needs_login_raises(env):
 
 def test_unknown_shop(env):
     mgr, *_ = env
-    with pytest.raises(LookupError):
+    with pytest.raises(NotFound):
         mgr.save_login(999, _login_result())
     with pytest.raises(SessionExpired):
         mgr.get_credentials(999)

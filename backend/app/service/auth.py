@@ -16,6 +16,7 @@ from app.domain.auth_rules import (
     session_alive,
     validate_password,
 )
+from app.domain.errors import NotFound
 from app.store import admin_store, audit_store
 
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
@@ -170,7 +171,7 @@ class AuthService:
         with self._engine.begin() as conn:
             user = admin_store.get_user_by_name(conn, username)
             if user is None:
-                raise LookupError(f"管理员账号不存在: {username}")
+                raise NotFound(f"管理员账号不存在: {username}")
             admin_store.set_password(
                 conn, user["id"], self._hasher.hash(new_password), now.strftime(_ISO_FMT))
             admin_store.delete_user_sessions(conn, user["id"])

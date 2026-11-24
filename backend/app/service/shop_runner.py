@@ -15,6 +15,7 @@ from app.adapter.doudian.errors import EgressUnavailable, RiskBlocked, SessionEx
 from app.adapter.doudian.pacer import ShopPacer
 from app.adapter.doudian.transport import CurlTransport
 from app.domain.audit import CallRecord
+from app.domain.errors import NotFound
 from app.service.events import SHOP_STATUS_CHANGED, EventBus
 from app.service.scheduler import ShopScheduler
 from app.service.session_manager import SessionManager
@@ -104,7 +105,7 @@ class ShopRunner:
         with self._engine.connect() as conn:
             shop = shop_store.get(conn, shop_id)
         if shop is None:
-            raise LookupError(f"店铺不存在: {shop_id}")
+            raise NotFound(f"店铺不存在: {shop_id}", shop_id)
         if shop["paused_reason"]:
             raise ShopPaused(shop_id, shop["paused_reason"])
 
