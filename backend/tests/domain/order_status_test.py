@@ -14,7 +14,7 @@ def test_platform_status_known():
 
 def test_platform_status_unknown():
     # 未知值不在枚举中，调用方保留原始整数
-    assert 2 not in {s.value for s in PlatformOrderStatus}
+    assert 99 not in {s.value for s in PlatformOrderStatus}
     assert PLATFORM_FINAL_STATUSES == frozenset({3, 4, 5})
 
 
@@ -27,3 +27,8 @@ def test_tabs_and_local_status_are_separate_str_enums():
         "synced", "pending_label", "label_obtained", "printed",
         "shipped", "closed", "exception", "cancelled",
     }
+
+
+def test_stock_up_is_2_but_not_final():
+    assert PlatformOrderStatus.STOCK_UP == 2
+    assert 2 not in PLATFORM_FINAL_STATUSES

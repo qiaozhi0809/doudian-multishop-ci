@@ -17,12 +17,15 @@ class OrderTab(StrEnum):
 class PlatformOrderStatus(IntEnum):
     """数据字段 order_status（数字）。仅列已确认的值，其余值调用方保留原始整数。"""
 
+    STOCK_UP = 2  # 待发货
     SHIPPED = 3
     CLOSED = 4
     COMPLETED = 5
 
 
-PLATFORM_FINAL_STATUSES: frozenset[int] = frozenset(int(s) for s in PlatformOrderStatus)
+PLATFORM_FINAL_STATUSES: frozenset[int] = frozenset(
+    int(s) for s in PlatformOrderStatus if s is not PlatformOrderStatus.STOCK_UP
+)
 
 
 class LocalOrderStatus(StrEnum):

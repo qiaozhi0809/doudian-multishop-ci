@@ -58,7 +58,7 @@ class EbillAccountDTO:
     net_code: str
     net_name: str | None
     account_type: int | None
-    balance: int | None
+    balance: int | None  # 面单张数；-1 表示月结账户，不计张数
     is_default: bool
     raw: dict
 

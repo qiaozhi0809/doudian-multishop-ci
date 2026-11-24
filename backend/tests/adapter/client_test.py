@@ -77,13 +77,30 @@ async def test_tabcnt_fixed_params():
     assert p["tabcnt_version"] == "v1" and p["tab"] == "all"  # 固定参数不可被覆盖
 
 
-async def test_express_list_is_post_json_with_common_params_in_body():
+async def test_express_list_is_post_empty_json_with_common_params_in_url():
     env = Env([ok()])
     await env.client.call(ep.EXPRESS_LIST)
     req = env.transport.requests[0]
     assert req["method"] == "POST" and req["data"] is None
-    assert req["json"]["appid"] == 1 and req["json"]["__token"] == TOKEN
+    assert req["json"] == {}
+    assert req["params"]["__token"] == TOKEN and req["params"]["_bid"] == "ffa_order"
+
+
+async def test_common_in_body_for_other_json_endpoints():
+    other = ep.Endpoint("x", "POST", "/api/x", "ffa_order", "json")
+    env = Env([ok()])
+    await env.client.call(other, body={"a": 1})
+    req = env.transport.requests[0]
+    assert req["json"]["a"] == 1 and req["json"]["__token"] == TOKEN
     assert "__token" not in (req["params"] or {})
+
+
+async def test_address_list_fixed_params():
+    env = Env([ok()])
+    await env.client.call(ep.ADDRESS_LIST, params={"page": 1, "pageSize": 10})
+    p = env.transport.requests[0]["params"]
+    assert (p["page"], p["keyword"], p["pageSize"], p["sort"], p["source"]) == (
+        1, "", 500, 2, "send_deliver")
 
 
 @pytest.mark.parametrize("code", [0, "0", "100000", 100000])

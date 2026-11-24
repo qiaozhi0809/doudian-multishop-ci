@@ -105,6 +105,9 @@ class FxgClient:
         payload: dict[str, Any] | None = None
         if ep.body == "query":
             query = {**common, **params, **ep.fixed_params}
+        elif ep.common_in == "query":
+            query = {**common, **params}
+            payload = {**body, **ep.fixed_params}
         else:
             payload = {**body, **common, **ep.fixed_params}
         return await self._transport.request(
