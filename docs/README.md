@@ -28,6 +28,14 @@
 | [fund.md](api/fund.md) | 附录 F 资金 |
 | [reconcile.md](api/reconcile.md) | 附录 G 跨店对账逻辑 |
 
+## 实施计划（`superpowers/plans/`）
+
+| 文件 | 内容 |
+|---|---|
+| [2026-11-25-roadmap.md](superpowers/plans/2026-11-25-roadmap.md) | 总路线图：M1 ~ M7 范围、阻塞缺口、完成标准、分工 |
+| [2026-11-25-m1-backend.md](superpowers/plans/2026-11-25-m1-backend.md) | M1 后端任务级计划（14 个任务，TDD，含管理员登录与每店固定出口） |
+| [2026-11-25-m1-frontend.md](superpowers/plans/2026-11-25-m1-frontend.md) | M1 前端任务级计划（6 个任务，含登录页与路由守卫） |
+
 ## 其他
 
 | 文件 | 内容 |

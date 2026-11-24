@@ -78,7 +78,7 @@ backend/app/
 
 **禁令**：
 - `domain/` 内禁止 `import fastapi` / `import sqlalchemy` / `import curl_cffi` / 任何 IO
-- `api/` 内禁止直接 SQL，必须经 service
+- `api/` 内禁止直接 SQL，必须经 service（不得 import sqlalchemy 或 `app.store`）
 - `adapter/` 不写业务判断（不做「这单该不该发货」这类决策），只翻译外部世界
 - `store/` 内禁止业务判断（不能写 `if order.status == 'stock_up':`）
 
@@ -211,6 +211,8 @@ CI 扫 import 图。
 - 全局并发上限默认 3 个店，可配置
 - 请求间隔 300~1200ms 随机
 - 单店失败隔离：一店会话失效不得阻塞其他店
+- **每店固定出口**（design/backend.md 5.17）：该店所有请求（扫码浏览器、协议通道、浏览器兜底）必须走该店配置的出口；出口异常时暂停该店，**禁止退回直连**；禁止使用轮换代理池；禁止伪造设备指纹
+- 代理 URL 含账号密码，按凭证处理：加密存库，日志只记主机与端口
 
 ### 8.3 写操作
 

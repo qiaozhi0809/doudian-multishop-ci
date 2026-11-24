@@ -10,9 +10,15 @@
 - 多店查询用 `shop_ids` 参数（逗号分隔，省略 = 全部启用店铺）。
 - 错误统一结构：`{ "error": { "type": "BizRejected", "message": "...", "shop_id": 1, "detail": {...} } }`。
 - 跨店聚合结果每店附 `source: upstream | local_db` 与失败原因，单店失败不让整个请求失败。
+- **鉴权**：除 `/api/health` 与下表「登录」分组的前三个接口外，都需要管理员会话 Cookie `dd_admin`，否则 401（[backend.md](backend.md) 5.16）。
 
 | 分组 | 方法 + 路径 | 用途 |
 |---|---|---|
+| 登录 | `GET /api/auth/status` | `{setup_required, logged_in, username}`，前端据此决定进入初始化页、登录页还是后台 |
+| | `POST /api/auth/setup {username, password}` | 首次运行创建管理员；已有账号时 409 |
+| | `POST /api/auth/login {username, password}` | 成功设置 `dd_admin` Cookie；失败 401，锁定中 423 |
+| | `POST /api/auth/logout` | 删除当前会话 |
+| | `POST /api/auth/password {old_password, new_password}` | 改密，其他会话失效 |
 | 店铺与会话 | `GET /api/shops` | 店铺列表 + 会话健康 |
 | | `POST /api/shops` | 新增店铺（随后发起扫码） |
 | | `POST /api/shops/{id}/login` | 打开浏览器扫码 / 重登 |
@@ -20,11 +26,14 @@
 | | `POST /api/shops/{id}/sync-base` | 同步地址 / 模板 / 快递 / 面单账户 |
 | | `GET /api/shops/{id}/base` | 查看本店基础数据 |
 | | `PATCH /api/shops/{id}` | 改名、停用、切换通道、默认打印机 |
+| | `PUT /api/shops/{id}/egress {mode: direct\|proxy, proxy_url? \| paste?, expires_at?}` | 设置固定出口；`paste` 为代理商格式 `IP\|端口\|账号\|密码\|到期日`；只接受 `http(s)://`；修改已登录店铺的出口会使其转 `needs_login`（backend 5.17） |
+| | `POST /api/shops/{id}/egress/check[?accept_change=true]` | 经该出口检查连通并取出口 IP → `{egress_ip, egress_ip_pending, egress_status}`；`accept_change` 用于人工确认 IP 变化 |
+| | `POST /api/shops/{id}/resume` | 解除风控暂停（`paused_reason` 置空） |
 | 订单 | `GET /api/orders` | 跨店列表（筛选、排序、分页） |
 | | `GET /api/orders/counts` | 跨店 tab 计数 |
 | | `GET /api/orders/{id}` | 详情（含商品行、面单历史） |
 | | `POST /api/orders/sync` | 立即拉单 |
-| | `POST /api/orders/{id}/receiver` | 按需解密单个订单的收件人（用户查看时；不在取号链路，DEC-06；受额度与限速约束，见 [flows.md](flows.md) 7.3） |
+| | `POST /api/orders/{id}/receiver` | 按需解密单个订单的收件人，结果只返回给前端、不入库（用户查看时；不在取号链路，DEC-06；受额度与限速约束，见 [flows.md](flows.md) 7.3） |
 | 取号 | `POST /api/labels/preview` · `POST /api/labels/execute` | 两步提交取号（打面单） |
 | | `POST /api/labels/fetch-and-ship/preview` · `POST /api/labels/fetch-and-ship/execute` | 两步提交「打单并发货」（一体接口） |
 | | `POST /api/labels/void/preview` · `POST /api/labels/void/execute` | 两步提交作废 |

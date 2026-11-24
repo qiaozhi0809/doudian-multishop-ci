@@ -48,9 +48,23 @@ CREATE TABLE shop (
   channel       TEXT NOT NULL DEFAULT 'protocol',  -- protocol | browser
   status        TEXT NOT NULL DEFAULT 'needs_login',
                 -- active | needs_login | disabled
+  egress_mode   TEXT,                       -- direct | proxy；NULL = 未配置（不允许扫码，backend 5.17）
+  proxy_url     BLOB,                       -- SecretBox 加密的代理 URL（含账号密码）
+  proxy_display TEXT,                       -- 仅主机:端口，用于界面与日志
+  egress_ip     TEXT,                       -- 最近一次检查得到的出口 IP
+  egress_status TEXT NOT NULL DEFAULT 'unchecked',
+                -- unchecked | ok | unreachable | changed | duplicate
+  egress_checked_at TEXT,
+  egress_ip_pending TEXT,                   -- changed / duplicate 时检查到的新 IP，人工确认后转正
+  proxy_expires_at TEXT,                    -- 代理到期日（粘贴导入或手填）
+  paused_reason TEXT,                       -- 风控暂停原因（如 risk_blocked:602502151）；NULL = 未暂停
+  paused_at     TEXT,
   created_at    TEXT NOT NULL,
   updated_at    TEXT NOT NULL
 );
+-- 最多一家店直连；启用店铺的出口 IP 两两不同（服务层同时校验，backend 5.17）
+CREATE UNIQUE INDEX uq_shop_direct ON shop(egress_mode) WHERE egress_mode = 'direct' AND status != 'disabled';
+CREATE UNIQUE INDEX uq_shop_egress_ip ON shop(egress_ip) WHERE egress_ip IS NOT NULL AND status != 'disabled';
 
 -- ①-b 店铺画像（取自已验证的资质/管理员/绑定接口，随会话同步刷新）
 CREATE TABLE shop_profile (
@@ -101,9 +115,7 @@ CREATE TABLE orders (
   receiver_name   TEXT,                      -- 列表返回的脱敏值
   receiver_phone  TEXT,                      -- 列表返回的脱敏值
   receiver_region TEXT,
-  receiver_address TEXT,                     -- 解密后的明文地址（仅按需解密时写入；存储与清除见 gaps DM-11）
-  address_encrypted INTEGER NOT NULL DEFAULT 0,
-  address_decrypted_at TEXT,
+  -- 收件人明文不入库：按需解密的结果只在后端内存中保留到平台 expire_time（flows 7.3）
   amount_cents    INTEGER,
   pay_time        TEXT,
   create_time     TEXT,
@@ -181,6 +193,7 @@ CREATE TABLE tasks (
                                             -- | ship | recover_label | decrypt | reconcile | sync_base | sync_aggregate
   payload         TEXT,
   idempotency_key TEXT UNIQUE,              -- 规则见 backend 5.11；重试复用本行，不新建
+  created_by      TEXT,                     -- 发起人（管理员用户名 / 'system'）
   status          TEXT NOT NULL DEFAULT 'queued',
                   -- queued | running | verifying（结果不明，待核实，backend 5.12）| success | failed | cancelled
   attempts        INTEGER NOT NULL DEFAULT 0,
@@ -196,6 +209,7 @@ CREATE TABLE audit_log (
   id            INTEGER PRIMARY KEY,
   shop_id       INTEGER,
   task_id       INTEGER,
+  actor         TEXT,                       -- 操作人（管理员用户名）；系统定时任务为 'system'
   action        TEXT NOT NULL,
   req_summary   TEXT,
   resp_summary  TEXT,
@@ -217,6 +231,27 @@ CREATE TABLE reconcile_findings (
   detail      TEXT,
   resolved    INTEGER NOT NULL DEFAULT 0
 );
+
+-- ㉑ 本机管理员（backend 5.16；MVP 只允许一行）
+CREATE TABLE admin_user (
+  id              INTEGER PRIMARY KEY,
+  username        TEXT NOT NULL UNIQUE,
+  password_hash   TEXT NOT NULL,              -- argon2id
+  failed_attempts INTEGER NOT NULL DEFAULT 0,
+  locked_until    TEXT,
+  password_changed_at TEXT NOT NULL,
+  created_at      TEXT NOT NULL
+);
+
+-- ㉒ 管理员会话（库里只存令牌的 SHA-256）
+CREATE TABLE admin_session (
+  token_hash    TEXT PRIMARY KEY,
+  user_id       INTEGER NOT NULL REFERENCES admin_user(id) ON DELETE CASCADE,
+  created_at    TEXT NOT NULL,
+  last_seen_at  TEXT NOT NULL,
+  expires_at    TEXT NOT NULL               -- 创建时间 + 7 天；空闲 12 小时另按 last_seen_at 判断
+);
+CREATE INDEX idx_admin_session_user ON admin_session(user_id);
 
 -- ⑨ 配置
 CREATE TABLE settings (
@@ -409,7 +444,7 @@ CREATE TABLE margin_account (
    `uq_waybill_no` 再从数据库层防止同一运单入库两次。
 6. `raw_json` 保留完整平台报文，用于排障与重放解析。
 7. 地址、模板、快递均按 `(shop_id, code)` 唯一，**禁止跨店复用**。
-8. 取号与官方组件打印**不依赖**收货地址解密（DEC-06）；`receiver_address` 为空的订单照常进入取号批次。
+8. 取号与官方组件打印**不依赖**收货地址解密（DEC-06）。收件人明文**不写入数据库**，只在内存中短暂缓存。
 
 ### 6.4 只读聚合与存储说明（DM-06 ~ DM-09）
 

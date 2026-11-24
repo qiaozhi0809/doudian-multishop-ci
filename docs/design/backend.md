@@ -12,7 +12,7 @@
 
 | 层 | 模块 | 职责 |
 |---|---|---|
-| `api/` | `shop` `order` `label` `print` `shipping` `remark` `task` `event` `aftersale` `catalog` `fund` `reconcile` `audit` `setting` | 路由 + pydantic I/O schema，只调 service |
+| `api/` | `auth` `shop` `order` `label` `print` `shipping` `remark` `task` `event` `aftersale` `catalog` `fund` `reconcile` `audit` `setting` | 路由 + pydantic I/O schema，只调 service |
 | `service/` | `session_manager` `base_data` `order_sync` `labeling` `printing` `shipping` `reconcile` `aftersale` `catalog` `fund` `scheduler` | 业务编排、事务、状态机推进 |
 | `adapter/doudian/` | `client` `endpoints` `bid` `error_codes` `enums` `signing/` | 抖店 HTTP 协议的唯一出口 |
 | `adapter/browser/` | `login` `channel` `page_print` | Playwright：扫码登录、兜底 fetch、借页面打印 |
@@ -32,9 +32,11 @@
 | 浏览器通道（扫码 / 需签名接口 / 借页面打印） | 每店持久化用户目录 `data/profiles/<shop_id>/`（`launch_persistent_context` + 系统 Edge） | 浏览器自身的完整登录态与指纹；登录态和指纹天然隔离，重登只需重开该目录 |
 | 协议通道（curl_cffi 直连） | `session` 表（[data-model.md](data-model.md) 6.2 ②），DPAPI 加密 | `context.cookies()` 导出的**全量** cookie（含 HttpOnly）、`__token`、设备参数 |
 
+两个通道都经该店的固定出口发出（5.17）。
+
 **行为**：
 
-- 首次添加店铺：打开该店的浏览器用户目录，人工扫码；登录成功后导出 cookie 与 `__token` 写入 `session` 表。
+- 首次添加店铺：先配置并检查该店出口（5.17），再打开该店的浏览器用户目录（经同一出口），人工扫码；登录成功后导出 cookie 与 `__token` 写入 `session` 表。
 - 探测：每 30 分钟 `GET /api/order/tabcnt`（未登录返回 `code:10008`）；协议响应若下发新 cookie 则回写（⏳ 是否会下发未验证，gaps API-02）。
 - 会话失效 → 标记 `needs_login`，暂停该店队列并通知界面；重登后从断点继续。
 
@@ -368,4 +370,52 @@ class Signer(Protocol):
 
 ### 5.15 实时推送
 
-`GET /api/events` 用 SSE 推送：任务进度、店铺会话状态变化、打印回执、告警。前端收到后让对应查询失效重取。不用 WebSocket，因为只需服务端单向推送。
+`GET /api/events` 用 SSE 推送：任务进度（`sync_progress`）、店铺状态变化（`shop_status_changed`，含会话、出口、风控暂停）、扫码失败（`shop_login_failed`）、打印回执、告警。前端收到后让对应查询失效重取。不用 WebSocket，因为只需服务端单向推送。
+
+### 5.16 本机管理员登录（`service/auth.py`、`api/auth.py`）
+
+**定位**：防止出单机上其他人直接打开后台操作店铺。只在本机使用，不做多租户、角色权限或对外授权（overview 2.2）。
+
+| 项 | 规则 |
+|---|---|
+| 账号 | MVP 只有**一个管理员账号**（`admin_user` 表支持多行，便于以后扩展，但界面只允许一个） |
+| 首次运行 | 没有任何账号时，前端进入「创建管理员」页；`POST /api/auth/setup` 只在账号数为 0 时可用，之后返回 409 |
+| 密码 | 至少 8 位；用 **argon2id** 哈希存储（`argon2-cffi`），不存明文、不可逆 |
+| 会话 | 登录成功生成 32 字节随机令牌，库里只存其 SHA-256；Cookie 名 `dd_admin`，`HttpOnly`、`SameSite=Strict`、`Path=/`。空闲 12 小时或自登录起 7 天过期 |
+| 防暴力尝试 | 同一账号连续 5 次失败后锁定 5 分钟；失败提示不区分「账号不存在」和「密码错误」 |
+| 鉴权范围 | 除 `/api/health`、`/api/auth/status`、`/api/auth/setup`、`/api/auth/login` 外，所有 `/api/*`（含 SSE `/api/events`）都要求有效会话，否则 401 |
+| Host 校验 | 只接受 `Host` 为 `127.0.0.1:8787` 或 `localhost:8787` 的请求（开发时加 Vite 代理端口），防止 DNS 重绑定让外部网页调用本机接口 |
+| 改密 | 已登录时 `POST /api/auth/password`（需旧密码）；改密后该账号的其他会话全部失效 |
+| 忘记密码 | 只能在出单机命令行执行 `python -m app.cli reset-admin` 重设，不提供网页找回 |
+| 审计 | 登录成功 / 失败、登出、改密写入 `audit_log`（`action=auth.*`）；写操作的 `audit_log` / `tasks` 记录操作人 `actor` |
+
+### 5.17 每店独立环境：浏览器 profile + 固定独立出口（`service/egress.py`）
+
+**决定（DEC-11，所有者）**：每家店一个独立浏览器 profile，加一个**固定、独立**的出口 IP。
+
+| 项 | 规则 |
+|---|---|
+| 浏览器 profile | 每店一个持久化用户目录 `data/profiles/<shop_id>/`（5.1），cookie 与登录态互不串号 |
+| 出口方式 | `direct`（商家自有宽带直连）或 `proxy`（独享静态 IP）；**不使用轮换代理池** |
+| 代理协议 | 一律按 `http://账号:密码@主机:端口` 配置。Chromium / Edge 不支持带账号密码的 SOCKS5，扫码浏览器无法使用；带凭证的 `socks5://` 在配置时即拒绝 |
+| 粘贴导入 | 出口设置可直接粘贴代理商格式 `IP\|端口\|账号\|密码\|到期日`，解析为 `http://` URL 与到期日 |
+| 代理到期 | 记录 `proxy_expires_at`；到期前 7 天提醒；到期后该店暂停（同「出口不通」）。续费后 IP 若变化按「出口 IP 变化」处理 |
+| 独立性 | 以**实际出口 IP** 判重：启用中的店铺两两不同。直连本身也是一个 IP，所以**最多一家店**用 `direct` |
+| 一致性 | 同一家店的扫码浏览器、协议通道（curl_cffi）、浏览器兜底通道**都走同一出口** |
+| 先配出口再扫码 | 店铺出口未配置或未通过检查时，不允许扫码登录；会话在哪个出口建立，就只在那个出口使用 |
+| 更换出口 | 改代理地址 → 清空 `egress_ip`、状态复位为 `unchecked`，该店转 `needs_login`，必须重新扫码 |
+| 出口检查 | 经该出口请求 IP 回显地址（设置项 `egress_echo_url`，默认 `https://api.ipify.org`）。**只有结果为 `ok` 时才写入 `egress_ip`**；`changed` / `duplicate` 时新 IP 写入 `egress_ip_pending`。时机：配置后、扫码前、每轮该店任务开始前（同一轮内缓存 10 分钟） |
+| 出口不通 | 该店 `egress_status=unreachable`，暂停该店全部请求并提示；**绝不自动退回直连** |
+| 出口 IP 变化 | 与 `egress_ip` 不同 → `egress_status=changed`，新 IP 存 `egress_ip_pending`，暂停该店；人工确认后 pending 转正、状态 `ok` |
+| 出口 IP 重复 | 与其他启用店铺的 `egress_ip` 相同 → **`created_at` 较晚**的那家店 `egress_status=duplicate`（新 IP 存 `egress_ip_pending`），暂停 |
+| 代理凭证 | 代理 URL（含账号密码）与 cookie 一样用 `SecretBox` 加密存库；日志只显示主机与端口 |
+| 设备参数 | 不伪造。各店 profile 使用本机真实浏览器参数；扫码时记录该浏览器的 `User-Agent` 与 `sec-ch-ua*` 头，协议通道发请求时使用同一组值（参数前后不一致本身就是风控信号） |
+| 统一入口 | 凡是会请求抖店的操作（定时任务、手动同步 / 探测 / 计数、扫码），都经 `ShopRunner.run`：先出口检查，再进该店串行队列（5.7） |
+
+**风控暂停**：任一请求遇到 `RiskBlocked`（[flows.md](flows.md) 第 8 节）→ 该店写入 `paused_reason`，`ShopRunner` 跳过该店，
+界面提示人工检查；人工点「恢复」（`POST /api/shops/{id}/resume`）后清除。出口异常与风控暂停都只影响该店。
+
+**数据去向**：配置代理的店铺，请求经代理商隧道转发（HTTPS CONNECT，代理商看不到内容，只看到目标域名）；
+cookie、订单数据等仍只存本机。
+
+**平台规则风险**：每店独立出口的作用之一是降低店铺被平台关联判定的概率。是否符合平台规则由所有者判断并承担（gaps DEC-11）。
