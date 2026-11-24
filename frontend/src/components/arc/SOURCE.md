@@ -17,5 +17,6 @@
 | `motion-tokens.ts` | Free | `uiarc/registry/motion-tokens.ts` |
 | `lib/arc-provider.tsx`、`lib/motion-tokens.ts`、`lib/use-copy-feedback.ts`、`lib/use-today.ts` | Free | `uiarc/lib/` |
 | `lib/clamp.ts` | Pro | `uiarc-pro/lib/clamp.ts` |
+| `input/`、`password-field/`、`button/`、`alert/`、`card/`、`skeleton/` | Free | `uiarc/registry/components/<id>/`（Task 3：登录 / 初始化表单） |
 
-随任务增加，在此表追加。
+`card` 依赖 npm 包 `@radix-ui/react-dialog`。随任务增加，在此表追加。

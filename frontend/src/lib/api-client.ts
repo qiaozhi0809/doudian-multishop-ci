@@ -51,6 +51,13 @@ async function toApiError(res: Response): Promise<ApiError> {
   return new ApiError({ type: "HttpError", message: res.statusText || `HTTP ${res.status}`, status: res.status });
 }
 
+let unauthorizedHandler: (() => void) | null = null;
+
+/** 会话过期（任意业务请求返回 401）时的全局处理，由 App 注册；`/api/auth/*` 的 401 不触发。 */
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
 async function request<T>(method: string, path: string, query?: Query, body?: unknown): Promise<T> {
   const init: RequestInit = { method, headers: {} };
   if (body !== undefined) {
@@ -63,7 +70,11 @@ async function request<T>(method: string, path: string, query?: Query, body?: un
   } catch {
     throw new ApiError({ type: "NetworkError", message: "无法连接本地服务，请确认后端已启动", status: 0 });
   }
-  if (!res.ok) throw await toApiError(res);
+  if (!res.ok) {
+    const error = await toApiError(res);
+    if (res.status === 401 && !path.startsWith("/api/auth/")) unauthorizedHandler?.();
+    throw error;
+  }
   if (res.status === 204) return undefined as T;
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;

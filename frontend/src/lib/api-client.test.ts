@@ -1,4 +1,4 @@
-import { ApiError, api } from "./api-client";
+import { ApiError, api, setUnauthorizedHandler } from "./api-client";
 
 function mockFetch(response: Response | Error) {
   const fn = vi.fn<typeof fetch>(async () => {
@@ -21,7 +21,10 @@ const failure = (p: Promise<unknown>) =>
     (e: unknown) => e as ApiError,
   );
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  setUnauthorizedHandler(null);
+});
 
 describe("api client", () => {
   it("api_error_from_envelope", async () => {
@@ -91,6 +94,33 @@ describe("api client", () => {
       setup_required: false,
       logged_in: true,
       username: "admin",
+    });
+  });
+
+  describe("401 处理", () => {
+    it("非 /api/auth/ 请求返回 401 时触发 onUnauthorized，并仍抛 ApiError", async () => {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      mockFetch(json({ error: { type: "Unauthorized", message: "请先登录" } }, 401));
+      const err = await failure(api.get("/api/shops"));
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(err.status).toBe(401);
+    });
+
+    it("/api/auth/* 的 401 不触发（登录失败由调用方自己处理）", async () => {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      mockFetch(json({ error: { type: "Unauthorized", message: "x" } }, 401));
+      await failure(api.post("/api/auth/login", { username: "a", password: "b" }));
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("其他状态码不触发", async () => {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      mockFetch(json({ error: { type: "SessionExpired", message: "x" } }, 409));
+      await failure(api.get("/api/shops"));
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });
