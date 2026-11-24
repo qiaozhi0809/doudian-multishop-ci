@@ -9,8 +9,13 @@
 
 | 文档 | 内容 |
 |---|---|
-| [架构与设计](docs/architecture.md) | 产品定位、模块划分、数据模型、接口规范、里程碑 |
+| [文档索引](docs/README.md) | 全部文档的目录与章节对照 |
+| [总体设计](docs/design/overview.md) | 定位、范围、架构、技术栈、里程碑、验收、风险 |
+| [后端](docs/design/backend.md) · [数据模型](docs/design/data-model.md) · [核心流程](docs/design/flows.md) | 模块设计、表结构、取号 / 打印 / 发货 / 对账流程 |
+| [前端](docs/design/frontend.md) · [本地 API](docs/design/local-api.md) · [经营仪表盘](docs/design/dashboard.md) | 界面、接口草案、多店经营指标（草案） |
+| [抖店接口](docs/api/README.md) | 已验证的只读 / 写接口与各页面字段映射 |
 | [工程规范](docs/engineering-rules.md) | 分层结构、命名、文件长度、硬编码、提交守则 |
+| [缺口清单](docs/gaps.md) | 待验证接口、文档矛盾、数据模型缺口、待拍板决策（可认领） |
 
 ## 技术栈
 
@@ -18,25 +23,26 @@
 |---|---|
 | 前端 | React 19 + TypeScript + Vite + Tailwind CSS 4 + Arc 组件库 |
 | 后端 | Python 3.12 + FastAPI + curl_cffi |
-| 存储 | SQLite（WAL） |
+| 存储 | SQLite（WAL）+ SQLAlchemy Core + Alembic |
 | 打印 | 抖店官方打印组件（本地 WebSocket） |
-| 登录 | Playwright（首次扫码，之后走协议） |
+| 登录 | Playwright + 系统 Edge（首次扫码，之后走协议） |
 
 ## 模块范围
 
 **已定义（只读）**
-- 订单：列表、筛选、状态计数、地址解密
+- 订单：列表、筛选、状态计数、按需地址解密
 - 售后：列表、详情、状态计数、待办队列
 - 商品 / 库存：列表、计数、库存概览
 - 资金：待结算、账单、保证金
 - 跨店对账：快照比对、三类异常
+- 经营仪表盘：多店订单量、销售额、售后率、出单、排行（草案）
 
 **已定义（写操作）**
-- 批量备注、取号、发货前检查、发货、取号并发货
+- 已验证：批量备注、取号、发货前检查、发货、取号并发货、面单作废、改物流
 
 ## 状态
 
-设计阶段。接口规范已完成，实现待开始。
+设计阶段。主链路接口已用测试单验证，剩余缺口见 [docs/gaps.md](docs/gaps.md)；实现待开始。
 
 ## 许可
 
