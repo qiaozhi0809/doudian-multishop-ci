@@ -6,6 +6,8 @@ on:
 
 jobs:
   backend-linux:
+    # 主仓库私有且 Actions 因账单无法启动，只在公开 CI 镜像上运行（CLAUDE.md）
+    if: github.repository == 'qiaozhi0809/doudian-multishop-ci'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +28,8 @@ jobs:
           bash scripts/ci/check-backend-layers.sh
 
   backend-windows:
+    # 主仓库私有且 Actions 因账单无法启动，只在公开 CI 镜像上运行（CLAUDE.md）
+    if: github.repository == 'qiaozhi0809/doudian-multishop-ci'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
