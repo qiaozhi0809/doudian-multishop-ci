@@ -1770,9 +1770,45 @@ Content-Type: application/json
 
 `is_tracking_no_and_logistics_company_match` 是可选校验，自行寄件场景有用。
 
-> ⏳ **待补（gaps API-17）**：第 3 步 `query_added_services_and_product_types` 只记了用途，
-> 缺请求体与响应。一体接口里的 `added_services` 与 `transport.expType`（产品类型）可能来自这里，
-> 需确认是否为必经步骤、取值怎么传。
+**第 3 步 `query_added_services_and_product_types`（2026-11-25 实测）**：
+
+```
+POST /api/order/query_added_services_and_product_types
+Content-Type: application/json
+
+{"logistics_company_code":"zhongtong","shop_order_ids":["<shop_order_id>"],
+ "appid":1,"__token":"...","_bid":"ffa_order","aid":4272,"_lid":"..."}
+```
+
+响应：
+
+```json
+{"code":0,"data":{
+  "added_services": [],
+  "logistics_product": [{
+    "param": "expType", "paramName": "产品类型",
+    "values": [
+      {"name": "普快", "value": "defaultProductType", "hover_text": "", "code": ""},
+      {"name": "中通标快(原尊享)", "value": "SVC-VIP", "hover_text": "", "code": ""},
+      {"name": "中通好快(原标快)", "value": "SVC-TIMING-STANDARD", "hover_text": "", "code": ""},
+      {"name": "中通飞快(原特快)", "value": "SVC-TIMING-HIGH", "hover_text": "", "code": ""}
+    ],
+    "selectedValue": "defaultProductType", "isRequire": 0
+  }],
+  "tips": [], "dynamic_fields": null
+}}
+```
+
+**关键结论**：
+
+1. **参数**：`logistics_company_code`（快递编码）+ `shop_order_ids`（订单号数组）+ 公共参数
+2. **`logistics_product[].selectedValue`** 就是取号/一体接口里
+   `transport: {"expType": "<selectedValue>"}` 的取值来源 ——
+   默认 `defaultProductType`（普快）
+3. `added_services` 是该快递可用的增值服务列表（本例为空），
+   一体接口的 `added_services: []` 与之对应
+4. `isRequire: 0` 表示该字段非必填
+5. `dynamic_fields` 用于特殊服务的动态参数（本例为 null）
 
 ### A.2.8 重新发货 / 改物流（已验证）
 
