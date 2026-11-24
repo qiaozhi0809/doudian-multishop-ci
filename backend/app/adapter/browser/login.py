@@ -10,14 +10,16 @@ import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
-from playwright.async_api import Request, async_playwright
+from playwright.async_api import async_playwright
 
 from app.adapter.doudian.endpoints import BASE_URL
 
 ORDER_PAGE_URL = BASE_URL + "/ffa/morder/order/list"
 SESSION_LIFETIME = timedelta(days=60)
+LOAD_WAIT_MS = 10_000
 _HOST = urlparse(BASE_URL).hostname
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 # 协议通道要复用的设备请求头（规范名）
@@ -68,37 +70,68 @@ def device_headers_from(raw: dict[str, str]) -> dict[str, str]:
     return {name: lower[name.lower()] for name in _DEVICE_HEADERS if name.lower() in lower}
 
 
-async def scan_login(
-    profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = 300
-) -> LoginResult:
-    """打开订单页等待人工扫码。超时抛 TimeoutError。"""
+class LoginCancelled(Exception):
+    """用户在扫码完成前关闭了浏览器窗口。"""
+
+
+async def await_login(
+    ctx: Any, page: Any, timeout_s: float
+) -> tuple[str, dict[str, str], list[dict]]:
+    """在已打开的 context / page 上等待登录成功，返回 (token, 设备头, 完整 cookie 列表)。
+
+    超时抛 TimeoutError；窗口被关闭抛 LoginCancelled。
+    """
     loop = asyncio.get_running_loop()
     found: asyncio.Future[tuple[str, dict[str, str]]] = loop.create_future()
     tasks: set[asyncio.Task] = set()  # 持有引用，防止任务被回收
 
-    async def capture(req: Request, token: str) -> None:
+    async def capture(req: Any, token: str) -> None:
         if not found.done():
             found.set_result((token, device_headers_from(await req.all_headers())))
 
-    def on_request(req: Request) -> None:
+    def on_request(req: Any) -> None:
         token = extract_token(req.url)
         if token and urlparse(req.url).hostname == _HOST and not found.done():
             task = asyncio.ensure_future(capture(req, token))
             tasks.add(task)
             task.add_done_callback(tasks.discard)
 
+    def on_close(*_: Any) -> None:
+        if not found.done():
+            found.set_exception(LoginCancelled("浏览器已关闭，扫码登录取消"))
+
+    ctx.on("request", on_request)
+    ctx.on("close", on_close)
+    try:
+        await page.goto(ORDER_PAGE_URL)
+    except Exception:
+        if found.done() and found.exception() is not None:
+            raise found.exception() from None
+        raise
+    token, headers = await asyncio.wait_for(found, timeout_s)
+    try:
+        await page.wait_for_load_state("load", timeout=LOAD_WAIT_MS)
+    except Exception:  # noqa: BLE001 - 页面没加载完也继续取 cookie
+        pass
+    return token, headers, await ctx.cookies()
+
+
+async def scan_login(
+    profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = 300
+) -> LoginResult:
+    """打开订单页等待人工扫码。超时抛 TimeoutError，关窗抛 LoginCancelled。"""
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context(
             str(profile_dir), channel=channel, headless=False, proxy=playwright_proxy(proxy),
         )
         try:
-            ctx.on("request", on_request)
             page = ctx.pages[0] if ctx.pages else await ctx.new_page()
-            await page.goto(ORDER_PAGE_URL)
-            token, headers = await asyncio.wait_for(found, timeout_s)
-            cookies = await ctx.cookies()
+            token, headers, cookies = await await_login(ctx, page, timeout_s)
         finally:
-            await ctx.close()
+            try:
+                await ctx.close()
+            except Exception:  # noqa: BLE001 - 用户已关窗时 close 会报错
+                pass
     return LoginResult(cookies, token, session_expiry(cookies, datetime.now(UTC)), headers)
 
 
