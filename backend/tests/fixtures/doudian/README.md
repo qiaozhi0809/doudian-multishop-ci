@@ -17,7 +17,7 @@
 | `tabcnt.json` | `GET /api/order/tabcnt?tabcnt_version=v1&tab=all` | 状态计数 |
 | `searchlist.json` | `GET /api/order/searchlist?tab=all&page=0&pageSize=10&order=desc&order_by=create_time` | 1 单，`order_status=4`（已关闭）、`sku_id=0`、有退款售后 |
 | `searchlist_by_order_id.json` | 同上加 `order_status=&order_id=<单号>` | 按单号补查 |
-| `searchlist_stock_up.json` | `tab=stock_up&order_status=stock_up&scene=1` | 1 单待发货：`order_status=2`、`sku_id=0` 且 `sku_id_str` 为空、无 `combine_id`、商品规格两项 |
+| `searchlist_stock_up.json` | `tab=stock_up&order_status=stock_up&scene=1` | 1 单待发货：`order_status=2`、`sku_id=0` 且 `sku_id_str` 为空、无 `combine_id`、商品规格两项。**这是「源头好货」供应商代发单**，商家不能发货，`operation_actions` 为空数组（gaps API-28） |
 | `searchlist_stock_up_empty.json` | 同上 | 待发货为空 |
 | `address_list.json` | `GET /shopuser/tshopuser/getAfterSaleList?page=1&keyword=&pageSize=500&sort=2&source=send_deliver` | 1 个默认发货地址（`is_send_default=1`） |
 | `template_list.json` | `GET /shopuser/power/searchTemplates` | 按快递分组：`parentTempList` / `customTempList` / `publicTempList` |
@@ -27,6 +27,8 @@
 所有请求的 `_bid` 均为 `ffa_order`。
 
 ## 尚未覆盖（需有订单的店铺补抓）
+
+- 商家自发的待发货订单（对照 `operation_actions` 与代发单的差异）
 
 - 已发货订单（`order_status=3`）、一单多商品
 - 取号所需的 `combine_id` 与实际 `sku_id`：订单列表（含打单发货页的列表请求）都不返回，需在打单弹窗打开时抓取（gaps API-04）
