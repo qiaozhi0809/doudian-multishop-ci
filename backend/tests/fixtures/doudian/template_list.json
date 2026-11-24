@@ -1,0 +1,79 @@
+{
+  "errno": 0,
+  "st": 0,
+  "msg": "",
+  "code": 0,
+  "data": {
+    "list": [
+      {
+        "companyCode": "jd",
+        "companyName": "京东物流(常用)",
+        "iconUrl": "https://lf3-cm.ecombdstatic.com/obj/ecom-logistics-track/cc4ab7862bd197a8be92a049705dfad7",
+        "parentTempList": [
+          {
+            "parentTempCode": "jd_76_130",
+            "parentTempName": "京东-一联（76*130）",
+            "isCanEdit": 0,
+            "templateUrl": "https://lf3-cm.ecombdstatic.com/obj/logistics-davinci/template/gray/1028/jd_76_130.png",
+            "templateWidth": 76,
+            "templateHeight": 130,
+            "templateType": 1
+          }
+        ],
+        "customTempList": [
+          {
+            "customTempCode": "C1lwrn575pfaq2",
+            "customTempName": "通天塔",
+            "parentTempName": "京东-一联（76*130）",
+            "description": "",
+            "parentTemplateCode": "jd_76_130",
+            "parentTempCode": "jd_76_130",
+            "templateVersion": 2,
+            "templateImg": "https://lf3-cm.ecombdstatic.com/obj/logistics-davinci/template/gray/1028/jd_76_130.png",
+            "height": 700,
+            "width": 409.23,
+            "customArea": {
+              "top": 522.31,
+              "left": 0,
+              "width": 409.23,
+              "height": 129.23
+            },
+            "templateUrl": "https://lf3-cm.ecombdstatic.com/obj/logistics-davinci/template/gray/1028/jd_76_130.png",
+            "templateWidth": 76,
+            "templateHeight": 130,
+            "templateType": 1
+          }
+        ],
+        "publicTempList": [
+          {
+            "customTempCode": "jd_76_130",
+            "customTempName": "【默认】京东-一联（76*130）",
+            "parentTempName": "京东-一联（76*130）",
+            "description": "",
+            "parentTemplateCode": "jd_76_130",
+            "parentTempCode": "jd_76_130",
+            "templateVersion": 0,
+            "templateImg": "https://lf3-cm.ecombdstatic.com/obj/logistics-davinci/template/gray/1028/jd_76_130.png",
+            "height": 700,
+            "width": 409.23,
+            "customArea": {
+              "top": 522.31,
+              "left": 0,
+              "width": 409.23,
+              "height": 129.23
+            },
+            "templateUrl": "",
+            "templateWidth": 76,
+            "templateHeight": 130,
+            "templateType": 1
+          }
+        ]
+      }
+    ],
+    "total": 1
+  },
+  "page": 0,
+  "total": 0,
+  "size": 0,
+  "total_page": 0
+}

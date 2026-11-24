@@ -1,0 +1,25 @@
+{
+  "errno": 0,
+  "st": 0,
+  "msg": "",
+  "code": 0,
+  "data": {
+    "accounts": [
+      {
+        "partnerId": "ACCOUNT_PLACEHOLDER",
+        "settleType": 0,
+        "subscribeAddress": "<详细地址>",
+        "balance": -1,
+        "isDefault": false,
+        "createTime": 1774763741,
+        "accountType": 1,
+        "monthlyAccountOrNetCode": "ACCOUNT_PLACEHOLDER",
+        "eBillId": 14855496
+      }
+    ],
+    "total": 1
+  },
+  "page": 0,
+  "total": 0,
+  "size": 0
+}
