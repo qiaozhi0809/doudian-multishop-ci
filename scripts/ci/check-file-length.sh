@@ -15,6 +15,7 @@ check() { # <limit> <file>
 
 while IFS= read -r f; do
   case "$f" in
+    frontend/src/lib/api-types.ts | frontend/src/components/arc/*) ;;  # 生成文件与第三方源码不计
     */index.tsx) check 80 "$f" ;;
     *.py) check 400 "$f" ;;
     *.ts | *.tsx) check 300 "$f" ;;
