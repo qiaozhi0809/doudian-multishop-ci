@@ -30,7 +30,7 @@
 
 - 商家自发的待发货订单（对照 `operation_actions` 与代发单的差异）
 
-- 已发货订单（`order_status=3`）、一单多商品
+- 已发货订单（`order_status=3`）、一单多商品（含数量大于 1 的商品行：`pay_amount` 是单价还是行合计，`price_cents` 取的就是它）
 - 取号所需的 `combine_id` 与实际 `sku_id`：订单列表（含打单发货页的列表请求）都不返回，需在打单弹窗打开时抓取（gaps API-04）
 - 网点型快递（如中通）的面单账户：字段是否为 `netCode` / `netName`，`balance` 是否为张数
 - 多个发货地址、非默认地址

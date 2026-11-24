@@ -32,3 +32,4 @@ def test_tabs_and_local_status_are_separate_str_enums():
 def test_stock_up_is_2_but_not_final():
     assert PlatformOrderStatus.STOCK_UP == 2
     assert 2 not in PLATFORM_FINAL_STATUSES
+    assert PLATFORM_FINAL_STATUSES == {3, 4, 5}

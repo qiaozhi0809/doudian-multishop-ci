@@ -10,7 +10,7 @@ class OrderItemDTO:
     product_name: str | None
     sku_spec: str | None
     quantity: int
-    price_cents: int | None
+    price_cents: int | None  # 取商品行 pay_amount；数量大于 1 时是单价还是行合计待样本确认
     sku_id: str | None
 
 

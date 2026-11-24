@@ -23,9 +23,12 @@ class PlatformOrderStatus(IntEnum):
     COMPLETED = 5
 
 
-PLATFORM_FINAL_STATUSES: frozenset[int] = frozenset(
-    int(s) for s in PlatformOrderStatus if s is not PlatformOrderStatus.STOCK_UP
-)
+# 显式列举：新增非终态（如待支付）时不会被误算成终态
+PLATFORM_FINAL_STATUSES: frozenset[int] = frozenset({
+    int(PlatformOrderStatus.SHIPPED),
+    int(PlatformOrderStatus.CLOSED),
+    int(PlatformOrderStatus.COMPLETED),
+})
 
 
 class LocalOrderStatus(StrEnum):

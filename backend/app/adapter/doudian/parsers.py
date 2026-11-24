@@ -76,6 +76,7 @@ def _parse_item(item: dict) -> OrderItemDTO:
         product_name=_opt_str(item.get("product_name")),
         sku_spec=_sku_spec(item),
         quantity=int(item["combo_num"]),
+        # 取商品行 pay_amount；数量大于 1 时是单价还是行合计待样本确认
         price_cents=_opt_int(item.get("pay_amount")),
         sku_id=_sku_id(item),
     )
