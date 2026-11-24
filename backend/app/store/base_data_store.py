@@ -90,3 +90,18 @@ def replace_couriers(
         for c in rows
     ]
     _replace(conn, courier, ["courier_code"], shop_id, data, now)
+
+
+def list_addresses(conn: sa.Connection, shop_id: int) -> list[dict[str, Any]]:
+    rows = conn.execute(sa.select(shop_address).where(shop_address.c.shop_id == shop_id))
+    return [dict(r) for r in rows.mappings()]
+
+
+def list_templates(conn: sa.Connection, shop_id: int) -> list[dict[str, Any]]:
+    rows = conn.execute(sa.select(waybill_template).where(waybill_template.c.shop_id == shop_id))
+    return [dict(r) for r in rows.mappings()]
+
+
+def list_ebill_accounts(conn: sa.Connection, shop_id: int) -> list[dict[str, Any]]:
+    rows = conn.execute(sa.select(ebill_account).where(ebill_account.c.shop_id == shop_id))
+    return [dict(r) for r in rows.mappings()]

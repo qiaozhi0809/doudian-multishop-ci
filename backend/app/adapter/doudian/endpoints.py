@@ -17,6 +17,7 @@ APPID = 1
 AID = 4272
 
 SEARCHLIST_MAX_PAGE_SIZE = 200
+ADDRESS_PAGE_SIZE = 500
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,9 @@ EXPRESS_LIST = Endpoint(
 )
 ADDRESS_LIST = Endpoint(
     "address_list", "GET", "/shopuser/tshopuser/getAfterSaleList", bid.ORDER, page_base=1,
-    fixed_params={"keyword": "", "pageSize": 500, "sort": 2, "source": "send_deliver"},
+    fixed_params={
+        "keyword": "", "pageSize": ADDRESS_PAGE_SIZE, "sort": 2, "source": "send_deliver",
+    },
 )
 TEMPLATE_LIST = Endpoint("template_list", "GET", "/shopuser/power/searchTemplates", bid.ORDER)
 EBILL_ACCOUNTS = Endpoint(
