@@ -43,3 +43,18 @@ def test_redact_does_not_mutate_input():
     src = {"token": "t", "n": {"cookie": "c"}}
     redact_mapping(src)
     assert src == {"token": "t", "n": {"cookie": "c"}}
+
+
+def test_display_and_id_keys_kept():
+    out = redact_mapping({
+        "proxy_display": "1.2.3.4:8000",
+        "address_id": "106591750",
+        "proxy_url": "http://u:p@h:1",
+        "token_id": "t",
+    })
+    assert out == {
+        "proxy_display": "1.2.3.4:8000",
+        "address_id": "106591750",
+        "proxy_url": "***",
+        "token_id": "***",
+    }

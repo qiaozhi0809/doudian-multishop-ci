@@ -4,7 +4,10 @@ import re
 from typing import Any
 
 _FULL_MASK = "***"
-_SECRET_KEYS = ("cookie", "token", "password", "proxy", "address", "detail")
+_ALWAYS_SECRET_KEYS = ("cookie", "token", "password")
+# 以 _display / _id 结尾的键（proxy_display、address_id）是给排查用的，不按下列规则打码
+_CONTEXT_SECRET_KEYS = ("proxy", "address", "detail")
+_SAFE_SUFFIXES = ("_display", "_id")
 _PHONE_KEYS = ("mobile", "phone")
 _NAME_KEYS = ("receiver", "user_name", "username", "buyer")
 _PHONE_RE = re.compile(r"(?<!\d)(1[3-9]\d)\d{4}(\d{4})(?!\d)")
@@ -35,7 +38,9 @@ def scrub_text(text: str) -> str:
 
 def _redact_value(key: str, value: Any) -> Any:
     k = _norm(key)
-    if any(s in k for s in _SECRET_KEYS):
+    if any(s in k for s in _ALWAYS_SECRET_KEYS):
+        return _FULL_MASK
+    if any(s in k for s in _CONTEXT_SECRET_KEYS) and not k.endswith(_SAFE_SUFFIXES):
         return _FULL_MASK
     if any(s in k for s in _PHONE_KEYS) or "tel" in k.split("_"):
         return mask_phone(value) if isinstance(value, str) else _FULL_MASK
