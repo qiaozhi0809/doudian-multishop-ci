@@ -1,4 +1,7 @@
+from datetime import UTC, datetime
+
 import pytest
+from argon2 import PasswordHasher
 from fastapi.testclient import TestClient
 
 from app.config import Settings
@@ -6,12 +9,45 @@ from app.main import create_app
 from app.store.db import make_engine
 from app.store.migrate import upgrade_to_head
 
+ADMIN_USER = "admin"
+ADMIN_PASSWORD = "pw_" + "x" * 8
+FAST_HASHER = PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)  # 测试用，加快哈希
+
+
+class FakeClock:
+    """可调的时钟，供需要控制时间的测试使用。"""
+
+    def __init__(self) -> None:
+        self.now = datetime(2026, 12, 1, 0, 0, 0, tzinfo=UTC)
+
+    def __call__(self) -> datetime:
+        return self.now
+
 
 @pytest.fixture
-def client(tmp_path):
-    app = create_app(Settings(data_dir=tmp_path / "data"))
+def clock():
+    return FakeClock()
+
+
+@pytest.fixture
+def app(tmp_path, clock):
+    return create_app(Settings(data_dir=tmp_path / "data"), clock=clock, hasher=FAST_HASHER)
+
+
+@pytest.fixture
+def client(app):
     with TestClient(app, base_url="http://127.0.0.1:8787") as c:
         yield c
+
+
+@pytest.fixture
+def logged_in_client(client):
+    """已创建管理员并登录的客户端（Cookie 保存在客户端里）。"""
+    assert client.post("/api/auth/setup", json={
+        "username": ADMIN_USER, "password": ADMIN_PASSWORD}).status_code == 201
+    assert client.post("/api/auth/login", json={
+        "username": ADMIN_USER, "password": ADMIN_PASSWORD}).status_code == 200
+    return client
 
 
 @pytest.fixture
