@@ -11,6 +11,7 @@
 | [backend.md](design/backend.md) | 分层与模块、会话、抖店适配层与通道降级、签名、订单同步、取号与超时恢复、发货、调度、对账、基础数据、只读聚合、两步提交与幂等、逐操作重试、存储、日志、SSE |
 | [data-model.md](design/data-model.md) | 订单状态机、表结构、关键约束、会话存储与迁移 |
 | [flows.md](design/flows.md) | 登录与公共参数、拉单、取号（含地址解密额度）、打印、发货、对账、错误码、风控、打印方案 |
+| [ui-guidelines.md](design/ui-guidelines.md) | 前端设计规范：令牌、字体、布局、状态色与文案、数据格式、交互、审查清单 |
 | [frontend.md](design/frontend.md) | 前端结构、数据层、表格、危险操作、技术栈、页面 → Arc 组件、Arc 安装 |
 | [local-api.md](design/local-api.md) | 前端调用的本地 API 草案 |
 | [dashboard.md](design/dashboard.md) | 经营仪表盘（多店订单量 / 销售额 / 售后率 / 出单 / 排行）——草案 |

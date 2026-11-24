@@ -4,6 +4,7 @@
 > 合并自原 `overall-design.md` 第 3 节与原 `architecture.md` 11.1 / 11.3 / 11.5。索引见 [docs/README.md](../README.md)。
 > 分层规则（`logic/` `hooks/` `components/` `index.tsx`）见 [engineering-rules.md](../engineering-rules.md) 2.1。
 > 仪表盘的指标与数据来源见 [dashboard.md](dashboard.md)。
+> **视觉与交互规范见 [ui-guidelines.md](ui-guidelines.md)**（令牌、字体、状态色、数据格式、文案、审查清单）。
 
 ### 1. 结构
 
