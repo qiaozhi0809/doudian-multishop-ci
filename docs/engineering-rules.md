@@ -74,16 +74,7 @@ backend/app/
   shared/       ← 跨模块工具，必须配单测 <name>_test.py
 ```
 
-与设计文档的映射（设计文档里的旧名 → 本规范的落位）：
-
-| 设计文档 | 本规范 |
-|---|---|
-| `channels/protocol.py` | `adapter/doudian/client.py` |
-| `channels/browser.py` | `adapter/browser/channel.py` |
-| `signing/` | `adapter/doudian/signing/` |
-| `services/order_sync.py` | `service/order_sync.py` |
-| `services/reconcile.py` | `service/reconcile.py` |
-| `db/` | `store/` |
+设计文档（[design/backend.md](design/backend.md)）已统一使用本规范的目录名。
 
 **禁令**：
 - `domain/` 内禁止 `import fastapi` / `import sqlalchemy` / `import curl_cffi` / 任何 IO
@@ -122,7 +113,7 @@ backend/app/
 
 | 文件 | 行数 | 处理 |
 |---|---|---|
-| `docs/architecture.md` | ~2100 | 超出 600 行硬上限 → 按附录拆成多文件（A~G 各自独立） |
+| —— | —— | 无。原 `docs/architecture.md`（2600+ 行）已于 2026-11-25 拆分为 `docs/design/` 与 `docs/api/`（[docs/README.md](README.md)） |
 
 新增文档一律从第一天就按 600 行规划；存量文档拆分为独立任务，不阻塞功能开发。
 
@@ -133,7 +124,7 @@ backend/app/
 - 文件名：前端 `kebab-case`（`order-status.ts`）；后端 `snake_case`（`order_status.py`）
 - 模块名：单数（`order/`，不是 `orders/`），集合型目录除外（`constants/`、`enums/`）
 - 禁止 `utils.ts` / `helpers.py` / `common.ts` 等垃圾桶名 → 按 domain 命名
-  （`money-format.ts`、`time-bj.py`、`order-status.ts`）
+  （`money-format.ts`、`time_bj.py`、`order-status.ts`）
 
 ---
 
@@ -228,14 +219,14 @@ CI 扫 import 图。
   2. 幂等键去重（`idempotency_key`）
   3. 完整记录请求/响应到审计日志
 - 签名要求**逐接口声明**，在 `adapter/doudian/endpoints.py` 标注：
-  - 已验证免签名（批量备注 / 取号 / sendcheck / 发货）→ 协议直连
-  - 未验证的 → 走 `adapter/browser` 兜底渠道，不得假设免签名
+  - 已验证免签名（批量备注 / 取号 / sendcheck / 发货 / 取号发货一体 / 面单作废 / 改物流，及大部分只读接口）→ 协议直连
+  - 未验证的、或已确认需签名的（如 `searchPackageList`）→ 走 `adapter/browser` 兜底渠道，不得假设免签名
 - 演练模式（dry-run）下禁止发出任何写请求
 
 ### 8.4 数据口径
 
 - **金额**：一律整数分（`*_cents`），禁止浮点；展示层再除 100
-- **时间**：平台接口多为 unix 秒；本地存储用 ISO 字符串；转换集中在 `shared/time-bj.py`
+- **时间**：平台接口多为 unix 秒；本地存储用 ISO 字符串；转换集中在 `shared/time_bj.py`（Python 模块名不能含连字符）
 - **两套状态枚举不得混用**：
   - 筛选参数 = 字符串（`"stock_up"`）
   - 数据字段 `order_status` = 数字（`3`）
@@ -246,7 +237,7 @@ CI 扫 import 图。
 - 所有接口路径、参数名、分页基准集中在 `adapter/doudian/endpoints.py`
 - 分页基准随接口声明（`page_base: 0 | 1`），禁止全局假设
 - 响应成功码不统一（`0`、`"100000"`）→ 统一在客户端层归一化
-- 新增接口前必须在文档（`docs/` 附录）记录实测结果，再写代码
+- 新增接口前必须在 [docs/api/](api/README.md) 记录实测结果，再写代码
 
 ---
 
