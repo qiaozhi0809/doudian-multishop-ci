@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+import structlog
 from sqlalchemy import Engine
 
 from app.adapter.doudian import endpoints as ep
@@ -14,7 +15,11 @@ from app.service.session_manager import SessionManager
 from app.service.shop_runner import ShopRunner
 from app.store import order_store
 
+log = structlog.get_logger()
+
 MAX_PAGES = 100
+MAX_RECHECK_PER_RUN = 50  # 补查是一单一请求：每轮设上限，其余留到下一轮
+NOT_FOUND_REASON = "平台查不到该订单"
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -72,7 +77,8 @@ class OrderSyncService:
         self, client: FxgClient, shop_id: int, seen: set[str]
     ) -> tuple[int, int]:
         with self._engine.connect() as conn:
-            vanished = sorted(order_store.recheck_candidates(conn, shop_id) - seen)
+            by_age = order_store.recheck_candidates_by_age(conn, shop_id)
+        vanished = [n for n in by_age if n not in seen][:MAX_RECHECK_PER_RUN]
         rechecked, cancelled = 0, 0
         for order_no in vanished:
             resp = await client.call(
@@ -81,6 +87,10 @@ class OrderSyncService:
             rechecked += 1
             found = [o for o in parse_orders(resp) if o.order_no == order_no]
             if not found:
+                # 平台查不到：标成异常，离开候选集并在界面可见，不再被反复请求
+                log.warning("order_sync.recheck_not_found", shop_id=shop_id, order_no=order_no)
+                with self._engine.begin() as conn:
+                    order_store.mark_exception(conn, shop_id, order_no, NOT_FOUND_REASON, _now())
                 continue
             with self._engine.begin() as conn:
                 order_store.upsert_orders(conn, shop_id, found, _now())

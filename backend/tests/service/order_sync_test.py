@@ -6,6 +6,7 @@ import sqlalchemy as sa
 
 from app.adapter.doudian.errors import SessionExpired
 from app.service.order_sync import OrderSyncService
+from app.shared.logging_setup import configure_logging
 from tests.fakes import ok, reply
 from tests.service.support import Env
 
@@ -118,14 +119,42 @@ async def test_vanished_shipped_not_rechecked_again(env):
     assert result.rechecked == 0 and len(env.transport.requests) == 1
 
 
-async def test_vanished_but_lookup_finds_nothing_is_left_alone(env):
+async def test_recheck_not_found_marked_exception_and_not_retried(env, capsys):
+    configure_logging(json=True)
     svc = service(env)
     env.transport.responses[:] = [page_of(0, 1)]
     await svc.sync_pending(env.shop_id, "admin")
     env.transport.responses[:] = [empty_page(), empty_page()]
     result = await svc.sync_pending(env.shop_id, "admin")
     assert (result.rechecked, result.cancelled) == (1, 0)
-    assert db_orders(env)[order_no(0)] == ("synced", 2)
+    with env.engine.connect() as conn:
+        row = conn.execute(sa.text("SELECT status, exception_reason FROM orders")).one()
+    assert tuple(row) == ("exception", "平台查不到该订单")
+    log_out = capsys.readouterr().out
+    assert "recheck_not_found" in log_out and order_no(0) in log_out
+    env.transport.requests.clear()
+    env.transport.responses[:] = [empty_page()]
+    result = await svc.sync_pending(env.shop_id, "admin")
+    assert result.rechecked == 0 and len(env.transport.requests) == 1  # 不再补查
+
+
+async def test_recheck_capped_per_run(env):
+    svc = service(env)
+    env.transport.responses[:] = [page_of(0, 60)]
+    await svc.sync_pending(env.shop_id, "admin")
+    with env.engine.begin() as conn:  # 59 号最久没同步，应排在最前
+        conn.execute(sa.text("UPDATE orders SET synced_at='2020-01-01T00:00:00Z' "
+                             "WHERE order_no = :n"), {"n": order_no(59)})
+    env.transport.requests.clear()
+    env.transport.responses[:] = [empty_page()] + [by_order_id(i, 3) for i in range(60)]
+    result = await svc.sync_pending(env.shop_id, "admin")
+    assert result.rechecked == 50 and len(env.transport.requests) == 51
+    assert query(env, 1)["order_id"] == order_no(59)
+    # 剩下 10 单留到下一轮
+    env.transport.requests.clear()
+    env.transport.responses[:] = [empty_page()] + [by_order_id(i, 3) for i in range(10)]
+    result = await svc.sync_pending(env.shop_id, "admin")
+    assert result.rechecked == 10
 
 
 async def test_incomplete_pagination_skips_recheck(env):

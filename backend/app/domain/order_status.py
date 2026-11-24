@@ -44,7 +44,11 @@ class LocalOrderStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
-# 本地履约已到终点：不再需要向平台补查
+# 本地履约已到终点
 LOCAL_FINAL_STATUSES: frozenset[LocalOrderStatus] = frozenset(
     {LocalOrderStatus.SHIPPED, LocalOrderStatus.CLOSED, LocalOrderStatus.CANCELLED}
 )
+# 不再向平台补查：终点状态，以及已标记异常（需人工处理，不能被反复请求）的订单
+RECHECK_EXCLUDED_STATUSES: frozenset[LocalOrderStatus] = LOCAL_FINAL_STATUSES | {
+    LocalOrderStatus.EXCEPTION
+}

@@ -7,7 +7,11 @@ from typing import Any
 import sqlalchemy as sa
 
 from app.domain.models import OrderDTO
-from app.domain.order_status import LOCAL_FINAL_STATUSES, PLATFORM_FINAL_STATUSES, LocalOrderStatus
+from app.domain.order_status import (
+    PLATFORM_FINAL_STATUSES,
+    RECHECK_EXCLUDED_STATUSES,
+    LocalOrderStatus,
+)
 from app.store.schema import order_items, orders
 
 
@@ -82,15 +86,29 @@ def list_orders(
     return [dict(r) for r in rows], int(total)
 
 
-def recheck_candidates(conn: sa.Connection, shop_id: int) -> set[str]:
-    """本地未完结且平台状态不是 3 / 4 / 5 的单号。"""
-    local_final = [s.value for s in LOCAL_FINAL_STATUSES]
+def recheck_candidates_by_age(conn: sa.Connection, shop_id: int) -> list[str]:
+    """本地未完结（含未标记异常）且平台状态不是 3 / 4 / 5 的单号，按最近同步时间从旧到新。"""
+    excluded = [s.value for s in RECHECK_EXCLUDED_STATUSES]
     stmt = sa.select(orders.c.order_no).where(
         orders.c.shop_id == shop_id,
-        orders.c.status.not_in(local_final),
+        orders.c.status.not_in(excluded),
         sa.or_(
             orders.c.platform_status.is_(None),
             orders.c.platform_status.not_in(sorted(PLATFORM_FINAL_STATUSES)),
         ),
+    ).order_by(orders.c.synced_at, orders.c.id)
+    return list(conn.execute(stmt).scalars())
+
+
+def recheck_candidates(conn: sa.Connection, shop_id: int) -> set[str]:
+    return set(recheck_candidates_by_age(conn, shop_id))
+
+
+def mark_exception(
+    conn: sa.Connection, shop_id: int, order_no: str, reason: str, now: str
+) -> None:
+    conn.execute(
+        sa.update(orders)
+        .where(orders.c.shop_id == shop_id, orders.c.order_no == order_no)
+        .values(status=LocalOrderStatus.EXCEPTION.value, exception_reason=reason, last_sync_at=now)
     )
-    return set(conn.execute(stmt).scalars())
