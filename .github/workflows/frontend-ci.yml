@@ -1,0 +1,32 @@
+name: frontend-ci
+
+on:
+  push:
+    paths: ["frontend/**", "scripts/ci/check-frontend-layers.sh", ".github/workflows/frontend-ci.yml"]
+  pull_request:
+    paths: ["frontend/**", "scripts/ci/check-frontend-layers.sh", ".github/workflows/frontend-ci.yml"]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: 接口类型与 openapi.json 一致
+        run: pnpm gen:api && git diff --exit-code src/lib/api-types.ts
+      - run: pnpm lint
+      - run: pnpm vitest run
+      - run: pnpm build
+      - name: 分层守门
+        run: bash ../scripts/ci/check-frontend-layers.sh

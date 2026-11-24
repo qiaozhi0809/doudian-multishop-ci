@@ -38,3 +38,6 @@ frontend/dist/
 
 # 其他会话的 worktree
 .claude/worktrees/
+
+# 前端构建缓存
+*.tsbuildinfo
