@@ -203,7 +203,7 @@
 | | `GET /api/orders/counts` | 跨店 tab 计数 |
 | | `GET /api/orders/{id}` | 详情（含商品行、面单历史） |
 | | `POST /api/orders/sync` | 立即拉单 |
-| | `POST /api/orders/decrypt` | 批量解密收货地址 |
+| | `POST /api/orders/{id}/receiver` | 按需解密单个订单的收件人（用户查看时；不在取号链路，DEC-06；受额度与限速约束，见 architecture 7.3） |
 | 取号 | `POST /api/labels/preview` · `POST /api/labels/execute` | 两步提交取号 |
 | | `POST /api/labels/void/preview` · `POST /api/labels/void/execute` | 两步提交作废（🔶 API-08） |
 | 打印 | `GET /api/print/status` | 打印组件是否在线 + 打印机列表 |
@@ -271,7 +271,7 @@ architecture.md 第 13 节把整个前端放在 M6，会导致 M1~M5 做完无�
 |---|---|---|
 | M0 补验证 | gaps.md 中所有 P0 的 API 项 | — |
 | M1 | 会话、基础数据、拉单 | App Shell、店铺与设置页、订单列表（只读） |
-| M2 | 地址解密、取号（两步提交） | 打单台 |
+| M2 | 取号（两步提交，不解密，DEC-06）；按需查看收件人 | 打单台 |
 | M3 | 打印（P3 保底 + P1 验证） | 打印状态、任务中心 |
 | M4 | 发货前检查、发货、对账 | 发货台、对账页 |
 | M5 | 售后 / 商品 / 库存 / 资金聚合 | 对应四个页面 + 仪表盘 |

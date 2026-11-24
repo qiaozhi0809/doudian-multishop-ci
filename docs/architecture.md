@@ -74,7 +74,7 @@
 **订单履约**
 - 待发货订单同步（手动 + 定时）
 - 多店订单聚合池（筛选、勾选）
-- 收货地址解密（`/api/order/receiveinfo`）
+- 收货地址解密（`/api/order/receiveinfo`）：**按需**，仅用户查看收件人或自渲染 PDF 时调用（DEC-06）
 - 批量取电子面单号
 - 面单打印（官方打印组件 `wss://localhost:13999`；自渲染兜底）
 - 发货前检查 + 发货回传（人工确认）
@@ -216,7 +216,7 @@ class ShopChannel(Protocol):
 
     # 订单
     def list_pending_orders(shop, cursor=None, page_size=50) -> Page[OrderDTO]
-    def decrypt_receiver(shop, order) -> ReceiverDTO       # 收货地址解密
+    def decrypt_receiver(shop, order) -> ReceiverDTO       # 收货地址解密（按需，不在取号链路，DEC-06）
 
     # 面单
     def obtain_waybill(shop, order, courier_code, template_code, address_id) -> WaybillDTO
@@ -278,7 +278,7 @@ class Signer(Protocol):
 
 流程：
 
-1. 预检：会话有效 / 发货地址已配置 / 面单模板存在 / 地址已解密（⏳ 是否必需待 DEC-06，见 7.3）/ 订单状态允许取号。
+1. 预检：会话有效 / 发货地址已配置 / 面单模板存在 / 订单状态允许取号。**不需要解密收货地址**（DEC-06，见 7.3）。
 2. 按店分组，逐店串行执行取号（`POST /api/order/batchFetchTrackingNos`）。
 3. 写入 `waybills`（`status=active`），订单转 `label_obtained`。
 4. 按「店 + 快递」分组生成打印批次。
@@ -497,7 +497,7 @@ CREATE TABLE orders (
   receiver_name   TEXT,
   receiver_phone  TEXT,
   receiver_region TEXT,
-  receiver_address TEXT,                     -- 解密后的明文地址
+  receiver_address TEXT,                     -- 解密后的明文地址（仅按需解密时写入；存储与清除见 gaps DM-11）
   address_encrypted INTEGER NOT NULL DEFAULT 0,
   address_decrypted_at TEXT,
   amount_cents    INTEGER,
@@ -813,8 +813,7 @@ CREATE TABLE margin_account (
 5. `tasks.idempotency_key` 保证取号/发货不会重复执行。
 6. `raw_json` 保留完整平台报文，用于排障与重放解析。
 7. 地址、模板、快递均按 `(shop_id, code)` 唯一，**禁止跨店复用**。
-8. 收货地址未解密（`address_encrypted=1` 且 `receiver_address` 为空）的订单不得进入取号批次。
-   ⏳ 是否保留待 DEC-06（见 7.3「取号是否需要先解密」）。
+8. 取号与官方组件打印**不依赖**收货地址解密（DEC-06）；`receiver_address` 为空的订单照常进入取号批次。
 
 ### 6.4 只读聚合与存储说明（DM-06 ~ DM-09）
 
@@ -919,11 +918,9 @@ CREATE TABLE margin_account (
 下面是「打面单」的完整流程：
 
 ```
-人工勾选订单 → 预检（会话 / 地址 / 模板 / 地址解密）
+人工勾选订单 → 预检（会话 / 发货地址 / 模板）
   → GET /api/order/getAftersaleAddressAndLogisticsTemplate
      一次返回 has_aftersale_address / has_template / has_logistics_service / has_printer
-  → 地址未解密的先调 /api/order/receiveinfo 解密
-     （参数名 order_id，值传 shop_order_id；返回明文，另含 verify_type 风控通道）
   → 按店分组，逐店串行
   → POST /api/order/batchFetchTrackingNos
       { logistics_company_code, logistics_template_code, address,
@@ -938,19 +935,16 @@ CREATE TABLE margin_account (
 
 1. 会话有效；
 2. 该店已配置默认发货地址（`shop_address.is_default`，平台侧标位为 `is_send_default=1`）；
-3. 已选择快递公司，且存在对应面单模板（`waybill_template`）；
-4. 收货地址已解密。（⏳ 待 DEC-06，见下）
+3. 已选择快递公司，且存在对应面单模板（`waybill_template`）。
 
-> ⏳ **取号是否需要先解密（DEC-06，待所有者决定）**：现有证据都指向「不需要」——
+> **取号不解密（DEC-06，2026-11-25 所有者决定）**：取号与官方组件打印都**不**调用 `receiveinfo`。依据：
 > ① 取号请求体（A.2.2）没有任何收件人字段，只有订单 ID 与**发货**地址；
 > ② 官方订单页「打单发货」链路（A.2.7 四步）全程没有调用 `receiveinfo`；
 > ③ 官方组件打印用的 `print_data` 是平台加密数据，收件人由组件渲染。
-> 而解密按次消耗当日额度并会触发风控（见下方「地址解密额度」）。
-> **建议**：取号与官方组件打印都不解密；只在用户手动查看收件人、或打印走自渲染 PDF（第 10 节方案 B）时解密。
-> 若采纳，需同步修改：5.5 预检、6.3 第 8 条、本节第 4 条与流程图、第 12 节测试项、第 14 节验收第 9 条、A.4、
-> 以及下方实现约束第 4、5 条。
+> 解密按次消耗当日额度并会触发风控（见下方「地址解密额度」），因此**只在两种场景按需解密**：
+> 用户在界面上手动查看某单收件人；打印走自渲染 PDF（第 10 节方案 B）。
 
-第 2~4 项可由 `GET /api/order/getAftersaleAddressAndLogisticsTemplate` 一次性预检
+第 2~3 项可由 `GET /api/order/getAftersaleAddressAndLogisticsTemplate` 一次性预检
 （`has_aftersale_address` / `has_template` / `has_logistics_service`）；
 `has_printer` 反映打印组件侧配置，不影响取号本身。
 
@@ -984,9 +978,9 @@ CREATE TABLE margin_account (
    ⏳ **合规待定（gaps DM-11）**：响应带 `expire_time`，明文有有效期；明文须加密存储，
    并在 `expire_time` 到期后清除，到期后不能再当作「已解密」
 3. **限速**：单店连续解密间隔 ≥ 2 秒（⏳ 2 秒为估计值，未验证安全；只知 0.5~0.8s 会触发）
-4. **额度感知**：捕获 `602502151` 后标记店铺「解密冷却中」，暂停该店取号队列（⏳ 若 DEC-06 采纳「取号不解密」，则只暂停解密、不暂停取号），
+4. **额度感知**：捕获 `602502151` 后标记店铺「解密冷却中」，只暂停该店的**解密**请求，**不暂停取号**（取号不依赖解密，DEC-06），
    提示用户「约 3 小时后恢复」或引导到官方页面申请提额
-5. **不预解密**：拉单时不批量解密，只在取号批次真正执行前解密（⏳ 时机待 DEC-06）
+5. **只按需解密**：拉单、取号、官方组件打印都不解密；只在用户查看收件人或自渲染 PDF 时逐单解密（DEC-06）
 
 ### 7.4 打印流程
 
@@ -1334,7 +1328,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 - 会话失效时只影响该店。
 - 面单作废后订单能回到 `pending_label`。
 - 对账能发现人为制造的三类异常。
-- 地址未解密的订单不会进入取号批次。（⏳ 待 DEC-06）
+- 取号、发货、官方组件打印全流程不发出任何 `receiveinfo` 请求（DEC-06）。
 - 模板/地址缺失时，取号前即被拦截。
 - 打印组件未启动时，订单不会被标记为已打印。
 
@@ -1346,7 +1340,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 |---|---|---|
 | **M0 技术验证** | 拉单接口已跑通（浏览器外免签名）；只读接口 第一轮验证 7 项已验证；打印协议已识别；取号/发货写接口待真实订单验证 | **部分完成** |
 | **M1 登录 + 基础数据 + 拉单** | 扫码登录、Cookie 导出、地址/模板/快递同步、订单入库 | 待开始 |
-| **M2 订单池 + 地址解密 + 取号** | 聚合界面、筛选勾选、批量取号 | 待开始 |
+| **M2 订单池 + 取号** | 聚合界面、筛选勾选、批量取号；按需查看收件人（解密） | 待开始 |
 | **M3 打印** | 官方组件 `wss://localhost:13999` 接通；PDF 兜底 | 待开始 |
 | **M4 发货前检查 + 发货 + 对账** | `sendcheck`、`batchDeliverGoodsByEES`、每日对账 | 待开始 |
 | **M5 多店聚合（只读）** | 售后 / 商品 / 库存 / 资金四类聚合服务与数据表 | 待开始 |
@@ -1365,7 +1359,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 6. 所有外部调用均可在审计日志中追溯。
 7. 软件在出单机上双击启动即可使用，无需命令行操作。
 8. 基础数据（地址 / 模板 / 快递）能自动同步，并在取号时正确匹配到本店配置。
-9. 加密收货地址能自动解密，面单上打印出完整明文地址。（⏳ 待 DEC-06：走官方组件打印时由 `print_data` 渲染，不需本地解密）
+9. 面单上打印出完整收件信息：官方组件打印由 `print_data` 渲染，**不经本地解密**；自渲染 PDF 兜底时按需解密（DEC-06）。
 10. 打印组件未启动时，界面明确提示，且**不会**把订单标记为已打印。
 11. 演练模式（dry-run）下不产生任何真实取号或发货请求。
 
@@ -1378,7 +1372,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 写接口强制签名 | 取号/发货需分析 bdms SDK | 先做双对照验证；必要时启用签名引擎或降级浏览器渠道 |
 | 平台风控关联判定 | 账号受限 | 限速、独立指纹、工作时段、操作留痕；异常即停 |
 | 官方打印组件接口变化 | 打印失败 | 保留 PDF 兜底（方案 B）与手动打印（方案 C） |
-| 地址解密接口变更 | 无法打印明文地址 | 保留原始密文；解密失败转 `exception` 并提示 |
+| 地址解密接口变更 / 额度用尽 | 无法查看收件人、自渲染 PDF 缺明文地址（取号与官方打印不受影响，DEC-06） | 解密失败只提示，不改订单状态；引导到官方页面查看或申请提额 |
 | 抖店后台改版 | 接口失效 | `adapter/doudian/` 与 `adapter/doudian/signing/` 隔离，替换适配器 |
 | 登录频繁过期 | 运维负担 | 重登流程简化（一键弹窗）+ 到期提醒 |
 | 开发机无打印机/打印组件 | 无法本地验证打印 | 打印在出单机验证；开发期用 dry-run + PDF 预览 |
@@ -1946,7 +1940,7 @@ Content-Type: application/json
 - 会话探测用 `/api/order/tabcnt`（未登录 = `code:10008`）；
   `/ecomauth/loginv1/session_check` 不可用（无 cookie 也返回 `check_code:0`）。
 - 分页基准不统一：`searchlist` 为 0-based，`getAfterSaleList` 为 1-based。
-- 列表返回的收货信息为**脱敏值**（`辛*` / `1**********`），取号/打印前必须调 `receiveinfo` 解密。（⏳ 已被后续验证质疑，待 DEC-06，见 7.3）
+- 列表返回的收货信息为**脱敏值**（`辛*` / `1**********`），取号与官方组件打印**不需要**明文（DEC-06）；查看收件人或自渲染 PDF 时才调 `receiveinfo` 解密。
 - 写接口鉴权强度：待真实订单验证。
 - 打印：官方组件本地 WebSocket（默认 13999）。
 
@@ -1959,7 +1953,7 @@ Content-Type: application/json
 1. 发货地址列表
 2. 面单模板列表
 3. 快递公司列表
-4. 收货地址解密
+4. 收货地址解密（按需，DEC-06）
 5. 发货前检查
 6. 打印组件协议
 7. 写接口鉴权验证
