@@ -16,7 +16,11 @@ imp() { echo "^[[:space:]]*(import|from)[[:space:]]+($1)([[:space:].]|$)"; }
 
 scan backend/app/domain "domain 不得依赖框架或 IO 库" \
   "$(imp 'fastapi|sqlalchemy|curl_cffi|playwright')"
-scan backend/app/store "store 不得 import app.service" "$(imp 'app\.service')"
-scan backend/app/adapter "adapter 不得 import app.service" "$(imp 'app\.service')"
+scan backend/app/domain "domain 不得 import store/adapter/service/api" \
+  "$(imp 'app\.(store|adapter|service|api)')"
+scan backend/app/store "store 不得 import adapter/service/api" \
+  "$(imp 'app\.(adapter|service|api)')"
+scan backend/app/adapter "adapter 不得 import store/service/api" \
+  "$(imp 'app\.(store|service|api)')"
 scan backend/app/api "api 不得 import sqlalchemy 或 app.store" "$(imp 'sqlalchemy|app\.store')"
 exit "$fail"

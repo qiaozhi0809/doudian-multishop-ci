@@ -20,7 +20,7 @@ while IFS= read -r f; do
     *.ts | *.tsx) check 300 "$f" ;;
     docs/*.md) check 600 "$f" ;;
   esac
-done < <(find . \( -name node_modules -o -name .venv -o -name .git -o -name dist -o -name data \) -prune \
+done < <(find . \( -name node_modules -o -name .claude -o -name .venv -o -name .git -o -name dist -o -name data \) -prune \
   -o -type f \( -name '*.py' -o -name '*.ts' -o -name '*.tsx' -o -name '*.md' \) -print | sed 's|^\./||')
 
 exit "$fail"
