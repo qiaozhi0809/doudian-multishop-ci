@@ -36,3 +36,9 @@ class LocalOrderStatus(StrEnum):
     CLOSED = "closed"
     EXCEPTION = "exception"
     CANCELLED = "cancelled"
+
+
+# 本地履约已到终点：不再需要向平台补查
+LOCAL_FINAL_STATUSES: frozenset[LocalOrderStatus] = frozenset(
+    {LocalOrderStatus.SHIPPED, LocalOrderStatus.CLOSED, LocalOrderStatus.CANCELLED}
+)
