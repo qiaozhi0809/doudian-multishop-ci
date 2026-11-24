@@ -108,7 +108,30 @@ describe("listAttention", () => {
     expect(rows.map((r) => r.name)).toEqual(["乙", "甲"]);
   });
 
-  it("会话已过期的时间显示已过期", () => {
-    expect(rowFor({ health: "expiring", expires_at: daysFromNow(-1) }).label).toBe("已过期");
+  it("到期后店铺已停摆：会话已过期、代理已到期为 error（danger）", () => {
+    expect(rowFor({ health: "expiring", expires_at: daysFromNow(-1) })).toMatchObject({
+      label: "已过期",
+      tone: "danger",
+      severity: "error",
+    });
+    expect(rowFor({ proxy_expires_at: daysFromNow(-1) })).toMatchObject({
+      label: "代理已到期",
+      tone: "danger",
+      severity: "error",
+    });
+    expect(summarizeHealth([makeShop({ proxy_expires_at: daysFromNow(-1) })], NOW)).toMatchObject({
+      level: "error",
+      errorCount: 1,
+    });
+  });
+
+  it("到期状态排在出口 IP 已变化之后、会话即将过期之前", () => {
+    expect(rowFor({ egress_status: "changed", egress_ip_pending: "1.2.3.5", proxy_expires_at: daysFromNow(-1) }).label).toBe(
+      "出口 IP 已变为 1.2.3.5，需确认",
+    );
+    expect(rowFor({ health: "expiring", expires_at: daysFromNow(-1), proxy_expires_at: daysFromNow(-1) }).label).toBe("已过期");
+    expect(rowFor({ health: "expiring", expires_at: daysFromNow(2), proxy_expires_at: daysFromNow(-1) }).label).toBe(
+      "代理已到期",
+    );
   });
 });

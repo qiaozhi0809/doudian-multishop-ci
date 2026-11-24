@@ -24,7 +24,8 @@ const daysLeft = (iso: string, now: Date) => Math.ceil((new Date(iso).getTime() 
 
 /**
  * 一家店当前最严重的问题（没有问题为 null）。
- * 顺序：需重新登录 > 风控暂停 > 出口不通 > 出口 IP 重复 > 出口 IP 已变化 > 会话即将过期 > 代理即将到期。
+ * 顺序：需重新登录 > 风控暂停 > 出口不通 > 出口 IP 重复 > 出口 IP 已变化 > 会话已过期 > 代理已到期
+ *       > 会话即将过期 > 代理即将到期。到期后店铺已无法工作（ensure_ready 对已到期代理抛 EgressNotReady），按 error 处理。
  * 文案与色调按 ui-guidelines 第 5 节；已停用的店铺没有问题。
  */
 function worstIssue(shop: ShopRow, now: Date): Omit<AttentionRow, "id" | "name"> | null {
@@ -40,16 +41,12 @@ function worstIssue(shop: ShopRow, now: Date): Omit<AttentionRow, "id" | "name">
     const ip = shop.egress_ip_pending;
     return error(ip ? `出口 IP 已变为 ${ip}，需确认` : "出口 IP 已变化，需确认", "warning");
   }
-  if (shop.health === "expiring") {
-    if (!shop.expires_at) return warn("即将过期");
-    const days = daysLeft(shop.expires_at, now);
-    return warn(days > 0 ? `即将过期（剩 ${days} 天）` : "已过期");
-  }
-  if (shop.proxy_expires_at) {
-    const days = daysLeft(shop.proxy_expires_at, now);
-    if (days <= 0) return warn("代理已到期");
-    if (days <= PROXY_WARN_DAYS) return warn(`代理 ${days} 天后到期`);
-  }
+  const sessionDays = shop.health === "expiring" && shop.expires_at ? daysLeft(shop.expires_at, now) : null;
+  const proxyDays = shop.proxy_expires_at ? daysLeft(shop.proxy_expires_at, now) : null;
+  if (sessionDays !== null && sessionDays <= 0) return error("已过期");
+  if (proxyDays !== null && proxyDays <= 0) return error("代理已到期");
+  if (shop.health === "expiring") return warn(sessionDays !== null ? `即将过期（剩 ${sessionDays} 天）` : "即将过期");
+  if (proxyDays !== null && proxyDays <= PROXY_WARN_DAYS) return warn(`代理 ${proxyDays} 天后到期`);
   return null;
 }
 
