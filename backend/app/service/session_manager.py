@@ -39,6 +39,10 @@ class SessionManager:
         self._events = events
         self._clock = clock
 
+    @property
+    def events(self) -> EventBus:
+        return self._events
+
     def save_login(self, shop_id: int, result: LoginResult) -> None:
         now = self._clock()
         now_iso = now.strftime(_ISO_FMT)

@@ -9,3 +9,10 @@ def test_startup_creates_data_dir(tmp_path):
     assert not data_dir.exists()
     with TestClient(create_app(Settings(data_dir=data_dir)), base_url="http://127.0.0.1:8787"):
         assert (data_dir / "app.db").is_file()
+
+
+def test_lifespan_wires_services_and_shuts_down_cleanly(tmp_path):
+    app = create_app(Settings(data_dir=tmp_path / "data"))
+    with TestClient(app, base_url="http://127.0.0.1:8787"):
+        for name in ("engine", "events", "sessions", "egress", "runner"):
+            assert hasattr(app.state, name)

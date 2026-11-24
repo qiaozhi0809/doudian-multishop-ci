@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     egress_echo_url: str = "https://api.ipify.org"
     dev_mode: bool = False
     dry_run: bool = False
+    max_concurrent_shops: int = 3
 
     def __init__(self, _platform: str | None = None, **values):
         super().__init__(**values)
