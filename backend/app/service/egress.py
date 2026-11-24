@@ -31,6 +31,7 @@ log = structlog.get_logger()
 MODES = ("direct", "proxy")
 READY_CACHE = timedelta(minutes=10)
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
+_PROXY_MISSING = "该店铺代理地址缺失，请重新设置出口"
 
 
 class EgressNotReady(Exception):
@@ -185,14 +186,17 @@ class EgressService:
         if status == "ok":
             return
         if status == "unreachable":
-            raise EgressUnavailable("出口不可达，该店已暂停")
+            raise EgressUnavailable("出口不可达，请检查代理是否到期或更换代理")
         raise EgressNotReady(f"出口状态异常: {status}")
 
     # ---- 取代理 ----
 
     def proxy_for(self, shop_id: int) -> str | None:
         """解密后的代理 URL；直连或未配置返回 None。"""
-        blob = self._load(shop_id)["proxy_url"]
+        shop = self._load(shop_id)
+        if shop["egress_mode"] == "proxy" and not shop["proxy_url"]:
+            raise EgressNotReady(_PROXY_MISSING)  # 绝不把「缺代理」当成直连
+        blob = shop["proxy_url"]
         return self._box.decrypt(blob).decode() if blob else None
 
     # ---- 内部 ----
@@ -208,5 +212,7 @@ class EgressService:
     def _require_usable(shop: Any, now: datetime) -> None:
         if shop["egress_mode"] is None:
             raise EgressNotReady("该店铺尚未配置出口")
+        if shop["egress_mode"] == "proxy" and not shop["proxy_url"]:
+            raise EgressNotReady(_PROXY_MISSING)
         if expiry_state(shop["proxy_expires_at"], now) == "expired":
             raise EgressNotReady("代理已到期，请续费或更换")

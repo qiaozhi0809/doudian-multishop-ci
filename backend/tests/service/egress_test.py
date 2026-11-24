@@ -235,3 +235,25 @@ async def test_proxy_url_encrypted_and_not_logged(env, capsys):
     assert env.row(sid)["proxy_display"] == "203.0.113.5:8000"
     assert PW not in capsys.readouterr().out
     assert env.svc.proxy_for(sid) == URL_A
+
+
+async def test_proxy_mode_without_url_never_probes_direct(env):
+    sid = await _ready_shop(env)
+    env.fetch_calls.clear()
+    with env.engine.begin() as conn:  # 模拟数据异常或手工改库
+        shop_store.set_egress(conn, sid, "2026-12-01T00:00:00Z", proxy_url=None)
+    env.now += timedelta(minutes=11)
+    for call in (env.svc.check(sid), env.svc.ensure_ready(sid)):
+        with pytest.raises(EgressNotReady, match="代理地址缺失"):
+            await call
+    with pytest.raises(EgressNotReady):
+        env.svc.proxy_for(sid)
+    assert env.fetch_calls == []
+
+
+async def test_unreachable_message_does_not_claim_paused(env):
+    sid = await _ready_shop(env)
+    env.now += timedelta(minutes=11)
+    env.ips[URL_A] = None
+    with pytest.raises(EgressUnavailable, match="代理是否到期"):
+        await env.svc.ensure_ready(sid)
