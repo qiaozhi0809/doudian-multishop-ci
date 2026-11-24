@@ -51,7 +51,7 @@
 | 页面 | Arc 组件 / blocks | 模块依据 |
 |---|---|---|
 | **App Shell**（侧边栏 + 顶栏） | `workspace-sidebar` 或 `sidebar-rail`（Pro） | — |
-| 管理员登录 / 创建管理员 | `login-split`（Pro）/ `sign-in`（Free block） | backend 5.16 |
+| 管理员登录 / 创建管理员 | `card` + `input` + `password-field` + `button` + `alert`（Free）组合的居中表单。不用 `sign-in` / `login-split` 区块：它们只支持邮箱 / SSO 演示流程，没有账号密码提交与错误提示的接口 | backend 5.16 |
 | 首页仪表盘 | `metrics-dashboard`（Pro）+ `metric-card` + `bar-chart` | 多店经营概览 |
 | 订单管理 | `sortable-data-table` + `filter-toolbar` + `pagination` | [附录 C](../api/order-page.md) |
 | 打单台 / 发货台 | `sortable-data-table` + `hold-to-confirm`（危险操作确认） | flows 7.3 / 7.5 |
