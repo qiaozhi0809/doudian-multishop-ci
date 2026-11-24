@@ -1410,7 +1410,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 取号 | POST | `/api/order/batchFetchTrackingNos` | ✅ **已验证**（运单号 `79209902836406`，见 A.2.2） |
 | 发货前检查 | POST | `/api/order/sendcheck` | ✅ **已验证**（见 A.2.3） |
 | 发货（打单台） | POST | `/api/order/batchDeliverGoodsByEES` | ✅ **已验证**（见 A.2.4） |
-| 发货（订单页） | POST | `/order/torder/batchsend` | ⏳ 待定（打单台不走这条） |
+| 发货（订单页） | POST | `batchFetchTrackingNosAndDeliverGoods`（同一体接口） | ✅ 已验证；batchsend 不需要（见 A.2.7） |
 | 取号+发货一体 | POST | `/api/order/batchFetchTrackingNosAndDeliverGoods` | ✅ **已验证**（见 A.2.5） |
 | 改物流 | POST | `/order/torder/modifyLogistic` | ⏳ 待定 |
 | 售后同意退款 | POST | 未抓（按钮 code `refund_audit`） | ⏳ 待定 |
@@ -1717,6 +1717,22 @@ Content-Type: application/json
 2. 作废后面单失效，**同一订单可重新取号**（实测：作废 `79209905279026` 后
    重取得到 `79209907035270`）
 3. 失败明细在 `fail_list`，整体错误在 `fail_msg`
+
+### A.2.7 订单页「打单发货」的实际链路（已验证）
+
+订单页点「发货」→ 选「打单发货」→「打印并发货」，实际依次调用：
+
+| # | 接口 | 用途 |
+|---|---|---|
+| 1 | `GET /shopuser/power/getEbillAccountListByExpress?company=<快递>` | 拉面单账户（含网点） |
+| 2 | `GET /api/order/is_tracking_no_and_logistics_company_match?shop_order_ids=<单号>&logistics_company=<code>` | 校验运单号与物流公司匹配 |
+| 3 | `POST /api/order/query_added_services_and_product_types` | 查询增值服务与产品类型 |
+| 4 | `POST /api/order/batchFetchTrackingNosAndDeliverGoods` | **取号 + 发货**（同一体接口） |
+
+**关键结论**：订单页「打单发货」与打单台「打单并发货」调用的是**同一个一体接口**。
+`/order/torder/batchsend` 在两条主要发货路径上都未出现 → **判定不需要**，从设计中移除。
+
+`is_tracking_no_and_logistics_company_match` 是可选校验，自行寄件场景有用。
 
 **写接口的一般性判断**：抖店只读接口全部免签名（已验证 20+ 个），
 写接口属于未知区域。若某写接口强制签名，方案是用 Playwright 在页面内执行 fetch
