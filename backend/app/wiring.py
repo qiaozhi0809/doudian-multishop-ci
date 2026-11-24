@@ -55,7 +55,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         "runner": runner, "base_data": base_data, "tasks": TaskRegistry(),
         "order_sync": OrderSyncService(engine, runner, sessions, events),
         "order_query": OrderQueryService(engine, runner),
-        "shop_admin": ShopAdminService(engine, **clock_kw),
+        "shop_admin": ShopAdminService(engine, events, **clock_kw),
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,
             settings.browser_channel, **login_kw,

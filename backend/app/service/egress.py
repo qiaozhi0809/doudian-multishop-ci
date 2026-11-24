@@ -13,6 +13,7 @@ import structlog
 from sqlalchemy import Engine
 
 from app.adapter.doudian.errors import EgressUnavailable
+from app.domain.audit import CallRecord
 from app.domain.egress_rules import (
     display_proxy,
     expiry_state,
@@ -25,7 +26,7 @@ from app.service.egress_probe import FetchIp
 from app.service.events import SHOP_STATUS_CHANGED, EventBus
 from app.service.session_manager import ACTIVE, DISABLED, NEEDS_LOGIN
 from app.shared.secret_box import SecretBox
-from app.store import shop_store
+from app.store import audit_store, shop_store
 
 log = structlog.get_logger()
 
@@ -74,7 +75,7 @@ class EgressService:
 
     def set_egress(
         self, shop_id: int, mode: str, proxy_url: str | None = None,
-        paste: str | None = None, expires_at: str | None = None,
+        paste: str | None = None, expires_at: str | None = None, actor: str = "system",
     ) -> None:
         """改出口：清空已确认的 IP、状态复位；已登录的店铺转 needs_login，必须重新扫码。"""
         if mode not in MODES:
@@ -113,6 +114,11 @@ class EgressService:
                 if shop["status"] == ACTIVE:
                     new_status = NEEDS_LOGIN
                     shop_store.set_status(conn, shop_id, NEEDS_LOGIN, now)
+                # 审计只记方式与 主机:端口，绝不记代理 URL
+                audit_store.insert(conn, CallRecord(
+                    shop_id, "shop.set_egress", actor,
+                    {"mode": mode, "proxy_display": display_proxy(url) if url else None},
+                    {"status": new_status}, "ok", 0), now)
         except sa.exc.IntegrityError:
             raise EgressConflict("已有另一家启用店铺使用直连") from None
         self._events.publish(SHOP_STATUS_CHANGED, {
@@ -128,7 +134,9 @@ class EgressService:
 
     # ---- 检查 ----
 
-    async def check(self, shop_id: int, accept_change: bool = False) -> EgressStatus:
+    async def check(
+        self, shop_id: int, accept_change: bool = False, actor: str = "system"
+    ) -> EgressStatus:
         """经该店出口取 IP 并判定。只有 ok 才写 egress_ip；accept_change 把新 IP 转正。"""
         now = self._clock()
         shop = self._load(shop_id)
@@ -161,6 +169,11 @@ class EgressService:
             elif verdict in ("changed", "duplicate"):
                 fields.update(egress_ip_pending=ip)
             shop_store.set_egress(conn, shop_id, now_iso, **fields)
+            if accept_change:
+                audit_store.insert(conn, CallRecord(
+                    shop_id, "shop.accept_egress_change", actor,
+                    {"proxy_display": shop["proxy_display"] or "direct"},
+                    {"egress_status": verdict}, "ok", 0), now_iso)
             result = EgressStatus(
                 fields.get("egress_ip", shop["egress_ip"]),
                 fields.get("egress_ip_pending", shop["egress_ip_pending"]),

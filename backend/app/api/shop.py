@@ -45,20 +45,25 @@ def create_shop(body: ShopCreate, request: Request) -> ShopRow:
 
 
 @router.patch("/{shop_id}", response_model=ShopRow)
-def patch_shop(shop_id: int, body: ShopPatch, request: Request) -> ShopRow:
+def patch_shop(
+    shop_id: int, body: ShopPatch, request: Request, admin: str = Depends(require_admin)
+) -> ShopRow:
     _state(request).shop_admin.update(
-        shop_id, name=body.name, entity=body.entity, channel=body.channel, enabled=body.enabled
+        shop_id, name=body.name, entity=body.entity, channel=body.channel, enabled=body.enabled,
+        actor=admin,
     )
     return _row(request, shop_id)
 
 
 @router.put("/{shop_id}/egress", response_model=ShopRow)
-def set_egress(shop_id: int, body: EgressRequest, request: Request) -> ShopRow:
+def set_egress(
+    shop_id: int, body: EgressRequest, request: Request, admin: str = Depends(require_admin)
+) -> ShopRow:
     egress: EgressService = _state(request).egress
     try:
         egress.set_egress(
             shop_id, body.mode, proxy_url=body.proxy_url, paste=body.paste,
-            expires_at=body.expires_at,
+            expires_at=body.expires_at, actor=admin,
         )
     except ValueError as e:  # 校验信息不含账号密码
         raise InvalidRequest(str(e)) from None
@@ -67,9 +72,10 @@ def set_egress(shop_id: int, body: EgressRequest, request: Request) -> ShopRow:
 
 @router.post("/{shop_id}/egress/check", response_model=EgressStatusOut)
 async def check_egress(
-    shop_id: int, request: Request, accept_change: bool = False
+    shop_id: int, request: Request, accept_change: bool = False,
+    admin: str = Depends(require_admin),
 ) -> EgressStatusOut:
-    status = await _state(request).egress.check(shop_id, accept_change=accept_change)
+    status = await _state(request).egress.check(shop_id, accept_change=accept_change, actor=admin)
     return EgressStatusOut(
         egress_ip=status.egress_ip, egress_ip_pending=status.egress_ip_pending,
         egress_status=status.egress_status,  # type: ignore[arg-type]
@@ -117,6 +123,8 @@ def get_base(shop_id: int, request: Request) -> BaseData:
 
 
 @router.post("/{shop_id}/resume", response_model=ShopRow)
-def resume_shop(shop_id: int, request: Request) -> ShopRow:
-    _state(request).shop_admin.resume(shop_id)
+def resume_shop(
+    shop_id: int, request: Request, admin: str = Depends(require_admin)
+) -> ShopRow:
+    _state(request).shop_admin.resume(shop_id, admin)
     return _row(request, shop_id)
