@@ -1412,7 +1412,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 发货（打单台） | POST | `/api/order/batchDeliverGoodsByEES` | ✅ **已验证**（见 A.2.4） |
 | 发货（订单页） | POST | `batchFetchTrackingNosAndDeliverGoods`（同一体接口） | ✅ 已验证；batchsend 不需要（见 A.2.7） |
 | 取号+发货一体 | POST | `/api/order/batchFetchTrackingNosAndDeliverGoods` | ✅ **已验证**（见 A.2.5） |
-| 改物流 | POST | `/order/torder/modifyLogistic` | ⏳ 待定 |
+| 改物流（重新发货） | POST | `/order/torder/modifyLogistic` | ✅ **已验证**（见 A.2.8） |
 | 售后同意退款 | POST | 未抓（按钮 code `refund_audit`） | ⏳ 待定 |
 | 售后代填运单号 | POST | 未抓（按钮 code `fill_logistics`） | ⏳ 待定 |
 | 售后延长收货 | POST | 未抓（按钮 code `exchange_logistics_extend`） | ⏳ 待定 |
@@ -1734,22 +1734,54 @@ Content-Type: application/json
 
 `is_tracking_no_and_logistics_company_match` 是可选校验，自行寄件场景有用。
 
-### A.2.8 重新发货（改物流）—— 入口已确认，接口未抓
+### A.2.8 重新发货 / 改物流（已验证）
 
 订单详情页 / 订单列表「已发货」行的「**重新发货**」按钮，
 弹窗说明：「已发货的运单号有误或者物流异常时，可以使用重新发货替换原单号」。
 
-**弹窗结构**（已验证）：
+```
+POST /order/torder/modifyLogistic
+Content-Type: application/json
+```
 
-- 发货地址（默认带出）
-- 选择发货方式：打单发货 / 在线寄件 / 自行寄件发货
-- 打单发货时：物流商、网点、打印机、模板、产品类型
-- **选择重发包裹**：显示原包裹信息（原运单号 + 快递公司）
-- 自行寄件发货时：物流单号输入框 + 物流公司下拉
-- 按钮：取消 / 重新发货
+**请求体**（2026-11-25 实测成功）：
 
-**接口状态**：未抓。物流公司下拉为虚拟滚动列表，自动化定位失败（28 项中未滚到「中通」）。
-建议手工走一次「自行寄件发货 → 重新发货」，抓 `modifyLogistic` / `reissue` 相关请求后补录。
+```json
+{
+  "sendType": "1",
+  "sendAddressIdForSave": 106591750,
+  "modifyList": [{
+    "orderId": "6919938449191743320",
+    "companyCode": "zhongtong",
+    "logisticsCode": "79209907035270",
+    "deliverId": "147767673767714066",
+    "resendProductOrderList": [{
+      "product_order_id": "6919938449191743320",
+      "serial_nos": { "serial_no_list": [], "status": 1, "status_desc": "未上传", "is_show": true }
+    }]
+  }],
+  "delivery_source_page": "order_detail",
+  "appid": 1, "__token": "...", "_bid": "ffa_order", "aid": 4272, "_lid": "..."
+}
+```
+
+**响应**：
+
+```json
+{"code":0,"data":{"failedNum":0,"sendFailList":[],"total":1,"sendFailListV2":[]}}
+```
+
+**关键点**：
+
+1. **`deliverId` 是原包裹 ID** —— 来自订单详情接口（`getOrderLogistics` / `orderDetail`），
+   不是订单号，替换前要先查到
+2. `companyCode` + `logisticsCode` 是新物流信息
+3. `sendType: "1"`（字符串）
+4. `delivery_source_page`：入口页面标识（`order_detail` / 其他）
+5. 响应成功看 `failedNum: 0`；失败明细在 `sendFailList`
+
+**弹窗结构**（已验证）：发货地址 / 发货方式（打单发货 / 在线寄件 / 自行寄件）/
+选择重发包裹（原单号） / 自行寄件时填新单号 + 物流公司。
 
 **写接口的一般性判断**：抖店只读接口全部免签名（已验证 20+ 个），
 写接口属于未知区域。若某写接口强制签名，方案是用 Playwright 在页面内执行 fetch

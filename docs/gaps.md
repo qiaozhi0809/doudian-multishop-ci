@@ -40,7 +40,7 @@
 | API-13 | P2 | 取号 + 发货一体 `batchFetchTrackingNosAndDeliverGoods` | 打单台「打单并发货」按钮；源码结构已知，未真实调用 | 用测试单验证一次，记录请求与响应 | | ✅ `batchFetchTrackingNosAndDeliverGoods` 实测成功（A.2.5，运单号 79209905665503） |
 | API-14 | P2 | `/order/torder/batchsend` 去留 | 打单台发货已确认走 `batchDeliverGoodsByEES`；`batchsend` 是否还需要不明确 | 确认订单页发货是否走它；不需要就从设计里移除 | | ✅ 结论：订单页「打单发货」也走一体接口，batchsend 不需要（A.2.7） |
 | API-15 | P2 | 资金金额字段校准 | 资金账单 `CHARGE_BILL_ITEM` 金额字段名未知；保证金 `payable` / `balance` 单位（元/分）未知 | 用有账单、有保证金的店铺取样本，更新附录 F.4 | | 🔶 保证金单位已确认（分：basic_balance 50000=500元）；账单字段仍待有账单店铺；`margin_account` 暂存原始值（`payable` / `balance`），校准后迁移为 `*_cents` |
-| API-16 | P2 | 阶段二写接口 | 售后（同意退款 / 代填运单号 / 延长收货）、商品创建提交、库存修改、改物流 | 按附录 A.2 的「必查项」逐个验证；不阻塞 MVP | | ⏳ |
+| API-16 | P2 | 阶段二写接口 | 售后（同意退款 / 代填运单号 / 延长收货）、商品创建提交、库存修改、改物流 | 按附录 A.2 的「必查项」逐个验证；不阻塞 MVP | | 🔶 改物流 ✅（`modifyLogistic`，A.2.8）；售后 / 商品创建 / 库存修改待验证 |
 
 ---
 
