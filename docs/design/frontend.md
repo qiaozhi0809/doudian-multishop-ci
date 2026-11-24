@@ -7,7 +7,8 @@
 
 ### 1. 结构
 
-- **App Shell**：侧边栏导航 + 顶栏。顶栏常驻三样：**店铺筛选器**（全局，可多选）、**任务中心**（批量操作进度）、**会话健康指示**（任一店掉线即亮红点，点开可一键重登）。
+- **登录**：未初始化时进「创建管理员」页，未登录时进登录页，路由守卫拦截所有后台页面；任一接口返回 401 时回到登录页（[backend.md](backend.md) 5.16）。
+- **App Shell**：侧边栏导航 + 顶栏（右上角为当前管理员与退出、修改密码）。顶栏常驻三样：**店铺筛选器**（全局，可多选）、**任务中心**（批量操作进度）、**会话健康指示**（任一店掉线即亮红点，点开可一键重登）。
 - **页面**：仪表盘、订单、打单台、发货台、售后、商品、库存、资金、对账、店铺与设置（组件映射见第 6 节）。
 - **模块四层**：每个页面按 engineering-rules 2.1 拆 `logic/` `hooks/` `components/` `index.tsx`。
 
@@ -49,7 +50,7 @@
 | 页面 | Arc 组件 / blocks | 模块依据 |
 |---|---|---|
 | **App Shell**（侧边栏 + 顶栏） | `workspace-sidebar` 或 `sidebar-rail`（Pro） | — |
-| 登录 | `login-split`（Pro）/ `sign-in`（Free block） | flows 7.1 |
+| 管理员登录 / 创建管理员 | `login-split`（Pro）/ `sign-in`（Free block） | backend 5.16 |
 | 首页仪表盘 | `metrics-dashboard`（Pro）+ `metric-card` + `bar-chart` | 多店经营概览 |
 | 订单管理 | `sortable-data-table` + `filter-toolbar` + `pagination` | [附录 C](../api/order-page.md) |
 | 打单台 / 发货台 | `sortable-data-table` + `hold-to-confirm`（危险操作确认） | flows 7.3 / 7.5 |

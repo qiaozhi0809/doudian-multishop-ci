@@ -181,6 +181,7 @@ CREATE TABLE tasks (
                                             -- | ship | recover_label | decrypt | reconcile | sync_base | sync_aggregate
   payload         TEXT,
   idempotency_key TEXT UNIQUE,              -- 规则见 backend 5.11；重试复用本行，不新建
+  created_by      TEXT,                     -- 发起人（管理员用户名 / 'system'）
   status          TEXT NOT NULL DEFAULT 'queued',
                   -- queued | running | verifying（结果不明，待核实，backend 5.12）| success | failed | cancelled
   attempts        INTEGER NOT NULL DEFAULT 0,
@@ -196,6 +197,7 @@ CREATE TABLE audit_log (
   id            INTEGER PRIMARY KEY,
   shop_id       INTEGER,
   task_id       INTEGER,
+  actor         TEXT,                       -- 操作人（管理员用户名）；系统定时任务为 'system'
   action        TEXT NOT NULL,
   req_summary   TEXT,
   resp_summary  TEXT,
@@ -217,6 +219,27 @@ CREATE TABLE reconcile_findings (
   detail      TEXT,
   resolved    INTEGER NOT NULL DEFAULT 0
 );
+
+-- ㉑ 本机管理员（backend 5.16；MVP 只允许一行）
+CREATE TABLE admin_user (
+  id              INTEGER PRIMARY KEY,
+  username        TEXT NOT NULL UNIQUE,
+  password_hash   TEXT NOT NULL,              -- argon2id
+  failed_attempts INTEGER NOT NULL DEFAULT 0,
+  locked_until    TEXT,
+  password_changed_at TEXT NOT NULL,
+  created_at      TEXT NOT NULL
+);
+
+-- ㉒ 管理员会话（库里只存令牌的 SHA-256）
+CREATE TABLE admin_session (
+  token_hash    TEXT PRIMARY KEY,
+  user_id       INTEGER NOT NULL REFERENCES admin_user(id) ON DELETE CASCADE,
+  created_at    TEXT NOT NULL,
+  last_seen_at  TEXT NOT NULL,
+  expires_at    TEXT NOT NULL               -- 创建时间 + 7 天；空闲 12 小时另按 last_seen_at 判断
+);
+CREATE INDEX idx_admin_session_user ON admin_session(user_id);
 
 -- ⑨ 配置
 CREATE TABLE settings (

@@ -12,7 +12,7 @@
 
 | 层 | 模块 | 职责 |
 |---|---|---|
-| `api/` | `shop` `order` `label` `print` `shipping` `remark` `task` `event` `aftersale` `catalog` `fund` `reconcile` `audit` `setting` | 路由 + pydantic I/O schema，只调 service |
+| `api/` | `auth` `shop` `order` `label` `print` `shipping` `remark` `task` `event` `aftersale` `catalog` `fund` `reconcile` `audit` `setting` | 路由 + pydantic I/O schema，只调 service |
 | `service/` | `session_manager` `base_data` `order_sync` `labeling` `printing` `shipping` `reconcile` `aftersale` `catalog` `fund` `scheduler` | 业务编排、事务、状态机推进 |
 | `adapter/doudian/` | `client` `endpoints` `bid` `error_codes` `enums` `signing/` | 抖店 HTTP 协议的唯一出口 |
 | `adapter/browser/` | `login` `channel` `page_print` | Playwright：扫码登录、兜底 fetch、借页面打印 |
@@ -369,3 +369,20 @@ class Signer(Protocol):
 ### 5.15 实时推送
 
 `GET /api/events` 用 SSE 推送：任务进度、店铺会话状态变化、打印回执、告警。前端收到后让对应查询失效重取。不用 WebSocket，因为只需服务端单向推送。
+
+### 5.16 本机管理员登录（`service/auth.py`、`api/auth.py`）
+
+**定位**：防止出单机上其他人直接打开后台操作店铺。只在本机使用，不做多租户、角色权限或对外授权（overview 2.2）。
+
+| 项 | 规则 |
+|---|---|
+| 账号 | MVP 只有**一个管理员账号**（`admin_user` 表支持多行，便于以后扩展，但界面只允许一个） |
+| 首次运行 | 没有任何账号时，前端进入「创建管理员」页；`POST /api/auth/setup` 只在账号数为 0 时可用，之后返回 409 |
+| 密码 | 至少 8 位；用 **argon2id** 哈希存储（`argon2-cffi`），不存明文、不可逆 |
+| 会话 | 登录成功生成 32 字节随机令牌，库里只存其 SHA-256；Cookie 名 `dd_admin`，`HttpOnly`、`SameSite=Strict`、`Path=/`。空闲 12 小时或自登录起 7 天过期 |
+| 防暴力尝试 | 同一账号连续 5 次失败后锁定 5 分钟；失败提示不区分「账号不存在」和「密码错误」 |
+| 鉴权范围 | 除 `/api/health`、`/api/auth/status`、`/api/auth/setup`、`/api/auth/login` 外，所有 `/api/*`（含 SSE `/api/events`）都要求有效会话，否则 401 |
+| Host 校验 | 只接受 `Host` 为 `127.0.0.1:8787` 或 `localhost:8787` 的请求（开发时加 Vite 代理端口），防止 DNS 重绑定让外部网页调用本机接口 |
+| 改密 | 已登录时 `POST /api/auth/password`（需旧密码）；改密后该账号的其他会话全部失效 |
+| 忘记密码 | 只能在出单机命令行执行 `python -m app.cli reset-admin` 重设，不提供网页找回 |
+| 审计 | 登录成功 / 失败、登出、改密写入 `audit_log`（`action=auth.*`）；写操作的 `audit_log` / `tasks` 记录操作人 `actor` |

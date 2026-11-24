@@ -10,9 +10,15 @@
 - 多店查询用 `shop_ids` 参数（逗号分隔，省略 = 全部启用店铺）。
 - 错误统一结构：`{ "error": { "type": "BizRejected", "message": "...", "shop_id": 1, "detail": {...} } }`。
 - 跨店聚合结果每店附 `source: upstream | local_db` 与失败原因，单店失败不让整个请求失败。
+- **鉴权**：除 `/api/health` 与下表「登录」分组的前三个接口外，都需要管理员会话 Cookie `dd_admin`，否则 401（[backend.md](backend.md) 5.16）。
 
 | 分组 | 方法 + 路径 | 用途 |
 |---|---|---|
+| 登录 | `GET /api/auth/status` | `{setup_required, logged_in, username}`，前端据此决定进入初始化页、登录页还是后台 |
+| | `POST /api/auth/setup {username, password}` | 首次运行创建管理员；已有账号时 409 |
+| | `POST /api/auth/login {username, password}` | 成功设置 `dd_admin` Cookie；失败 401，锁定中 423 |
+| | `POST /api/auth/logout` | 删除当前会话 |
+| | `POST /api/auth/password {old_password, new_password}` | 改密，其他会话失效 |
 | 店铺与会话 | `GET /api/shops` | 店铺列表 + 会话健康 |
 | | `POST /api/shops` | 新增店铺（随后发起扫码） |
 | | `POST /api/shops/{id}/login` | 打开浏览器扫码 / 重登 |
