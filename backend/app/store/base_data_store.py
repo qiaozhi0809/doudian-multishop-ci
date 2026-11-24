@@ -105,3 +105,8 @@ def list_templates(conn: sa.Connection, shop_id: int) -> list[dict[str, Any]]:
 def list_ebill_accounts(conn: sa.Connection, shop_id: int) -> list[dict[str, Any]]:
     rows = conn.execute(sa.select(ebill_account).where(ebill_account.c.shop_id == shop_id))
     return [dict(r) for r in rows.mappings()]
+
+
+def list_couriers(conn: sa.Connection, shop_id: int) -> list[dict[str, Any]]:
+    rows = conn.execute(sa.select(courier).where(courier.c.shop_id == shop_id))
+    return [dict(r) for r in rows.mappings()]

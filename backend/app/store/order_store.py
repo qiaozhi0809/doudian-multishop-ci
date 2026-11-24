@@ -112,3 +112,17 @@ def mark_exception(
         .where(orders.c.shop_id == shop_id, orders.c.order_no == order_no)
         .values(status=LocalOrderStatus.EXCEPTION.value, exception_reason=reason, last_sync_at=now)
     )
+
+
+def items_by_order(
+    conn: sa.Connection, order_ids: Sequence[int]
+) -> dict[int, list[Mapping[str, Any]]]:
+    out: dict[int, list[Mapping[str, Any]]] = {i: [] for i in order_ids}
+    if not order_ids:
+        return out
+    rows = conn.execute(
+        sa.select(order_items).where(order_items.c.order_id.in_(order_ids)).order_by(order_items.c.id)
+    ).mappings()
+    for r in rows:
+        out[r["order_id"]].append(dict(r))
+    return out

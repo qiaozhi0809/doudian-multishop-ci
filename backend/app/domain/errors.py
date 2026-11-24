@@ -11,3 +11,7 @@ class NotFound(Exception):
     def __init__(self, message: str, shop_id: int | None = None) -> None:
         super().__init__(message)
         self.shop_id = shop_id
+
+
+class InvalidRequest(Exception):
+    """请求内容不合法（字段取值、格式），对应 422。"""

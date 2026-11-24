@@ -76,8 +76,7 @@ class ShopRunner:
         needs_session: bool = True,
     ) -> T:
         """needs_session=False 用于扫码登录：此时 job 拿到的客户端不带任何凭证，不得用来发请求。"""
-        self._ensure_not_paused(shop_id)
-        await self._egress.ensure_ready(shop_id)
+        await self.precheck(shop_id, needs_session=needs_session)
 
         async def in_queue() -> T:
             # 排队期间前一个任务可能触发了风控暂停：执行前再查一次
@@ -100,6 +99,16 @@ class ShopRunner:
                 raise
 
         return await self._scheduler.run(shop_id, in_queue)
+
+    def proxy_for(self, shop_id: int) -> str | None:
+        return self._egress.proxy_for(shop_id)
+
+    async def precheck(self, shop_id: int, *, needs_session: bool = True) -> None:
+        """入队前的快速检查：店铺存在且未暂停、出口可用、会话有效。不通则抛异常，不发任何请求。"""
+        self._ensure_not_paused(shop_id)
+        await self._egress.ensure_ready(shop_id)
+        if needs_session:
+            self._sessions.get_credentials(shop_id)
 
     def _ensure_not_paused(self, shop_id: int) -> None:
         with self._engine.connect() as conn:

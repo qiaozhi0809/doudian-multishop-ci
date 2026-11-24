@@ -14,14 +14,14 @@ class Credentials(BaseModel):
     password: str
 
 
-class PasswordChange(BaseModel):
+class ChangePassword(BaseModel):
     old_password: str
     new_password: str
 
 
 class AuthStatus(BaseModel):
-    initialized: bool
-    authenticated: bool
+    setup_required: bool
+    logged_in: bool
     username: str | None
 
 
@@ -34,21 +34,23 @@ def status(request: Request) -> AuthStatus:
     auth = _auth(request)
     username = auth.current_user(request.cookies.get(COOKIE_NAME))
     return AuthStatus(
-        initialized=auth.is_initialized(), authenticated=username is not None, username=username
+        setup_required=not auth.is_initialized(), logged_in=username is not None,
+        username=username,
     )
 
 
-@router.post("/setup", status_code=201)
-def setup(body: Credentials, request: Request) -> dict[str, str]:
+@router.post("/setup", response_model=AuthStatus, status_code=201)
+def setup(body: Credentials, request: Request) -> AuthStatus:
+    """创建管理员。不自动登录，需再调用登录接口。"""
     _auth(request).setup(body.username, body.password)
-    return {"username": body.username}
+    return AuthStatus(setup_required=False, logged_in=False, username=None)
 
 
-@router.post("/login")
-def login(body: Credentials, request: Request, response: Response) -> dict[str, str]:
+@router.post("/login", response_model=AuthStatus)
+def login(body: Credentials, request: Request, response: Response) -> AuthStatus:
     token = _auth(request).login(body.username, body.password)
     _set_cookie(response, token)
-    return {"username": body.username}
+    return AuthStatus(setup_required=False, logged_in=True, username=body.username)
 
 
 @router.post("/logout")
@@ -60,7 +62,7 @@ def logout(request: Request, response: Response) -> dict[str, str]:
 
 @router.post("/password")
 def change_password(
-    body: PasswordChange, request: Request, _admin: str | None = Depends(require_admin)
+    body: ChangePassword, request: Request, _admin: str | None = Depends(require_admin)
 ) -> dict[str, str]:
     token = request.cookies.get(COOKIE_NAME)
     if not token:

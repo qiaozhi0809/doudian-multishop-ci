@@ -20,12 +20,13 @@ def rows(app, sql):
 
 def test_status_flow(client):
     assert client.get("/api/auth/status").json() == {
-        "initialized": False, "authenticated": False, "username": None}
+        "setup_required": True, "logged_in": False, "username": None}
     setup(client)
-    assert client.get("/api/auth/status").json()["initialized"] is True
-    client.post("/api/auth/login", json=CREDS)
+    assert client.get("/api/auth/status").json()["setup_required"] is False
+    login = client.post("/api/auth/login", json=CREDS)
+    assert login.json() == {"setup_required": False, "logged_in": True, "username": ADMIN_USER}
     assert client.get("/api/auth/status").json() == {
-        "initialized": True, "authenticated": True, "username": ADMIN_USER}
+        "setup_required": False, "logged_in": True, "username": ADMIN_USER}
 
 
 def test_setup_only_once(client):
@@ -38,7 +39,7 @@ def test_setup_rejects_short_password(client):
     r = client.post("/api/auth/setup", json={"username": "a", "password": "short"})
     assert r.status_code == 422
     assert r.json()["error"]["detail"]["problems"] == ["密码至少 8 位"]
-    assert client.get("/api/auth/status").json()["initialized"] is False
+    assert client.get("/api/auth/status").json()["setup_required"] is True
 
 
 def test_protected_requires_login(app, client):
@@ -216,4 +217,4 @@ def test_validation_error_uses_envelope(client):
 
 
 def test_logged_in_client_fixture(logged_in_client):
-    assert logged_in_client.get("/api/auth/status").json()["authenticated"] is True
+    assert logged_in_client.get("/api/auth/status").json()["logged_in"] is True

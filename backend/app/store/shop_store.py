@@ -55,3 +55,12 @@ def set_egress(conn: sa.Connection, shop_id: int, now: str, **fields: Any) -> No
 
 def set_paused(conn: sa.Connection, shop_id: int, reason: str | None, now: str) -> None:
     _update(conn, shop_id, now, {"paused_reason": reason, "paused_at": now if reason else None})
+
+
+def update_fields(conn: sa.Connection, shop_id: int, now: str, **fields: Any) -> None:
+    """改名 / 主体 / 通道等普通字段。只允许白名单列。"""
+    unknown = set(fields) - {"name", "entity", "shop_no", "channel"}
+    if unknown:
+        raise ValueError(f"不可修改的列: {sorted(unknown)}")
+    if fields:
+        _update(conn, shop_id, now, fields)
