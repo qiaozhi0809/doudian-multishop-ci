@@ -305,6 +305,7 @@ CREATE TABLE waybill_template (
   template_code TEXT NOT NULL,
   courier_code  TEXT,
   name          TEXT,
+  is_custom     INTEGER NOT NULL DEFAULT 0,  -- 自定义模板（customTempList）；取号只能用自定义模板 code（api/write.md A.2.2）
   is_default    INTEGER NOT NULL DEFAULT 0,
   raw_json      TEXT,
   synced_at     TEXT NOT NULL,
