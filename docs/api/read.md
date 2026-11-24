@@ -7,7 +7,7 @@
 
 | 用途 | 方法 | 路径 | 备注 |
 |---|---|---|---|
-| 待发货订单 | GET | `/api/order/searchlist?tab=stock_up&order_status=stock_up&scene=1` | page **0-based**；pageSize 上限 200。**响应（2026-11-25 样本）**：`data` 为订单数组，`total` 在顶层；时间字段为 unix 秒；金额整数分；`product_item[].item_order_id` 即子订单 ID；`sku_id` 可能为 `0`。按单号补查：`tab=all&order_status=&order_id=<单号>`。样本见 `backend/tests/fixtures/doudian/` |
+| 待发货订单 | GET | `/api/order/searchlist?tab=stock_up&order_status=stock_up&scene=1` | page **0-based**；pageSize 上限 200。**响应（2026-11-25 样本）**：`data` 为订单数组，`total` 在顶层；时间字段为 unix 秒；金额整数分；`product_item[].item_order_id` 即子订单 ID；`sku_id` 为 `0`、`sku_id_str` 为空（待发货单同样如此），也没有 `combine_id`：取号所需字段不在订单列表里（gaps API-04）。数字状态码已见 `2` 待发货、`4` 已关闭。按单号补查：`tab=all&order_status=&order_id=<单号>`。样本见 `backend/tests/fixtures/doudian/` |
 | 打单台列表 | GET | `/api/order/searchCombineOrder` | ⏳ 返回结构未记录；可能是取号字段 `combine_id` / 实际 `sku_id` 的来源（gaps API-04） |
 | 订单明细（取号前） | GET | `/api/order/orderListInfo` | ⏳ 页面取号前会调用（A.2.2 前置链路）；参数、返回、签名状态均未记录（gaps API-04） |
 | 状态计数（会话探测） | GET | `/api/order/tabcnt` | **未登录返回 `code:10008`**，推荐作健康探测 |
