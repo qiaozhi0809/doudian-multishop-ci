@@ -12,6 +12,15 @@ def _redact_processor(_logger, _method, event_dict: dict) -> dict:
     return redact_mapping(event_dict)
 
 
+class _StdoutLogger:
+    """每次输出时才取 sys.stdout，避免持有已关闭的流（测试捕获、重定向）。"""
+
+    def msg(self, message: str) -> None:
+        print(message, file=sys.stdout, flush=True)
+
+    log = debug = info = warn = warning = error = critical = fatal = failure = exception = msg
+
+
 def configure_logging(json: bool = True) -> None:
     renderer = structlog.processors.JSONRenderer(ensure_ascii=False) if json else (
         structlog.dev.ConsoleRenderer()
@@ -24,6 +33,6 @@ def configure_logging(json: bool = True) -> None:
             renderer,
         ],
         wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+        logger_factory=_StdoutLogger,
         cache_logger_on_first_use=False,
     )
