@@ -1,0 +1,28 @@
+# 依赖
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 环境与密钥
+.env
+.env.*
+*.key
+*.pem
+
+# 会话与数据（绝不入库）
+cookies/
+data/
+artifacts/
+
+# 构建产物
+dist/
+build/
+*.egg-info/
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
