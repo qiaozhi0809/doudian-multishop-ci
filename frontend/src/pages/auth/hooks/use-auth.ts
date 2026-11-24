@@ -19,16 +19,18 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  /** 执行一个认证动作；失败时不抛，把可读的原因放进 `error`。 */
+  /** 执行一个认证动作；失败时不抛，把可读的原因放进 `error`，返回是否成功。 */
   const run = useCallback(
-    async (action: AuthAction, fn: () => Promise<unknown>, onDone?: () => Promise<unknown> | void) => {
+    async (action: AuthAction, fn: () => Promise<unknown>, onDone?: () => Promise<unknown> | void): Promise<boolean> => {
       setPending(true);
       setError(null);
       try {
         await fn();
         await onDone?.();
+        return true;
       } catch (e) {
         setError(authErrorMessage(action, e));
+        return false;
       } finally {
         setPending(false);
       }

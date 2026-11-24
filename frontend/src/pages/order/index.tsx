@@ -1,3 +1,3 @@
 export default function OrderPage() {
-  return <h1>订单</h1>;
+  return <p>订单列表将在后续任务实现</p>;
 }

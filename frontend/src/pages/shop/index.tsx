@@ -1,3 +1,3 @@
 export default function ShopPage() {
-  return <h1>店铺</h1>;
+  return <p>店铺与设置页将在后续任务实现</p>;
 }

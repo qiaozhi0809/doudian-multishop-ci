@@ -13,17 +13,20 @@ function renderAt(path: string) {
   );
 }
 
+beforeEach(() => {
+  vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe("App", () => {
   it("renders_shell_routes", async () => {
-    mockFetch({ "GET /api/auth/status": jsonResponse(IN) });
+    mockFetch({ "GET /api/auth/status": jsonResponse(IN), "GET /api/shops": jsonResponse([]) });
     renderAt("/shops");
-    expect(await screen.findByRole("heading", { name: "店铺" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "店铺与设置" })).toBeInTheDocument();
   });
 
   it("redirects_root_to_orders", async () => {
-    mockFetch({ "GET /api/auth/status": jsonResponse(IN) });
+    mockFetch({ "GET /api/auth/status": jsonResponse(IN), "GET /api/shops": jsonResponse([]) });
     renderAt("/");
     expect(await screen.findByRole("heading", { name: "订单" })).toBeInTheDocument();
   });

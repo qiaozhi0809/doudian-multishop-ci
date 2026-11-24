@@ -18,5 +18,6 @@
 | `lib/arc-provider.tsx`、`lib/motion-tokens.ts`、`lib/use-copy-feedback.ts`、`lib/use-today.ts` | Free | `uiarc/lib/` |
 | `lib/clamp.ts` | Pro | `uiarc-pro/lib/clamp.ts` |
 | `input/`、`password-field/`、`button/`、`alert/`、`card/`、`skeleton/` | Free | `uiarc/registry/components/<id>/`（Task 3：登录 / 初始化表单） |
+| `multi-select/`、`dropdown-menu/`、`dialog/`、`popover/`、`badge/`、`tooltip/` | Free | `uiarc/registry/components/<id>/`（Task 4：App Shell） |
 
-`card` 依赖 npm 包 `@radix-ui/react-dialog`。随任务增加，在此表追加。
+npm 依赖：`@radix-ui/react-dialog`（card、dialog）、`react-dropdown-menu`、`react-popover`、`react-tooltip`。随任务增加，在此表追加。

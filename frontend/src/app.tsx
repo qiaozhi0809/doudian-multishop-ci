@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { AppShell } from "@/components/custom/app-shell";
 import AuthPage from "@/pages/auth";
 import { useUnauthorizedRedirect } from "@/pages/auth/hooks/use-unauthorized-redirect";
 import { RequireAuth } from "@/pages/auth/require-auth";
@@ -17,9 +18,11 @@ function AppRoutes() {
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/setup" element={<AuthPage mode="setup" />} />
       <Route element={<RequireAuth />}>
-        <Route path="/" element={<Navigate to="/orders" replace />} />
-        <Route path="/orders" element={<OrderPage />} />
-        <Route path="/shops" element={<ShopPage />} />
+        <Route element={<AppShell />}>
+          <Route path="/" element={<Navigate to="/orders" replace />} />
+          <Route path="/orders" element={<OrderPage />} />
+          <Route path="/shops" element={<ShopPage />} />
+        </Route>
       </Route>
     </Routes>
   );
