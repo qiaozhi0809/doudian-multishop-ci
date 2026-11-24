@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import pytest
@@ -12,7 +13,7 @@ from app.adapter.doudian.errors import (
     SessionExpired,
 )
 from app.adapter.doudian.pacer import ShopPacer
-from app.service.egress import EgressNotReady
+from app.service.egress import EgressNotReady, EgressService
 from app.service.events import EventBus
 from app.service.scheduler import ShopScheduler
 from app.service.session_manager import SessionManager
@@ -31,6 +32,7 @@ class FakeEgress:
         self.ready_calls: list[int] = []
         self.error: Exception | None = None
         self.proxy: str | None = PROXY
+        self.unreachable_marks: list[int] = []
 
     async def ensure_ready(self, shop_id: int) -> None:
         self.ready_calls.append(shop_id)
@@ -39,6 +41,9 @@ class FakeEgress:
 
     def proxy_for(self, shop_id: int) -> str | None:
         return self.proxy
+
+    def mark_unreachable(self, shop_id: int) -> None:
+        self.unreachable_marks.append(shop_id)
 
 
 class Env:
@@ -173,3 +178,54 @@ async def test_job_error_still_audited(env):
     with env.engine.connect() as conn:
         row = conn.execute(sa.text("SELECT actor, result FROM audit_log")).one()
     assert tuple(row) == ("system", "SessionExpired")
+
+
+async def test_queued_jobs_stop_after_risk_pause(env):
+    env.transport.responses[:] = [ok(code="602502151")]
+
+    async def job(client):
+        await asyncio.sleep(0.01)  # 让后两个任务都通过进队列前的检查，排在锁后面
+        return await client.call(ep.TABCNT)
+
+    results = await asyncio.gather(
+        *[env.runner.run(env.shop_id, job, actor="admin") for _ in range(3)],
+        return_exceptions=True,
+    )
+    assert isinstance(results[0], RiskBlocked)
+    assert all(isinstance(r, ShopPaused) for r in results[1:])
+    assert len(env.transport.requests) == 1
+
+
+async def test_egress_failure_mid_job_invalidates_cache(engine, tmp_path):
+    env = Env(engine, tmp_path)
+    ips = {PROXY: "203.0.113.5"}
+    fetched: list = []
+
+    async def fetch_ip(proxy):
+        fetched.append(proxy)
+        return ips.get(proxy)
+
+    egress = EgressService(engine, DevKeyBox(tmp_path / "k2"), env.events, fetch_ip)
+    egress.set_egress(env.shop_id, "proxy", proxy_url=PROXY)
+    await egress.check(env.shop_id)
+    env.sessions.save_login(env.shop_id, LoginResult([], TOKEN, "2027-01-24T00:00:00Z", {}))
+    runner = ShopRunner(engine, ShopScheduler(3), egress, env.sessions, env._factory)
+
+    async def job(client):
+        raise EgressUnavailable("proxy dropped")
+
+    with pytest.raises(EgressUnavailable):
+        await runner.run(env.shop_id, job, actor="admin")
+    assert env.shop()["egress_status"] == "unreachable"
+
+    ips[PROXY] = None  # 代理仍然不通
+    ran = []
+
+    async def second(client):
+        ran.append(1)
+
+    before = len(fetched)
+    with pytest.raises(EgressUnavailable):
+        await runner.run(env.shop_id, second, actor="admin")
+    assert len(fetched) == before + 1  # 没走 10 分钟缓存，重新探测了
+    assert ran == []

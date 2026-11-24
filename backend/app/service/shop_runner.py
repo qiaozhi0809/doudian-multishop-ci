@@ -11,7 +11,7 @@ from typing import Protocol, TypeVar
 from sqlalchemy import Engine
 
 from app.adapter.doudian.client import FxgClient, ShopCredentials
-from app.adapter.doudian.errors import RiskBlocked, SessionExpired
+from app.adapter.doudian.errors import EgressUnavailable, RiskBlocked, SessionExpired
 from app.adapter.doudian.pacer import ShopPacer
 from app.adapter.doudian.transport import CurlTransport
 from app.domain.audit import CallRecord
@@ -43,6 +43,8 @@ class EgressGate(Protocol):
 
     def proxy_for(self, shop_id: int) -> str | None: ...
 
+    def mark_unreachable(self, shop_id: int) -> None: ...
+
 
 def default_client_factory(
     creds: ShopCredentials, proxy: str | None, actor: str, observer: Callable[[CallRecord], None]
@@ -73,15 +75,12 @@ class ShopRunner:
         needs_session: bool = True,
     ) -> T:
         """needs_session=False 用于扫码登录：此时 job 拿到的客户端不带任何凭证，不得用来发请求。"""
-        with self._engine.connect() as conn:
-            shop = shop_store.get(conn, shop_id)
-        if shop is None:
-            raise LookupError(f"店铺不存在: {shop_id}")
-        if shop["paused_reason"]:
-            raise ShopPaused(shop_id, shop["paused_reason"])
+        self._ensure_not_paused(shop_id)
         await self._egress.ensure_ready(shop_id)
 
         async def in_queue() -> T:
+            # 排队期间前一个任务可能触发了风控暂停：执行前再查一次
+            self._ensure_not_paused(shop_id)
             if needs_session:
                 creds = self._sessions.get_credentials(shop_id)
             else:
@@ -95,8 +94,19 @@ class ShopRunner:
             except SessionExpired:
                 self._sessions.mark_expired(shop_id)
                 raise
+            except EgressUnavailable:
+                self._egress.mark_unreachable(shop_id)  # 作废「出口 ok」缓存，下次必须重查
+                raise
 
         return await self._scheduler.run(shop_id, in_queue)
+
+    def _ensure_not_paused(self, shop_id: int) -> None:
+        with self._engine.connect() as conn:
+            shop = shop_store.get(conn, shop_id)
+        if shop is None:
+            raise LookupError(f"店铺不存在: {shop_id}")
+        if shop["paused_reason"]:
+            raise ShopPaused(shop_id, shop["paused_reason"])
 
     def _audit(self, record: CallRecord) -> None:
         with self._engine.begin() as conn:

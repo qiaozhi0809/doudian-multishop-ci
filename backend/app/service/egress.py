@@ -189,6 +189,16 @@ class EgressService:
             raise EgressUnavailable("出口不可达，请检查代理是否到期或更换代理")
         raise EgressNotReady(f"出口状态异常: {status}")
 
+    def mark_unreachable(self, shop_id: int) -> None:
+        """请求过程中出口断了：写 unreachable，使 ensure_ready 的 10 分钟缓存失效。"""
+        with self._engine.begin() as conn:
+            shop_store.set_egress(
+                conn, shop_id, self._clock().strftime(_ISO_FMT), egress_status="unreachable"
+            )
+        self._events.publish(
+            SHOP_STATUS_CHANGED, {"shop_id": shop_id, "egress_status": "unreachable"}
+        )
+
     # ---- 取代理 ----
 
     def proxy_for(self, shop_id: int) -> str | None:
