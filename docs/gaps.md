@@ -27,7 +27,7 @@
 |---|---|---|---|---|---|---|
 | API-01 | P0 | `__token` / `_lid` / `aid` / `appid` 的来源与有效期 | 所有请求都带这几个公共参数；7.1 只写了「页面公共参数」，没写怎么拿。拿不到，协议直连通道就无法独立工作 | 写清每个参数：从哪个页面变量或接口取、浏览器外能否获取、有效期、失效时的返回 | | ✅ 已补（architecture 7.1 公共参数） |
 | API-02 | P0 | 会话有效期与 cookie 续期 | 决定会话探测频率和重登提示时机；协议直连响应若下发 `Set-Cookie` 需要回写，否则会话会提前过期 | 实测一个店从扫码到失效的时长；说明响应是否刷新 cookie、哪些 cookie 会变 | | 🔶 5.1 已补 60 天有效期；cookie 刷新待验证 |
-| API-03 | P0 | 面单账户接口 `GET /shopuser/power/getEbillAccountListByExpress` 正式收录 | 取号**必填**的 `net_code` / `ebill_id` 来自它；目前只在 A.2.2 的注释里提了一句，A.1 接口表、5.9 基础数据同步、表结构都没有 | 收录进附录 A.1：参数、返回结构、与快递/模板的对应关系；一个快递有多个网点或账户时选哪个 | | 🔶 5.9 + ebill_account 表已收录；参数细节待补 |
+| API-03 | P0 | 面单账户接口 `GET /shopuser/power/getEbillAccountListByExpress` 正式收录 | 取号**必填**的 `net_code` / `ebill_id` 来自它；目前只在 A.2.2 的注释里提了一句，A.1 接口表、5.9 基础数据同步、表结构都没有 | 收录进附录 A.1：参数、返回结构、与快递/模板的对应关系；一个快递有多个网点或账户时选哪个 | | ✅ 5.9 已收录完整响应（实测 200） |
 | API-04 | P0 | 取号所需订单字段的来源 | 取号请求要 `combine_id`、`sku_order_id`、`sku_id`、`product_id`、`product_cnt`、`is_sub_bundle_item`；取号前置链路第 1 步的 `GET /api/order/orderListInfo` 不在 A.1 表里，`searchCombineOrder` 也没写返回结构 | 确认这些字段分别从哪个接口拿到（`searchlist` / `orderListInfo` / `searchCombineOrder`）；收录到 A.1 并附字段样本 | | 🔶 字段已补（6.2）；来源接口待确认 |
 | API-05 | P0 | 发货地址的行政区 ID | 取号与 `sendcheck` 的 `address` 要传 `province_id` / `city_id` / `town_id` / `street_id`；不清楚 `getAfterSaleList` 是否返回 | 确认 `getAfterSaleList` 返回字段；如不返回，找到 ID 的来源接口 | | ✅ 5.9（getAfterSaleList 已返回行政区 ID） |
 | API-06 | P1 | 取号扩展验证 | 目前只验证过 1 单、1 个 SKU、中通 | 至少覆盖：一批多单、一单多 SKU、合单、第二家快递；`fail_orders_list` 结构与常见错误码（超区 / 余额不足 / 地址异常）；**同一订单重复取号**的平台行为（返回同号 / 新号 / 报错）；单批上限 | | ⏳ |

@@ -8,7 +8,7 @@
 - 日期：2026-11-03（初版）；2026-11-24（第一轮验证 + 技术栈修订）；2026-11-25（写接口与打印协议验证）
 - 状态：已评审（设计阶段）；2026-11-24 更新只读接口清单与技术栈（React 19 + Arc 组件库）
 - 参考产品：抖小宝（douxiaobao.com）
-- 项目目录：`E:\抖店多店铺管理`
+- 项目目录：`doudian-multishop-admin/`（本仓库根目录）
 - UI 组件库：`uiarc-system`（Arc Free 122 + Arc Pro 121 + Pro blocks 130+）
 - 研究证据：`artifacts/`（本地留存，不入库）
 
@@ -296,7 +296,7 @@ class Signer(Protocol):
 - 成功：`orders.status=shipped`；失败：退避重试 3 次，之后转人工。
 - 记录平台返回的完整报文摘要（`success_package_list` / `fail_package_list`）。
 
-### 5.7 调度队列（`core/scheduler.py`）
+### 5.7 调度队列（`service/scheduler.py`）
 
 - **每店一条串行队列**，同店请求绝不并发。
 - 全局并发上限（默认 3 个店同时执行）。
@@ -330,9 +330,12 @@ class Signer(Protocol):
 - **地址行政区 ID（API-05）**：`getAfterSaleList` 的 `address_list[]` 已包含
   `province_id` / `city_id` / `town_id` / `street_id` 及对应名称，
   取号与 `sendcheck` 的 `address` 可直接复用，无需额外查询。
-- **面单账户（API-03）**：每个「快递公司 × 模板」对应一个面单账户；
-  `net_code`（网点编码）与 `ebill_id`（电子面单账户 ID）取自该接口。
-  一个快递有多个账户时，优先选余额充足且与模板匹配的账户。
+- **面单账户（API-03）**：`getEbillAccountListByExpress?company=<快递编码>`
+  返回 `accounts[]`，字段为驼峰命名：`netCode` / `netName` / `eBillId` /
+  `balance`（面单张数，非金额）/ `accountType` / `isDefault`。
+  一个快递可返回多个账户，每个账户自带网点编码，
+  唯一键取 `(shop_id, courier_code, ebill_id, net_code)`。
+  余额不足时取号会失败，界面需提示。
 - 刷新时机：首次登录后、店铺配置变更提示、每日首次同步前。
 - 失效策略：取号失败且错误指向模板/地址时，强制刷新一次再重试。
 - **取号必须使用本店已配置的 `address_id` 与 `template_code`**，不能跨店复用。
@@ -381,8 +384,7 @@ class Signer(Protocol):
           ┌──────────── 作废重取 ────────────┐
           ▼                                  │
  synced → pending_label → label_obtained → printed → shipped → closed
-   │            │              │                        ▲
-   │            │              └──► print_failed ───────┘（重试打印）
+   │            │              │
    │            └──► exception ┘   （地址异常 / 超区 / 库存不足 / 余额不足）
    │                  │
    └─ 取消/退款 ──────► cancelled
@@ -393,8 +395,8 @@ class Signer(Protocol):
 - `synced`：订单刚从平台同步入库，尚未做取号预检（会话/快递/地址）。
 - `pending_label`：预检通过，允许进入取号批次。
 - `label_obtained`（已取号未发货）是关键中间态，保证取号与发货可分离、可回滚。
-- `print_failed`：打印任务失败（组件不可达 / 模板渲染失败），可无限重试；
-  不影响订单的发货状态，只体现在 `waybills.status=failed` 与打印任务表。
+- **打印结果不是订单状态**：打印失败时订单停留在 `label_obtained`，
+  失败详情记在 `print_job.status` / `result_detail`，可无限重试；面单保持 `active`。
 - `exception` 必须记录 `exception_reason`，人工处理后回到 `pending_label`。
 - 面单作废后，`waybills.status=void`，订单回到 `pending_label`。
 - **快捷路径**：`batchFetchTrackingNosAndDeliverGoods` 一步完成取号与发货，
@@ -512,14 +514,16 @@ CREATE TABLE waybills (
   logistics_template_code TEXT,             -- 面单模板编码（取号请求用）
   ebill_id      TEXT,                       -- 面单账户 ID
   net_code      TEXT,                       -- 网点编码
-  status        TEXT NOT NULL,              -- active | printed | void | failed
+  status        TEXT NOT NULL,              -- active | printed | void
   obtained_at   TEXT,
   printed_at    TEXT,
   voided_at     TEXT
 );
 CREATE INDEX idx_waybills_order ON waybills(order_id, status);
+-- 同一订单同时只能存在一张有效面单；printed 也占用唯一名额，
+-- 防止「已打印未发货」的订单重复取号。打印失败不改面单状态，只记 print_job.status
 CREATE UNIQUE INDEX uq_active_waybill
-  ON waybills(order_id) WHERE status = 'active';
+  ON waybills(order_id) WHERE status IN ('active','printed');
 
 -- ⑤-b 打印任务（每次打印尝试一条）
 CREATE TABLE print_job (
@@ -612,15 +616,15 @@ CREATE TABLE ebill_account (
   id            INTEGER PRIMARY KEY,
   shop_id       INTEGER NOT NULL REFERENCES shop(id),
   courier_code  TEXT NOT NULL,
-  ebill_id      TEXT NOT NULL,
-  net_code      TEXT NOT NULL,
+  ebill_id      TEXT NOT NULL,              -- 平台字段 eBillId（数字，按文本存）
+  net_code      TEXT NOT NULL,              -- 平台字段 netCode
   net_name      TEXT,
-  template_code TEXT,
-  balance_cents INTEGER,                     -- 余额（平台返回时才有）
+  account_type  INTEGER,                    -- 平台字段 accountType
+  balance       INTEGER,                    -- 面单余额（张数，非金额）
   is_default    INTEGER NOT NULL DEFAULT 0,
   raw_json      TEXT,
   synced_at     TEXT NOT NULL,
-  UNIQUE(shop_id, courier_code, ebill_id)
+  UNIQUE(shop_id, courier_code, ebill_id, net_code)
 );
 
 -- ⑪ 面单模板（取号必需）
@@ -673,6 +677,100 @@ CREATE TABLE logistics_events (
   synced_at     TEXT NOT NULL
 );
 CREATE INDEX idx_logistics_waybill ON logistics_events(waybill_no, event_time);
+
+-- ⑮ 跨店对账快照（附录 G.4）
+CREATE TABLE orders_snapshot (
+  id              INTEGER PRIMARY KEY,
+  shop_id         INTEGER NOT NULL REFERENCES shop(id),
+  shop_order_id   TEXT NOT NULL,
+  order_status    INTEGER,
+  tracking_no     TEXT,
+  company_code    TEXT,
+  pay_time        TEXT,
+  ship_time       TEXT,
+  raw_json        TEXT,
+  first_seen_at   TEXT NOT NULL,
+  last_synced_at  TEXT NOT NULL,
+  UNIQUE(shop_id, shop_order_id)
+);
+
+-- ⑯ 售后聚合（附录 E）
+CREATE TABLE aftersale (
+  id                  INTEGER PRIMARY KEY,
+  shop_id             INTEGER NOT NULL REFERENCES shop(id),
+  after_sale_id       TEXT NOT NULL,
+  order_no            TEXT,
+  type                TEXT,
+  status              INTEGER,
+  refund_amount_cents INTEGER,
+  status_deadline     INTEGER,
+  apply_time          TEXT,
+  detail_json         TEXT,
+  synced_at           TEXT NOT NULL,
+  UNIQUE(shop_id, after_sale_id)
+);
+
+-- ⑰ 商品快照（附录 D.1）
+CREATE TABLE product_snapshot (
+  id              INTEGER PRIMARY KEY,
+  shop_id         INTEGER NOT NULL REFERENCES shop(id),
+  product_id      TEXT NOT NULL,
+  name            TEXT,
+  status          TEXT,
+  tab             TEXT,
+  price_lower_cents   INTEGER,
+  price_higher_cents  INTEGER,
+  stock_num       INTEGER,
+  sell_num        INTEGER,
+  raw_json        TEXT,
+  synced_at       TEXT NOT NULL,
+  UNIQUE(shop_id, product_id)
+);
+
+-- ⑱ 库存快照（附录 D.2）
+CREATE TABLE stock_snapshot (
+  id              INTEGER PRIMARY KEY,
+  shop_id         INTEGER NOT NULL REFERENCES shop(id),
+  product_id      TEXT NOT NULL,
+  total_stock_num             INTEGER,
+  spot_stock_num              INTEGER,
+  total_occupied_stock_num    INTEGER,
+  total_unoccupied_stock_num  INTEGER,
+  is_alarming     INTEGER,
+  raw_json        TEXT,
+  synced_at       TEXT NOT NULL,
+  UNIQUE(shop_id, product_id)
+);
+
+-- ⑲ 待结算订单（附录 F.1b）
+CREATE TABLE fund_unsettled (
+  id              INTEGER PRIMARY KEY,
+  shop_id         INTEGER NOT NULL REFERENCES shop(id),
+  shop_order_no   TEXT,
+  sku_order_no    TEXT,
+  product_id      TEXT,
+  income_amount_cents         INTEGER,
+  unsettled_amount_cents      INTEGER,
+  platform_service_fee_cents  INTEGER,
+  ecom_order_status   TEXT,
+  expected_settle_time TEXT,
+  settle_period_detail TEXT,
+  raw_json        TEXT,
+  synced_at       TEXT NOT NULL,
+  UNIQUE(shop_id, shop_order_no, sku_order_no)
+);
+
+-- ⑳ 保证金账户（附录 F.1c）
+CREATE TABLE margin_account (
+  id              INTEGER PRIMARY KEY,
+  shop_id         INTEGER NOT NULL REFERENCES shop(id),
+  payable_cents   INTEGER,
+  balance_cents   INTEGER,
+  level           TEXT,
+  raw_json        TEXT,
+  synced_at       TEXT NOT NULL,
+  UNIQUE(shop_id)
+);
 ```
 
 ### 6.3 关键约束
@@ -688,20 +786,22 @@ CREATE INDEX idx_logistics_waybill ON logistics_events(waybill_no, event_time);
 
 ### 6.4 只读聚合与存储说明（DM-06 ~ DM-09）
 
-**只读聚合模块的表**（结构分别在对应附录）：
+**只读聚合模块的表**（建表语句见 6.2 ⑮~⑳，字段定义参考对应附录）：
 
-| 表 | 用途 | 结构位置 |
+| 表 | 用途 | 字段依据 |
 |---|---|---|
-| `orders_snapshot` | 跨店对账快照 | 附录 G.2 |
-| `aftersale` | 售后聚合 | 附录 E.7 |
-| `product_snapshot` / `stock_snapshot` | 商品与库存快照 | 附录 D |
-| `fund_unsettled` / `margin_account` | 资金待结算与保证金 | 附录 F |
+| `orders_snapshot` | 跨店对账快照 | 附录 G.4 |
+| `aftersale` | 售后聚合 | 附录 E.1 / E.7 |
+| `product_snapshot` / `stock_snapshot` | 商品与库存快照 | 附录 D.1 / D.2 |
+| `fund_unsettled` / `margin_account` | 资金待结算与保证金 | 附录 F.1b / F.1c |
 
-**会话存储（DM-08）**：以 SQLite `session` 表为唯一来源，`cookies/` 目录仅作导出备份。
+**会话存储（DM-08）**：以 SQLite `session` 表为唯一来源。
 
 - `session.cookies` 用 **DPAPI**（Windows）加密后存库，密钥随用户账户绑定
-- `cookies/` 目录不入库、不提交、不同步
 - `storage_state`（Playwright 格式）同样加密存储
+- **不保留明文 `cookies/` 目录作为运行时依赖**；如需跨机迁移，
+  导出包必须整体加密（DPAPI 或口令加密），且不入库、不同步
+- 明文会话只存在于内存与 Playwright 临时上下文，进程退出即丢弃
 
 **迁移机制（DM-09）**：使用 **Alembic** 管理表结构变更。
 
@@ -737,10 +837,14 @@ CREATE INDEX idx_logistics_waybill ON logistics_events(waybill_no, event_time);
 | `aid` | 固定 `4272` | 永久 |
 | `_bid` | 按业务域选：`ffa_order`（订单）/ `ffa_goods`（商品）/ `ffa_aftersale`（售后） | 永久 |
 | `__token` | 登录后从页面请求 URL 提取，每店一个；随会话文件持久化（`token` 字段） | 跟随会话（约 60 天） |
-| `_lid` | 每次请求随机生成的 13 位数字 | 单次请求 |
+| `_lid` | 页面会话内递增计数器（12 位数字；见下方证据） | 单次请求 |
 
 - `__token` 在扫码登录成功后即可获取并保存，浏览器外协议直连时从会话文件读取
-- `_lid` 无需预先获取，客户端每次请求现生成
+- **`_lid` 证据（API-01 追加）**：10 个样本（2026-11-24 ~ 11-25）全部 12 位、
+  单调递增（`331325398959` → `380214583677`），同一时刻的两次请求相差约 5000。
+  与标准时间戳位数不符（秒 10 位 / 毫秒 13 位 / 微秒 16 位），
+  判断为**页面会话内的高精度递增计数器**，不是时间戳。
+  实现时每请求生成 12 位递增数字；若平台校验严格，改从页面实时读取。
 
 ### 7.2 拉单流程
 
@@ -1064,7 +1168,7 @@ Pro 组件API 以源码导出的 TypeScript interface 为准，不猜 props。
 ### 11.4 目录结构
 
 ```
-E:\抖店多店铺管理\
+doudian-multishop-admin/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI 入口、静态资源托管
@@ -1147,7 +1251,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | **M1 登录 + 基础数据 + 拉单** | 扫码登录、Cookie 导出、地址/模板/快递同步、订单入库 | 待开始 |
 | **M2 订单池 + 地址解密 + 取号** | 聚合界面、筛选勾选、批量取号 | 待开始 |
 | **M3 打印** | 官方组件 `wss://localhost:13999` 接通；PDF 兜底 | 待开始 |
-| **M4 发货前检查 + 发货 + 对账** | `sendcheck`、`batchsend`、每日对账 | 待开始 |
+| **M4 发货前检查 + 发货 + 对账** | `sendcheck`、`batchDeliverGoodsByEES`、每日对账 | 待开始 |
 | **M5 多店聚合（只读）** | 售后 / 商品 / 库存 / 资金四类聚合服务与数据表 | 待开始 |
 | **M6 前端后台** | Arc 组件搭完整后台，九个页面（见 11.3） | 待开始 |
 | **M7 打磨** | 掉线重登、异常处理、日志、限速、备份、演练模式 | 待开始 |
@@ -1222,7 +1326,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 模块 | 只读接口 | 写接口 | 数据样本 |
 |---|---|---|---|
 | 会话 | ✅ 探测 / cookie 导出 | — | ✅ |
-| 订单 | ✅ 列表 / 筛选（8 项）/ 计数 / 地址解密 / 取号 / 发货前检查 / 发货 / 批量备注 | ⏳ 改物流 / 面单作废 | ✅ 18 单 + 新店 529 单 |
+| 订单 | ✅ 列表 / 筛选（8 项）/ 计数 / 地址解密 | ✅ 取号 / 发货前检查 / 发货 / 批量备注；⏳ 改物流 / 面单作废 | ✅ 18 单 + 新店 529 单 |
 | 商品 | ✅ 列表 / 计数 / 分组 / 类目树 | ⏳ 创建提交 | ✅ 6 个商品 |
 | 库存 | ✅ 列表 / 仓库列表 | ⏳ 库存修改 | ✅ |
 | 售后 | ✅ 列表 / 计数 / 详情 | ⏳ 同意退款 / 填运单号 / 延长收货 | ✅ 8 单 |
@@ -1689,7 +1793,7 @@ compact_time[select]=create_time_start,create_time_end
 
 | UI 按钮 | 类型 | 目标 | 状态 |
 |---|---|---|---|
-| 批量备注 | 写接口 | `POST /api/order/addremarks` | 接口已识别，未验证 |
+| 批量备注 | 写接口 | `POST /api/order/addremarks` | ✅ 已验证（A.2.1） |
 | 批量导入发货 | 页面 | `/ffa/morder/delivery/upload` | 跳转 |
 | 打单发货 | 页面 | `/ffa/morder/logistics/ewaybill-delivery` | 跳转 |
 | 在线寄件 | 页面 | 菜单内跳转 | 未识别 |
