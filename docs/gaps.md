@@ -36,10 +36,10 @@
 | API-09 | P1 | 发货扩展验证 | 目前只验证过 1 个包裹 | 覆盖：一批多包裹、部分失败时 `fail_package_list` 结构；**同一运单重复发货**的平台行为 | | 🔶 重复发货已测（返回 success，服务端不阻止）；多包裹 / 部分失败待测 |
 | API-10 | P1 | 地址解密的风控限制 | `receiveinfo` 返回 `verify_type`，说明有风控通道；多店批量解密是最容易触发风控的环节 | 实测：单店连续解密多少单会触发验证、触发后的返回形态、是否有日配额 | | ⏳ |
 | API-11 | P1 | 写接口被风控拦截时的表现 | 错误分类（见 overall-design 2.2）需要知道「风控拦截」长什么样，才能和业务拒绝、会话失效区分 | 记录至少一种风控拦截的 `code` / `msg` / 是否要求验证码 | | ✅ 已记录 `10001010A`（searchPackageList 无签名直连触发） |
-| API-12 | P1 | 拉单增量与分页上限 | 5.4 写了「cursor/时间窗减少重复拉取」，但 `searchlist` 的增量参数没验证；`pageSize` 上限只知道 100 可用 | 确认按 `create_time` / `update_time` 窗口拉取的参数；`pageSize` 上限；订单号多值输入的格式（拼接串还是数组） | | ⏳ |
+| API-12 | P1 | 拉单增量与分页上限 | 5.4 写了「cursor/时间窗减少重复拉取」，但 `searchlist` 的增量参数没验证；`pageSize` 上限只知道 100 可用 | 确认按 `create_time` / `update_time` 窗口拉取的参数；`pageSize` 上限；订单号多值输入的格式（拼接串还是数组） | | 🔶 pageSize 上限 200 已确认（201 报 602502051）；增量时间窗 / 订单号多值待测 |
 | API-13 | P2 | 取号 + 发货一体 `batchFetchTrackingNosAndDeliverGoods` | 打单台「打单并发货」按钮；源码结构已知，未真实调用 | 用测试单验证一次，记录请求与响应 | | 🔶 A.2.5 结构已知，待实测 |
 | API-14 | P2 | `/order/torder/batchsend` 去留 | 打单台发货已确认走 `batchDeliverGoodsByEES`；`batchsend` 是否还需要不明确 | 确认订单页发货是否走它；不需要就从设计里移除 | | ⏳ |
-| API-15 | P2 | 资金金额字段校准 | 资金账单 `CHARGE_BILL_ITEM` 金额字段名未知；保证金 `payable` / `balance` 单位（元/分）未知 | 用有账单、有保证金的店铺取样本，更新附录 F.4 | | ⏳ 需有账单、有保证金的店铺；`margin_account` 暂存原始值（`payable` / `balance`），校准后迁移为 `*_cents` |
+| API-15 | P2 | 资金金额字段校准 | 资金账单 `CHARGE_BILL_ITEM` 金额字段名未知；保证金 `payable` / `balance` 单位（元/分）未知 | 用有账单、有保证金的店铺取样本，更新附录 F.4 | | 🔶 保证金单位已确认（分：basic_balance 50000=500元）；账单字段仍待有账单店铺；`margin_account` 暂存原始值（`payable` / `balance`），校准后迁移为 `*_cents` |
 | API-16 | P2 | 阶段二写接口 | 售后（同意退款 / 代填运单号 / 延长收货）、商品创建提交、库存修改、改物流 | 按附录 A.2 的「必查项」逐个验证；不阻塞 MVP | | ⏳ |
 
 ---

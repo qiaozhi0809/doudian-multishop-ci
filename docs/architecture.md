@@ -1373,7 +1373,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 
 | 用途 | 方法 | 路径 | 备注 |
 |---|---|---|---|
-| 待发货订单 | GET | `/api/order/searchlist?tab=stock_up&order_status=stock_up&scene=1` | page **0-based**；pageSize 100 验证可用 |
+| 待发货订单 | GET | `/api/order/searchlist?tab=stock_up&order_status=stock_up&scene=1` | page **0-based**；pageSize 上限 200（201 及以上报 602502051） |
 | 打单台列表 | GET | `/api/order/searchCombineOrder` | |
 | 状态计数（会话探测） | GET | `/api/order/tabcnt` | **未登录返回 `code:10008`**，推荐作健康探测 |
 | 快递公司 | **POST** | `/api/order/expressList` | GET 返回 `404 路由错误`；无业务参数 |
@@ -2261,7 +2261,7 @@ GET /bill_center/domestic/query_bill_config?config_key_list=hosting_service_fee_
 |---|---|---|
 | 待结算订单（`SHOP_UNSETTLED_ORDER`） | `income_amount` / `platform_service_fee` / `unsettled_amount` / `aggregation_res.total_unsettled_amount` | ✅ **已确认，单位：分** |
 | 资金账单（`CHARGE_BILL_ITEM`） | 未知 | ⚠️ 样本为空，字段名待有账单的店铺校准 |
-| 保证金（`payable/info_v2`） | `payable` / `balance` / `withdrawable_amount` | ⚠️ 样本全为 0，单位（元/分）待确认 |
+| 保证金（`payable/info_v2`） | `payable` / `balance` / `withdrawable_amount` / `risk_detail.basic_payable` / `risk_detail.basic_balance` | ✅ **单位：分**（实测 `basic_balance: 50000` = 500 元个体店保证金；`payable: 0`、`balance: 1000`） |
 
 资金账单条目的候选字段表（拿到首笔账单前使用，命中即按约定换算）：
 
