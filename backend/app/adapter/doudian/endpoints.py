@@ -11,12 +11,14 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from app.adapter.doudian import bid
+from app.domain.order_status import OrderTab
 
 BASE_URL = "https://fxg.jinritemai.com"
 APPID = 1
 AID = 4272
 
 SEARCHLIST_MAX_PAGE_SIZE = 200
+SEARCHLIST_PAGE_BASE = 0
 ADDRESS_PAGE_SIZE = 500
 
 
@@ -38,7 +40,9 @@ TABCNT = Endpoint(
     "tabcnt", "GET", "/api/order/tabcnt", bid.ORDER,
     fixed_params={"tabcnt_version": "v1", "tab": "all"},
 )
-SEARCHLIST = Endpoint("searchlist", "GET", "/api/order/searchlist", bid.ORDER, page_base=0)
+SEARCHLIST = Endpoint(
+    "searchlist", "GET", "/api/order/searchlist", bid.ORDER, page_base=SEARCHLIST_PAGE_BASE
+)
 EXPRESS_LIST = Endpoint(
     "express_list", "POST", "/api/order/expressList", bid.ORDER, body="json", common_in="query"
 )
@@ -52,3 +56,22 @@ TEMPLATE_LIST = Endpoint("template_list", "GET", "/shopuser/power/searchTemplate
 EBILL_ACCOUNTS = Endpoint(
     "ebill_accounts", "GET", "/shopuser/power/getEbillAccountListByExpress", bid.ORDER
 )
+
+
+# ---- searchlist 的两种查询参数 ----
+# tab 与 order_status 必须同时传；全部订单时 order_status 为空串（docs/api/read.md）
+
+def searchlist_pending_params(page: int) -> dict[str, str | int]:
+    """待发货订单：整页 200 条。"""
+    return {
+        "tab": OrderTab.STOCK_UP.value, "order_status": OrderTab.STOCK_UP.value, "scene": 1,
+        "page": page, "pageSize": SEARCHLIST_MAX_PAGE_SIZE,
+    }
+
+
+def searchlist_by_order_id_params(order_no: str) -> dict[str, str | int]:
+    """按订单号补查任意状态的订单。"""
+    return {
+        "tab": OrderTab.ALL.value, "order_status": "", "order_id": order_no,
+        "page": SEARCHLIST_PAGE_BASE, "pageSize": 10,
+    }

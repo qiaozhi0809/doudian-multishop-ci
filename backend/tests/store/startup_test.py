@@ -14,5 +14,5 @@ def test_startup_creates_data_dir(tmp_path):
 def test_lifespan_wires_services_and_shuts_down_cleanly(tmp_path):
     app = create_app(Settings(data_dir=tmp_path / "data"))
     with TestClient(app, base_url="http://127.0.0.1:8787"):
-        for name in ("engine", "events", "sessions", "egress", "runner"):
+        for name in ("engine", "events", "sessions", "egress", "runner", "base_data", "order_sync"):
             assert hasattr(app.state, name)

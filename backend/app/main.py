@@ -8,10 +8,19 @@ from functools import partial
 from fastapi import FastAPI
 
 from app.config import Settings
+from app.service.base_data import BaseDataService
 from app.service.egress import EgressService
 from app.service.egress_probe import make_fetch_ip
 from app.service.events import EventBus
-from app.service.periodic import PROBE_INTERVAL_S, for_each_active_shop, probe_session, run_every
+from app.service.order_sync import OrderSyncService
+from app.service.periodic import (
+    ORDER_SYNC_INTERVAL_S,
+    PROBE_INTERVAL_S,
+    SYSTEM_ACTOR,
+    for_each_active_shop,
+    probe_session,
+    run_every,
+)
 from app.service.scheduler import ShopScheduler
 from app.service.session_manager import SessionManager
 from app.service.shop_runner import ShopRunner
@@ -39,10 +48,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.sessions = sessions
         app.state.egress = egress
         app.state.runner = runner
+        app.state.base_data = BaseDataService(engine, runner, events)
+        order_sync = OrderSyncService(engine, runner, sessions, events)
+        app.state.order_sync = order_sync
 
         stop = asyncio.Event()
         probe_all = partial(for_each_active_shop, engine, partial(probe_session, runner))
-        tasks = [asyncio.create_task(run_every(PROBE_INTERVAL_S, probe_all, stop))]
+        sync_all = partial(
+            for_each_active_shop, engine, lambda sid: order_sync.sync_pending(sid, SYSTEM_ACTOR)
+        )
+        tasks = [
+            asyncio.create_task(run_every(PROBE_INTERVAL_S, probe_all, stop)),
+            asyncio.create_task(run_every(ORDER_SYNC_INTERVAL_S, sync_all, stop)),
+        ]
         try:
             yield
         finally:
