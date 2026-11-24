@@ -43,6 +43,12 @@
   padding-left: 0;
 }
 
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 .navLink {
   display: flex;
   align-items: center;
@@ -126,6 +132,17 @@
 .content {
   min-width: 0;
   padding: var(--space-6);
+}
+
+.popoverTrigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.badgeLink {
+  text-decoration: none;
 }
 
 .attentionPanel {

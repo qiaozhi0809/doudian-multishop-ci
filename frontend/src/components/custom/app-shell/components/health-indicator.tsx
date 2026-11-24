@@ -14,14 +14,15 @@ interface HealthIndicatorProps {
 }
 
 function label(summary: HealthSummary): string {
-  if (summary.level === "error") return `${summary.needsLogin} 家需重新登录`;
-  if (summary.level === "warn") return `${summary.expiring} 家即将过期`;
-  return "会话正常";
+  if (summary.level === "error") return `${summary.errorCount} 家店需处理`;
+  if (summary.level === "warn") return `${summary.warnCount} 家店即将到期`;
+  if (summary.level === "empty") return "还没有店铺";
+  return "店铺正常";
 }
 
-const TONE = { ok: "success", warn: "warning", error: "danger" } as const;
+const TONE = { empty: "neutral", ok: "success", warn: "warning", error: "danger" } as const;
 
-/** 会话健康指示：正常时只是一个状态标记；有店铺需要处理时可点开查看并前往店铺页。 */
+/** 店铺状态指示：正常时只是状态标记；没有店铺时引导去店铺页；有店铺需要处理时可点开查看并前往店铺页。 */
 export function HealthIndicator({ state, summary, attention, onRetry }: HealthIndicatorProps) {
   if (state === "loading") {
     return (
@@ -44,10 +45,17 @@ export function HealthIndicator({ state, summary, attention, onRetry }: HealthIn
     </Badge>
   );
   if (summary.level === "ok") return badge;
+  if (summary.level === "empty") {
+    return (
+      <Link to="/shops" className={styles.badgeLink}>
+        {badge}
+      </Link>
+    );
+  }
 
   return (
     <Popover>
-      <PopoverTrigger aria-label={text} style={{ background: "none", border: 0, padding: 0, cursor: "pointer" }}>
+      <PopoverTrigger aria-label={text} className={styles.popoverTrigger}>
         {badge}
       </PopoverTrigger>
       <PopoverContent align="end" className={styles.attentionPanel}>
@@ -55,9 +63,7 @@ export function HealthIndicator({ state, summary, attention, onRetry }: HealthIn
           {attention.map((row) => (
             <li key={row.id} className={styles.attentionRow}>
               <span>{row.name}</span>
-              <Badge tone={row.kind === "needs_login" ? "danger" : "warning"}>
-                {row.kind === "needs_login" ? "需重新登录" : "即将过期"}
-              </Badge>
+              <Badge tone={row.tone}>{row.label}</Badge>
             </li>
           ))}
         </ul>

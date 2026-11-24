@@ -78,25 +78,42 @@ describe("App Shell", () => {
     expect(within(nav).getByRole("link", { name: "店铺与设置" })).toHaveAttribute("href", "/shops?shops=1");
   });
 
-  it("健康正常时显示会话正常", async () => {
+  it("店铺都正常时显示店铺正常", async () => {
     renderShell("/orders");
-    expect(await screen.findByText("会话正常")).toBeInTheDocument();
+    expect(await screen.findByText("店铺正常")).toBeInTheDocument();
   });
 
-  it("有店铺需重新登录时显示数量并给出处理入口", async () => {
+  it("没有店铺时显示还没有店铺，并链接到店铺页", async () => {
+    renderShell("/orders", {}, []);
+    const link = await screen.findByRole("link", { name: "还没有店铺" });
+    expect(link).toHaveAttribute("href", "/shops");
+    expect(screen.queryByText("店铺正常")).not.toBeInTheDocument();
+  });
+
+  it("有店铺需处理时显示数量，弹层列出店铺与最严重的问题", async () => {
     renderShell("/orders", {}, [
       makeShop(),
-      makeShop({ id: 2, name: "店铺乙", status: "needs_login", health: "expired" }),
+      makeShop({ id: 2, name: "店铺乙", status: "needs_login", health: "expired", egress_status: "duplicate" }),
     ]);
-    const trigger = await screen.findByRole("button", { name: /1 家需重新登录/ });
+    const trigger = await screen.findByRole("button", { name: /1 家店需处理/ });
     await userEvent.setup().click(trigger);
     expect(await screen.findByText("店铺乙")).toBeInTheDocument();
+    expect(screen.getByText("需重新登录")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "前往店铺页" })).toHaveAttribute("href", "/shops");
   });
 
   it("即将过期时显示警告数量", async () => {
     renderShell("/orders", {}, [makeShop({ health: "expiring" })]);
-    expect(await screen.findByRole("button", { name: /1 家即将过期/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /1 家店即将到期/ })).toBeInTheDocument();
+  });
+
+  it("风控暂停、出口异常的店铺也算需处理，不显示店铺正常", async () => {
+    renderShell("/orders", {}, [
+      makeShop({ id: 1, name: "甲", paused_reason: "risk_blocked:1" }),
+      makeShop({ id: 2, name: "乙", egress_status: "unreachable" }),
+    ]);
+    expect(await screen.findByRole("button", { name: /2 家店需处理/ })).toBeInTheDocument();
+    expect(screen.queryByText("店铺正常")).not.toBeInTheDocument();
   });
 
   it("店铺列表读取失败时健康指示显示出错并可重试", async () => {

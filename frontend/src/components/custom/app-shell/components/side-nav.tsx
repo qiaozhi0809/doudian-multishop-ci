@@ -50,7 +50,7 @@ export function SideNav({ collapsed, onToggle, shopIds }: SideNavProps) {
           )}
         </Button>
       </div>
-      <nav aria-label="主导航" style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+      <nav aria-label="主导航" className={styles.navList}>
         {NAV_ITEMS.map((item) => (
           <NavEntry key={item.path} item={item} collapsed={collapsed} shopIds={shopIds} />
         ))}
