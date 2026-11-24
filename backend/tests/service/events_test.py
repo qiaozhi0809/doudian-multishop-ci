@@ -46,3 +46,25 @@ async def test_async_with_unsubscribes():
         bus.publish("e", {"x": 1})
         assert await anext(sub) == ("e", {"x": 1})
     assert bus.subscriber_count == 0
+
+
+async def test_publish_from_thread_wakes_subscriber():
+    bus = EventBus()
+    sub = bus.subscribe()
+    waiter = asyncio.ensure_future(anext(sub))  # 订阅者先进入等待
+    await asyncio.sleep(0)
+    await asyncio.to_thread(bus.publish, "shop_status_changed", {"shop_id": 1})
+    assert await asyncio.wait_for(waiter, 1) == ("shop_status_changed", {"shop_id": 1})
+
+
+def test_publish_with_closed_loop_subscriber_is_ignored():
+    bus = EventBus()
+    loop = asyncio.new_event_loop()
+
+    async def subscribe():
+        return bus.subscribe()
+
+    sub = loop.run_until_complete(subscribe())
+    loop.close()
+    bus.publish("e", {})  # 订阅者的循环已关闭：不抛异常
+    sub.close()

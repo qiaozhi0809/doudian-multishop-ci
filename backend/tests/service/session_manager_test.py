@@ -94,3 +94,21 @@ def test_unknown_shop(env):
         mgr.save_login(999, _login_result())
     with pytest.raises(SessionExpired):
         mgr.get_credentials(999)
+
+
+def test_get_credentials_disabled_raises(env):
+    mgr, _, shop_id, engine = env
+    mgr.save_login(shop_id, _login_result())
+    with engine.begin() as conn:
+        shop_store.set_status(conn, shop_id, "disabled", NOW)
+    with pytest.raises(SessionExpired, match="已停用"):
+        mgr.get_credentials(shop_id)
+
+
+def test_get_credentials_only_for_active(env):
+    mgr, _, shop_id, engine = env
+    mgr.save_login(shop_id, _login_result())
+    with engine.begin() as conn:
+        shop_store.set_status(conn, shop_id, "weird", NOW)
+    with pytest.raises(SessionExpired):
+        mgr.get_credentials(shop_id)

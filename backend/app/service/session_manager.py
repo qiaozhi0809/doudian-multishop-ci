@@ -17,7 +17,12 @@ from app.store.session_store import SessionRow
 
 ACTIVE = "active"
 NEEDS_LOGIN = "needs_login"
+DISABLED = "disabled"
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
+_INACTIVE_MESSAGES = {
+    NEEDS_LOGIN: "该店铺需要重新扫码登录",
+    DISABLED: "该店铺已停用",
+}
 
 
 def _utc_now() -> datetime:
@@ -58,7 +63,11 @@ class SessionManager:
         with self._engine.connect() as conn:
             shop = shop_store.get(conn, shop_id)
             row = session_store.load(conn, shop_id)
-        if shop is None or shop["status"] == NEEDS_LOGIN or row is None:
+        if shop is None:
+            raise SessionExpired("店铺不存在")
+        if shop["status"] != ACTIVE:
+            raise SessionExpired(_INACTIVE_MESSAGES.get(shop["status"], "该店铺当前不可用"))
+        if row is None:
             raise SessionExpired("该店铺需要重新扫码登录")
         return ShopCredentials(
             shop_id=shop_id,

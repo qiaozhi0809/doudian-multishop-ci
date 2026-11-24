@@ -38,23 +38,39 @@ class Subscription:
 class EventBus:
     def __init__(self, queue_size: int = DEFAULT_QUEUE_SIZE) -> None:
         self._queue_size = queue_size
-        self._queues: list[asyncio.Queue[Event]] = []
+        # (队列, 订阅时所在的事件循环)；循环为 None 表示订阅发生在循环之外
+        self._subs: list[tuple[asyncio.Queue[Event], asyncio.AbstractEventLoop | None]] = []
 
     @property
     def subscriber_count(self) -> int:
-        return len(self._queues)
+        return len(self._subs)
 
     def subscribe(self) -> Subscription:
         queue: asyncio.Queue[Event] = asyncio.Queue(self._queue_size)
-        self._queues.append(queue)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        self._subs.append((queue, loop))
         return Subscription(self, queue)
 
     def _remove(self, queue: asyncio.Queue[Event]) -> None:
-        if queue in self._queues:
-            self._queues.remove(queue)
+        self._subs = [(q, loop) for q, loop in self._subs if q is not queue]
+
+    @staticmethod
+    def _put(queue: asyncio.Queue[Event], item: Event) -> None:
+        if queue.full():
+            queue.get_nowait()
+        queue.put_nowait(item)
 
     def publish(self, event: str, data: dict[str, Any]) -> None:
-        for q in self._queues:
-            if q.full():
-                q.get_nowait()
-            q.put_nowait((event, data))
+        """可在事件循环线程或工作线程调用；跨线程时经 call_soon_threadsafe 转回订阅者的循环。"""
+        try:
+            current = asyncio.get_running_loop()
+        except RuntimeError:
+            current = None
+        for queue, loop in list(self._subs):
+            if loop is None or loop is current:
+                self._put(queue, (event, data))
+            elif not loop.is_closed():
+                loop.call_soon_threadsafe(self._put, queue, (event, data))
