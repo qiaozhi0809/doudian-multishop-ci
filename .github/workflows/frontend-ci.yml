@@ -8,6 +8,8 @@ on:
 
 jobs:
   frontend:
+    # 主仓库私有且 Actions 因账单无法启动，只在公开 CI 镜像上运行（CLAUDE.md）
+    if: github.repository == 'qiaozhi0809/doudian-multishop-ci'
     runs-on: ubuntu-latest
     defaults:
       run:
