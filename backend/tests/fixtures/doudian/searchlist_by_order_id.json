@@ -1,0 +1,148 @@
+{
+  "st": 0,
+  "msg": "",
+  "code": 0,
+  "data": [
+    {
+      "order_id": "",
+      "shop_order_id": "6900000000000000001",
+      "order_status": 4,
+      "user_id": "user_placeholder",
+      "pay_type": 8,
+      "order_type": 0,
+      "product_count": 1,
+      "pay_amount": 12800,
+      "post_amount": 0,
+      "total_goods_amount": 0,
+      "promotion_amount": 0,
+      "actual_pay_amount": 12800,
+      "actual_receive_amount_int": 12800,
+      "create_time": 1781261789,
+      "pay_time": 1781261799,
+      "exp_ship_time": 1781366399,
+      "logistics_time": 0,
+      "receipt_time": 0,
+      "user_nickname": "测*",
+      "receiver_info": {
+        "post_receiver": "测*",
+        "post_tel": "1**********",
+        "post_addr": {
+          "province": {
+            "name": "江苏省",
+            "id": "32",
+            "has_child": false
+          },
+          "city": {
+            "name": "苏州市",
+            "id": "320500",
+            "has_child": false
+          },
+          "town": {
+            "name": "吴中区",
+            "id": "3205060000000",
+            "has_child": false
+          },
+          "street": {
+            "name": "胥口镇",
+            "id": "3205061040000",
+            "has_child": false
+          },
+          "detail": "<详细地址>"
+        },
+        "can_view": 1,
+        "post_tel_type": 0,
+        "expire_time": 0,
+        "is_show_edit_address": false,
+        "can_postpone": false,
+        "extension_number": "",
+        "post_tel_mask": "",
+        "address_tag": [],
+        "user_account_infos": null,
+        "ui_type": "",
+        "buyer_tel_info": {
+          "pay_tel": "",
+          "pay_tel_type": 0,
+          "expire_time": 0,
+          "can_postpone": false,
+          "pay_tel_mask": "",
+          "ui_type": "",
+          "can_view": 0,
+          "extension_number": "",
+          "nick_name": "测*"
+        }
+      },
+      "product_item": [
+        {
+          "item_order_id": "6900000000000000001",
+          "order_status": 4,
+          "total_amount": 12800,
+          "pay_amount": 12800,
+          "product_id": "3811109459833520578",
+          "sku_id": 0,
+          "product_name": "黑色银色日本回流剃须刀（图片仅供参考）以直播介绍为准",
+          "img": "https://p9-aio.ecombdimg.com/obj/ecom-shop-material/jpeg_m_0c3b735a737c2f4faabeee9893846b2e_sx_324894_www612-612",
+          "sku_spec": [
+            {
+              "name": "颜色分类",
+              "value": "白色"
+            }
+          ],
+          "combo_amount": 12800,
+          "combo_num": 1,
+          "shipped_count": 0,
+          "after_sale_info": {
+            "url_after_sale_no": 1,
+            "after_sale_text": "退款成功",
+            "after_sale_remark": "",
+            "after_sale_id": "140000000000000001",
+            "has_pre_sale": false,
+            "aftersale_status_class_color_type": 2,
+            "aftersale_status_class_string": "退款成功",
+            "after_sale_status_remark": "",
+            "after_sale_status_remark_hover": "",
+            "after_sale_url": "https://fxg.jinritemai.com/ffa/maftersale/aftersale/detail-v3?aftersale_id=140000000000000001"
+          },
+          "properties": [
+            {
+              "key": "sku_spec",
+              "text": "白色x1",
+              "action": "",
+              "action_text": ""
+            },
+            {
+              "key": "sku_order_id",
+              "text": "商品单ID:6900000000000000001",
+              "action": "",
+              "action_text": ""
+            }
+          ]
+        }
+      ],
+      "operation_actions": [
+        "viewOrder"
+      ],
+      "latest_logistic_info": {
+        "tracking_no": "",
+        "company_code": "",
+        "track": "",
+        "deliver_name": "",
+        "deliver_mobile": "",
+        "lo_status_text": "",
+        "track_detail_description": "",
+        "show_track": false,
+        "lo_status_text_type": "",
+        "description_text_type": "",
+        "lo_status_text_v2": "",
+        "show_call_dispatch": false,
+        "track_info": ""
+      },
+      "way_bill_url": "",
+      "logistics_status": ""
+    }
+  ],
+  "page": 0,
+  "size": 1,
+  "total": 1,
+  "order": "desc",
+  "order_by": ""
+}

@@ -1,0 +1,147 @@
+{
+  "st": 0,
+  "msg": "",
+  "code": 0,
+  "data": [
+    {
+      "order_id": "",
+      "shop_order_id": "6900000000000000002",
+      "order_status": 2,
+      "user_id": "user_placeholder",
+      "pay_type": 24,
+      "order_type": 0,
+      "product_count": 1,
+      "pay_amount": 3600,
+      "post_amount": 0,
+      "total_goods_amount": 0,
+      "promotion_amount": 0,
+      "actual_pay_amount": 3600,
+      "actual_receive_amount_int": 3600,
+      "create_time": 1795561505,
+      "pay_time": 1795561506,
+      "exp_ship_time": 1795734307,
+      "logistics_time": 0,
+      "receipt_time": 0,
+      "user_nickname": "测*",
+      "receiver_info": {
+        "post_receiver": "测*",
+        "post_tel": "1**********",
+        "post_addr": {
+          "province": {
+            "name": "内蒙古自治区",
+            "id": "15",
+            "has_child": false
+          },
+          "city": {
+            "name": "通辽市",
+            "id": "150500",
+            "has_child": false
+          },
+          "town": {
+            "name": "科尔沁左翼后旗",
+            "id": "150522",
+            "has_child": false
+          },
+          "street": {
+            "name": "甘旗卡镇",
+            "id": "150522100",
+            "has_child": false
+          },
+          "detail": "<详细地址>"
+        },
+        "can_view": 1,
+        "post_tel_type": 0,
+        "expire_time": 0,
+        "is_show_edit_address": false,
+        "can_postpone": false,
+        "extension_number": "",
+        "post_tel_mask": "",
+        "address_tag": [],
+        "user_account_infos": null,
+        "ui_type": "",
+        "buyer_tel_info": {
+          "pay_tel": "",
+          "pay_tel_type": 0,
+          "expire_time": 0,
+          "can_postpone": false,
+          "pay_tel_mask": "",
+          "ui_type": "",
+          "can_view": 0,
+          "extension_number": "",
+          "nick_name": "测*"
+        },
+        "extra_map": null
+      },
+      "product_item": [
+        {
+          "item_order_id": "6900000000000000002",
+          "order_status": 2,
+          "total_amount": 3600,
+          "pay_amount": 3600,
+          "product_id": "3855930690352840825",
+          "sku_id": 0,
+          "sku_id_str": "",
+          "product_name": "轻熟法式衬衫女上衣单排扣荷叶边印花系带百搭气质领口女装碎花优",
+          "img": "https://p3-aio.ecombdimg.com/obj/ecom-shop-material/jpeg_m_7d05ccb5911ff9d3b97d1e359c6f9e46_sx_98857_www800-800",
+          "sku_spec": [
+            {
+              "name": "颜色分类",
+              "value": "蓝色(蓝色)"
+            },
+            {
+              "name": "尺码大小",
+              "value": "均码(均码)"
+            }
+          ],
+          "combo_amount": 3600,
+          "combo_num": 1,
+          "shipped_count": 0,
+          "after_sale_info": {
+            "url_after_sale_no": 0,
+            "after_sale_text": "-",
+            "after_sale_remark": "",
+            "after_sale_id": "",
+            "has_pre_sale": false,
+            "aftersale_status_class_color_type": 0,
+            "aftersale_status_class_string": "",
+            "after_sale_status_remark": "",
+            "after_sale_status_remark_hover": ""
+          },
+          "properties": [
+            {
+              "key": "sku_spec",
+              "text": "蓝色(蓝色)/均码(均码)x1",
+              "action": "",
+              "action_text": ""
+            }
+          ],
+          "relation_sku_order_ids": []
+        }
+      ],
+      "operation_actions": [],
+      "latest_logistic_info": {
+        "tracking_no": "",
+        "company_code": "",
+        "track": "",
+        "deliver_name": "",
+        "deliver_mobile": "",
+        "lo_status_text": "",
+        "tags": null,
+        "track_detail_description": "",
+        "show_track": false,
+        "lo_status_text_type": "",
+        "description_text_type": "",
+        "lo_status_text_v2": "",
+        "show_call_dispatch": false,
+        "track_info": ""
+      },
+      "way_bill_url": "",
+      "logistics_status": ""
+    }
+  ],
+  "page": 0,
+  "size": 1,
+  "total": 1,
+  "order": "desc",
+  "order_by": "create_time"
+}

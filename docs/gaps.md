@@ -23,8 +23,8 @@
 |---|---|---|---|---|---|---|
 | API-01 | P0 | `__token` / `_lid` / `aid` / `appid` 的来源与有效期 | 所有请求都带这几个公共参数；7.1 只写了「页面公共参数」，没写怎么拿。拿不到，协议直连通道就无法独立工作 | 写清每个参数：从哪个页面变量或接口取、浏览器外能否获取、有效期、失效时的返回 | | ✅ 7.1 公共参数完整；**`_lid` 只读与写接口均不校验**（只读三组对照 + 取号/发货随机值实测 2026-11-25） |
 | API-02 | P0 | 会话有效期与 cookie 续期 | 决定会话探测频率和重登提示时机；协议直连响应若下发 `Set-Cookie` 需要回写，否则会话会提前过期 | 实测一个店从扫码到失效的时长；说明响应是否刷新 cookie、哪些 cookie 会变 | | 🔶 5.1 已补 60 天有效期；cookie 刷新待验证 |
-| API-03 | P0 | 面单账户接口 `GET /shopuser/power/getEbillAccountListByExpress` 正式收录 | 取号**必填**的 `net_code` / `ebill_id` 来自它；目前只在 A.2.2 的注释里提了一句，A.1 接口表、5.9 基础数据同步、表结构都没有 | 收录进附录 A.1：参数、返回结构、与快递/模板的对应关系；一个快递有多个网点或账户时选哪个 | | 🔶 已收录 A.1 与 5.9；**多账户选择规则为建议稿**（5.9），待 DEC-05 确认 |
-| API-04 | P0 | 取号所需订单字段的来源 | 取号请求要 `combine_id`、`sku_order_id`、`sku_id`、`product_id`、`product_cnt`、`is_sub_bundle_item`；取号前置链路第 1 步的 `GET /api/order/orderListInfo` 不在 A.1 表里，`searchCombineOrder` 也没写返回结构 | 确认这些字段分别从哪个接口拿到（`searchlist` / `orderListInfo` / `searchCombineOrder`）；收录到 A.1 并附字段样本 | | 🔶 6.2 字段已补；`combine_id` 必填（空报 310011）、`sku_id` ≠ searchlist 值（A.2.2）；`searchPackageList` 需签名。**下一步：试 `searchCombineOrder` 是否免签名且返回 `combine_id` / 实际 `sku_id`**，不行则取号前数据走浏览器通道 |
+| API-03 | P0 | 面单账户接口 `GET /shopuser/power/getEbillAccountListByExpress` 正式收录 | 取号**必填**的 `net_code` / `ebill_id` 来自它；目前只在 A.2.2 的注释里提了一句，A.1 接口表、5.9 基础数据同步、表结构都没有 | 收录进附录 A.1：参数、返回结构、与快递/模板的对应关系；一个快递有多个网点或账户时选哪个 | | 🔶 已收录 A.1 与 5.9，并有京东月结样本（`monthlyAccountOrNetCode`、`balance=-1`）；**网点型快递字段待补抓**；多账户选择规则为建议稿，待 DEC-05 确认 |
+| API-04 | P0 | 取号所需订单字段的来源 | 取号请求要 `combine_id`、`sku_order_id`、`sku_id`、`product_id`、`product_cnt`、`is_sub_bundle_item`；取号前置链路第 1 步的 `GET /api/order/orderListInfo` 不在 A.1 表里，`searchCombineOrder` 也没写返回结构 | 确认这些字段分别从哪个接口拿到（`searchlist` / `orderListInfo` / `searchCombineOrder`）；收录到 A.1 并附字段样本 | | 🔶 `searchlist` 两种参数都不返回 `combine_id`、实际 `sku_id`。2026-11-25 用新订单试探失败：该单为「源头好货」供应商代发单，「发货」按钮禁用；打单发货页因本机未装打印组件也不可用。**下一步**：在装了打印组件的机器上，用一笔商家自发的待发货单打开打单弹窗（不点确认），抓弹窗加载的请求 |
 | API-05 | P0 | 发货地址的行政区 ID | 取号与 `sendcheck` 的 `address` 要传 `province_id` / `city_id` / `town_id` / `street_id`；不清楚 `getAfterSaleList` 是否返回 | 确认 `getAfterSaleList` 返回字段；如不返回，找到 ID 的来源接口 | | ✅ 5.9（getAfterSaleList 已返回行政区 ID） |
 | API-06 | P1 | 取号扩展验证 | 目前只验证过 1 单、1 个 SKU、中通 | 至少覆盖：一批多单、一单多 SKU、合单、第二家快递；`fail_orders_list` 结构与常见错误码（超区 / 余额不足 / 地址异常）；**同一订单重复取号**的平台行为（返回同号 / 新号 / 报错）；单批上限 | | 🔶 重复取号报「不存在可取号商品」，**但需确认第二次取号时订单是否已发货**（若已发货，结论不成立；用「取号后不发货」的订单重测）；多 SKU / 合单 / 第二家快递 / 单批上限待测 |
 | API-07 | P1 | 打印数据转换 | 取号返回的 `print_data` + `sign` 是加密数据，转成打印组件 `documents` 的逻辑在前端 SDK 的 `mW()` 里，未搞清；打印链路目前不通 | 二选一给出结论：① 「借页面打印」（见 design/flows.md 第 10 节 P1）可行性验证；② `mW()` 转换逻辑说明。另需在出单机用真实热敏打印机打出一张面单 | | 🔶 10 章 print 消息已验证；数据转换待解 |
@@ -43,11 +43,12 @@
 | API-20 | P1 | 新收录接口的签名状态 | `getOrderLogistics`、`orderDetail`、`get_manual_send_order_info`、`query_added_services_and_product_types` 未写明是否免签名；5.3 已规定逐接口验证（`searchPackageList` 就是例外） | 对 4 个接口各做一次浏览器外无签名直连，结果写进 A.1 备注 | | ⏳ |
 | API-21 | P1 | 取号前 `sendcheck` 是否必经 | 页面在取号前会调 `sendcheck`（api/write.md A.2.2 前置链路）；不调直接取号是否会失败或有风险未知 | 用测试单跳过 `sendcheck` 直接取号一次，记录结果 | | ⏳ |
 | API-22 | P1 | 自渲染面单的合规性 | flows.md 第 10 节方案 B 要用明文地址自绘面单；是否符合平台电子面单 / 隐私面单规范未确认 | 查平台规则或客服确认；不允许则删除方案 B | | ⏳ |
-| API-23 | P1 | `searchlist` 时间筛选与状态枚举（仪表盘） | 仪表盘按 `pay_time` 归日（design/dashboard.md） | 确认能否按 `pay_time` / `create_time` 筛时间窗、默认排序与深度翻页上限；数字 `order_status` 完整枚举（未支付、待发货是几）；未支付订单的 `pay_time` 取值；时间字段是秒还是字符串 | | ⏳ |
+| API-23 | P1 | `searchlist` 时间筛选与状态枚举（仪表盘） | 仪表盘按 `pay_time` 归日（design/dashboard.md） | 确认能否按 `pay_time` / `create_time` 筛时间窗、默认排序与深度翻页上限；数字 `order_status` 完整枚举（未支付、待发货是几）；未支付订单的 `pay_time` 取值；时间字段是秒还是字符串 | | 🔶 数字状态码已见 `2` 待发货、`3` 已发货、`4` 已关闭、`5` 已完成（2026-11-25 样本）；`searchlist` 时间窗筛选、未支付订单 `pay_time`、深度翻页仍待测 |
 | API-24 | P2 | 商家实收字段口径 | 仪表盘「商家实收」 | 用同一订单对照 `actual_receive_amount_int` 与待结算 `income_amount`，说明是否已扣平台服务费 | | ⏳ |
 | API-25 | P1 | 售后按时间统计 | 售后率、退款率（dashboard.md 1.2） | 售后列表能否按 `apply_time` / `update_time` 筛选排序；退款成功的状态码与成功时间字段；`after_sale_type` 枚举含义 | | ⏳ |
 | API-26 | P2 | 商品金额与流量字段 | 按金额的商品排行、曝光 / 点击 | 订单商品行的单价 / 分摊金额字段；`listTractionItems` 返回字段 | | ⏳ |
 | API-27 | P2 | 抖店罗盘经营概览（待抓取） | 平台官方 GMV / 退款 / 访客，作为仪表盘参考值（dashboard.md 第 5 节） | 抓取 `compass.jinritemai.com` 经营概览接口；确认现有会话能否访问、是否需签名 | | ⏳ |
+| API-28 | P1 | 识别商家不能自行发货的订单 | 「源头好货」等供应商代发订单在「待发货」tab 里，但商家不能取号 / 发货（按钮禁用，提示「供应商发货后自动更新订单状态」）。混进取号批次会被平台拒绝 | 确认判别字段：样本中该单 `operation_actions` 为空数组（自发订单含发货类动作），或订单 / 商品行的「源头好货」「由供应商发货」标记；写入 `docs/api/read.md`，订单同步时标记为不可取号（backend 5.4 / 5.5 预检） | | ⏳ |
 
 ---
 

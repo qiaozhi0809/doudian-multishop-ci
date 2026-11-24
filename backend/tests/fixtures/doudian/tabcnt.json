@@ -1,0 +1,50 @@
+{
+  "errno": 0,
+  "st": 0,
+  "msg": "",
+  "code": 0,
+  "data": {
+    "stock_up": 0,
+    "under_sure": 0,
+    "unpaid": 0,
+    "in_aftersale": 0,
+    "exp_ship": 0,
+    "ship_delay": 0,
+    "all": 1,
+    "on_delivery": 0,
+    "received": 0,
+    "closed": 1,
+    "handling": 0,
+    "have_aftersale": 0,
+    "ship_and_logistics_delay": 0,
+    "exp_ship_and_logistics": 0,
+    "cnt_report": {
+      "unpaid": "0",
+      "warning": "0",
+      "stock_up": "0",
+      "exp_ship": "0",
+      "ship_delay": "0",
+      "on_delivery": "0",
+      "sku_order_wait_settle": "0",
+      "ship_exception": "0",
+      "stock_aftersale": "0",
+      "delivery_aftersale": "0",
+      "handling": "0",
+      "ship_and_logistics_delay": "0",
+      "exp_ship_and_logistics": "0"
+    },
+    "sub_tab_count_map": {
+      "all": {
+        "early_promise_ship": 0,
+        "modify_address_after_delivery_open": 0,
+        "new_delivery_overtime": 0,
+        "out_of_stock": 0,
+        "regulatory_spillover": 0
+      }
+    }
+  },
+  "page": 0,
+  "total": 0,
+  "size": 0,
+  "total_page": 0
+}

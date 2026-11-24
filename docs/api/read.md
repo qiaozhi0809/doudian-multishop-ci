@@ -7,14 +7,14 @@
 
 | 用途 | 方法 | 路径 | 备注 |
 |---|---|---|---|
-| 待发货订单 | GET | `/api/order/searchlist?tab=stock_up&order_status=stock_up&scene=1` | page **0-based**；pageSize 上限 200（201 及以上报 602502051） |
+| 待发货订单 | GET | `/api/order/searchlist?tab=stock_up&order_status=stock_up&scene=1` | page **0-based**；pageSize 上限 200。**响应（2026-11-25 样本）**：`data` 为订单数组，`total` 在顶层；时间字段为 unix 秒；金额整数分；`product_item[].item_order_id` 即子订单 ID；`sku_id` 为 `0`、`sku_id_str` 为空（待发货单同样如此），也没有 `combine_id`：取号所需字段不在订单列表里（gaps API-04）。数字状态码已见 `2` 待发货、`4` 已关闭。按单号补查：`tab=all&order_status=&order_id=<单号>`。样本见 `backend/tests/fixtures/doudian/` |
 | 打单台列表 | GET | `/api/order/searchCombineOrder` | ⏳ 返回结构未记录；可能是取号字段 `combine_id` / 实际 `sku_id` 的来源（gaps API-04） |
 | 订单明细（取号前） | GET | `/api/order/orderListInfo` | ⏳ 页面取号前会调用（A.2.2 前置链路）；参数、返回、签名状态均未记录（gaps API-04） |
 | 状态计数（会话探测） | GET | `/api/order/tabcnt` | **未登录返回 `code:10008`**，推荐作健康探测 |
-| 快递公司 | **POST** | `/api/order/expressList` | GET 返回 `404 路由错误`；无业务参数 |
-| 发货地址列表 | GET | `/shopuser/tshopuser/getAfterSaleList` | page **1-based**；`is_send_default=1` 为默认发货地址 |
-| 面单模板列表 | GET | `/shopuser/power/searchTemplates` | parentTempList / customTempList |
-| 面单账户列表 | GET | `/shopuser/power/getEbillAccountListByExpress?company=<快递编码>` | 返回 `accounts[]`（驼峰：`netCode` / `netName` / `eBillId` / `balance` 张数 / `accountType` / `isDefault`）；取号必需的 `net_code` / `ebill_id` 来源，见 5.9 |
+| 快递公司 | **POST** | `/api/order/expressList` | GET 返回 `404 路由错误`。**请求体 `{}`，公共参数（appid / __token / _bid / aid / _lid）在 URL 查询串**。响应 `data.eBills[]`（快递编码字段为 `company`、名称 `name`）与 `data.favourites[]` |
+| 发货地址列表 | GET | `/shopuser/tshopuser/getAfterSaleList?page=1&keyword=&pageSize=500&sort=2&source=send_deliver` | page **1-based**。响应 `data.address_list[]`（另有 `data.default_address[]`）：`id`、`user_name`、`mobile`、`province_id/name`…`street_id/name`、`detail`、`is_send_default=1` 为默认发货地址、`address_error`（地址异常提示） |
+| 面单模板列表 | GET | `/shopuser/power/searchTemplates` | 响应 `data.list[]` **按快递分组**：`companyCode`、`parentTempList[]`（标准模板 `parentTempCode`）、`customTempList[]`（自定义模板 `customTempCode`，取号用它）、`publicTempList[]` |
+| 面单账户列表 | GET | `/shopuser/power/getEbillAccountListByExpress?company=<快递编码>` | 响应 `data.accounts[]`。**京东月结样本（2026-11-25）**：`eBillId`（数字）、`monthlyAccountOrNetCode`（月结账号或网点编码，取号的 `net_code` 取此值）、`accountType`、`settleType`、`balance`（`-1` = 月结不计张数）、`isDefault`、`partnerId`、`subscribeAddress`。网点型快递（如中通）是否另有 `netCode` / `netName` 待补抓；取号必需的 `net_code` / `ebill_id` 来源见 backend 5.9 |
 | 取号前置检查 | GET | `/api/order/getAftersaleAddressAndLogisticsTemplate` | 返回 4 个布尔位 |
 | 增值服务与产品类型 | POST | `/api/order/query_added_services_and_product_types` | 只读（虽为 POST）。`logistics_product[].selectedValue` 即取号 `transport.expType`，详见 [write.md](write.md) A.2.7 |
 | 包裹列表 | GET | `/api/order/searchPackageList` | ⚠️ **需签名**：无签名直连返回风控错误 `10001010A`（2026-11-25） |
