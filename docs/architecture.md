@@ -242,6 +242,12 @@ class ShopChannel(Protocol):
 
 **M0 / 第一轮验证结论**：只读接口在只带 Cookie + `__token` 时可正常返回（Python + curl_cffi 已在浏览器外验证）。已验证免签名的只读接口：订单列表、状态计数、快递公司（POST）、面单模板、发货地址、收货地址解密、店铺画像。`a_bogus` / `msToken` / `verifyFp` 属于风控打分参数，不是这类接口的鉴权必需项。
 
+**例外（2026-11-25 实测）**：只读接口 `GET /api/order/searchPackageList` 无签名直连返回风控错误
+`10001010A`「当前环境存在风险，请稍后重试」。**并非所有只读接口都免签名**，
+免签名须逐接口验证后在 `endpoints.py` 声明；未验证的接口默认走浏览器通道。
+
+已验证免签名的写接口：批量备注、取号、发货前检查、发货、取号发货一体、面单作废、改物流（附录 A.2）。
+
 因此签名引擎**不进入 MVP 主路径**，保留为接口级开关。
 
 **职责**：当某个接口被确认强制校验签名时，为该接口生成动态参数。
@@ -282,7 +288,19 @@ class Signer(Protocol):
 
 - 单笔业务拒绝（超区/地址异常/余额不足）→ 订单转 `exception`，记原因，不阻塞批次。
 - 会话失效 → 暂停该店，提示重登，重登后从断点继续。
-- 瞬时故障 → 退避重试。
+- 瞬时故障 → 退避重试。**取号不能简单重试**（见下）。
+
+**取号超时的恢复（⏳ gaps API-19）**：
+
+平台对已取号的订单再次取号会拒绝（`fail_msg`「不存在可取号商品」，A.2.2 第 8 条）。
+因此若取号实际成功、但响应丢失（超时 / 断网），重试只会得到这条拒绝，本地拿不到运单号。
+
+- 处理原则：取号请求超时或收到「不存在可取号商品」时，**不得**把订单转 `exception`，
+  而是保持 `pending_label`、把该取号任务标为待核实，去平台查询该订单当前的运单号，
+  查到则补写 `waybills(active)` 并转 `label_obtained`
+- 待补：用哪个接口查「已取号未发货订单的运单号」（候选：`searchCombineOrder` 已打单列表、订单详情）
+- 一体接口 `batchFetchTrackingNosAndDeliverGoods` 有同样问题；它已完成发货，可从订单列表的
+  `latest_logistic_info.tracking_no` 查回
 
 ### 5.6 发货回传器（`service/shipping.py`）
 
@@ -770,8 +788,11 @@ CREATE TABLE fund_unsettled (
 CREATE TABLE margin_account (
   id              INTEGER PRIMARY KEY,
   shop_id         INTEGER NOT NULL REFERENCES shop(id),
-  payable         INTEGER,                   -- 原样存平台值；单位（元/分）待校准（附录 F.4、gaps API-15），
-  balance         INTEGER,                   -- 校准后再迁移为 *_cents 列
+  payable_cents         INTEGER,             -- 平台 payable（单位：分，附录 F.4）
+  balance_cents         INTEGER,             -- 平台 balance
+  basic_payable_cents   INTEGER,             -- 平台 risk_detail.basic_payable
+  basic_balance_cents   INTEGER,             -- 平台 risk_detail.basic_balance
+  withdrawable_cents    INTEGER,             -- 平台 withdraw_detail.withdrawable_amount
   level           TEXT,
   raw_json        TEXT,
   synced_at       TEXT NOT NULL,
@@ -1380,7 +1401,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 面单模板列表 | GET | `/shopuser/power/searchTemplates` | parentTempList / customTempList |
 | 面单账户列表 | GET | `/shopuser/power/getEbillAccountListByExpress?company=<快递编码>` | 返回 `accounts[]`（驼峰：`netCode` / `netName` / `eBillId` / `balance` 张数 / `accountType` / `isDefault`）；取号必需的 `net_code` / `ebill_id` 来源，见 5.9 |
 | 取号前置检查 | GET | `/api/order/getAftersaleAddressAndLogisticsTemplate` | 返回 4 个布尔位 |
-| 包裹列表 | GET | `/api/order/searchPackageList` | |
+| 包裹列表 | GET | `/api/order/searchPackageList` | ⚠️ **需签名**：无签名直连返回风控错误 `10001010A`（2026-11-25） |
 | 包裹配置 | GET | `/api/order/getPackageConfig` | |
 | 合单灰度 | GET | `/api/order/queryCombineOrderGrayShopStatus` | |
 | 公告 | GET | `/api/order/getNotice` | |
@@ -1531,12 +1552,17 @@ Content-Type: application/json
    「合并ID为空，请刷新页面重试或联系客服解决」。
    实际值来自打单台订单数据（样例 `7711789938665324819`）。
    来源接口待确认 —— `searchPackageList` 直连需签名，无签名返回风控错误（见 API-11）。
+   ⏳ **下一步（gaps API-04）**：试 `GET /api/order/searchCombineOrder`（打单台列表，A.1 已收录）
+   是否免签名且返回 `combine_id` 与实际 `sku_id`；若也需签名，取号前的订单数据只能走浏览器通道。
 7. **`sku_id` 不能取自 `searchlist`**：`searchlist` 的 `product_item.sku_id`
    可能为 `0`，取号必须用实际 SKU ID（样例 `3707788120163074`）。
    实际值从打单台订单数据或订单详情获取。
 8. **重复取号被拒绝**：已取号的订单再次取号 →
    `code: 0` + `fail_orders_list: [{ "fail_msg": "不存在可取号商品，请刷新后重试" }]`。
    服务端不会为同一订单返回第二张面单。
+   ⏳ **待确认（gaps API-06）**：第二次取号时该订单是否已发货？若已发货，此报错可能源于「已发货」
+   而非「已取号」，不能证明「已取号未发货」的订单不能重取。需用「取号后不发货」的订单再测一次。
+   本条也决定了取号超时的恢复方式（5.5，gaps API-19）。
 
 **取号前置链路（验证顺序）**：
 
@@ -1673,6 +1699,12 @@ Content-Type: application/json
 
 注意：响应字段是 `success_deliver_list`，与单独发货的 `success_package_list` 不同。
 
+⏳ **待补（gaps API-13）**：
+
+- 失败时的字段名与结构（`fail_*`）未记录
+- 响应里是否有 `print_data`：样本只见 `sign`。若一体接口不返回 `print_data`，
+  「打单并发货」之后就没有打印数据，需要另找补打途径——直接影响打印方案（第 10 节、overall-design 2.6）
+
 **价值**：一次请求完成「取号 + 发货」，省掉 `batchFetchTrackingNos` +
 `batchDeliverGoodsByEES` 两次调用，也避免中间态（已取号未发货）。
 
@@ -1793,9 +1825,13 @@ Content-Type: application/json
 > `replaced` 状态）、新运单如何入 `waybills`、订单状态是否保持 `shipped`，6.1 / 6.2 均未覆盖。
 > 不处理的话，每日对账会把它报成 `waybill_mismatch`。
 
-**写接口的一般性判断**：抖店只读接口全部免签名（已验证 20+ 个），
-写接口属于未知区域。若某写接口强制签名，方案是用 Playwright 在页面内执行 fetch
-（浏览器渠道兜底），业务代码不需改动。
+**签名的一般性判断**（2026-11-25 更新）：
+
+- 只读接口：已验证的 20+ 个免签名，但**存在例外**（`searchPackageList` 无签名触发风控 `10001010A`），
+  不能整体假设免签名
+- 写接口：已验证的 7 个（批量备注 / 取号 / 发货前检查 / 发货 / 取号发货一体 / 面单作废 / 改物流）均免签名；
+  售后、商品、库存写接口未验证
+- 任一接口确认需签名时，用 Playwright 在页面内执行 fetch（浏览器渠道兜底），业务代码不需改动
 
 ### A.3 页面路径
 
@@ -2358,8 +2394,9 @@ GET /governance/shop/tpledgecash/payable/info_v2
 }}
 ```
 
-- 样本店为**零保证金店铺**（`payable=0, balance=0, govern_stage=PayableEnough`），
-  **金额单位（元/分）无法从 0 值判断，待有余额的店铺校准**
+- 上方样本店为**零保证金店铺**（`payable=0, balance=0, govern_stage=PayableEnough`）
+- **金额单位：分**（2026-11-25 另一店实测 `risk_detail.basic_balance: 50000` 对应 500 元个体店保证金，
+  `balance: 1000`，见 F.4）。⏳ 对照依据待补：50000 = 500 元是与页面显示金额核对所得还是推断（gaps API-15）
 - 配套接口：`recharge/info`（充值信息）、`get_identity`（主体身份）、
   `crossborder/country_currency`（跨境币种）、`margin/common/getBankCode`（银行）、
   `getProvince`（省份）

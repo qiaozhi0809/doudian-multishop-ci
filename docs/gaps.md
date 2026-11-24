@@ -28,21 +28,22 @@
 | API-01 | P0 | `__token` / `_lid` / `aid` / `appid` 的来源与有效期 | 所有请求都带这几个公共参数；7.1 只写了「页面公共参数」，没写怎么拿。拿不到，协议直连通道就无法独立工作 | 写清每个参数：从哪个页面变量或接口取、浏览器外能否获取、有效期、失效时的返回 | | ✅ 7.1 公共参数完整；**`_lid` 只读与写接口均不校验**（只读三组对照 + 取号/发货随机值实测 2026-11-25） |
 | API-02 | P0 | 会话有效期与 cookie 续期 | 决定会话探测频率和重登提示时机；协议直连响应若下发 `Set-Cookie` 需要回写，否则会话会提前过期 | 实测一个店从扫码到失效的时长；说明响应是否刷新 cookie、哪些 cookie 会变 | | 🔶 5.1 已补 60 天有效期；cookie 刷新待验证 |
 | API-03 | P0 | 面单账户接口 `GET /shopuser/power/getEbillAccountListByExpress` 正式收录 | 取号**必填**的 `net_code` / `ebill_id` 来自它；目前只在 A.2.2 的注释里提了一句，A.1 接口表、5.9 基础数据同步、表结构都没有 | 收录进附录 A.1：参数、返回结构、与快递/模板的对应关系；一个快递有多个网点或账户时选哪个 | | 🔶 已收录 A.1 与 5.9；**多账户选择规则为建议稿**（5.9），待 DEC-05 确认 |
-| API-04 | P0 | 取号所需订单字段的来源 | 取号请求要 `combine_id`、`sku_order_id`、`sku_id`、`product_id`、`product_cnt`、`is_sub_bundle_item`；取号前置链路第 1 步的 `GET /api/order/orderListInfo` 不在 A.1 表里，`searchCombineOrder` 也没写返回结构 | 确认这些字段分别从哪个接口拿到（`searchlist` / `orderListInfo` / `searchCombineOrder`）；收录到 A.1 并附字段样本 | | 🔶 6.2 字段已补；A.2.2 补「`combine_id` 必填（空报 310011）」「`sku_id` ≠ searchlist 值」；来源接口待确认（searchPackageList 需签名） |
+| API-04 | P0 | 取号所需订单字段的来源 | 取号请求要 `combine_id`、`sku_order_id`、`sku_id`、`product_id`、`product_cnt`、`is_sub_bundle_item`；取号前置链路第 1 步的 `GET /api/order/orderListInfo` 不在 A.1 表里，`searchCombineOrder` 也没写返回结构 | 确认这些字段分别从哪个接口拿到（`searchlist` / `orderListInfo` / `searchCombineOrder`）；收录到 A.1 并附字段样本 | | 🔶 6.2 字段已补；`combine_id` 必填（空报 310011）、`sku_id` ≠ searchlist 值（A.2.2）；`searchPackageList` 需签名。**下一步：试 `searchCombineOrder` 是否免签名且返回 `combine_id` / 实际 `sku_id`**，不行则取号前数据走浏览器通道 |
 | API-05 | P0 | 发货地址的行政区 ID | 取号与 `sendcheck` 的 `address` 要传 `province_id` / `city_id` / `town_id` / `street_id`；不清楚 `getAfterSaleList` 是否返回 | 确认 `getAfterSaleList` 返回字段；如不返回，找到 ID 的来源接口 | | ✅ 5.9（getAfterSaleList 已返回行政区 ID） |
-| API-06 | P1 | 取号扩展验证 | 目前只验证过 1 单、1 个 SKU、中通 | 至少覆盖：一批多单、一单多 SKU、合单、第二家快递；`fail_orders_list` 结构与常见错误码（超区 / 余额不足 / 地址异常）；**同一订单重复取号**的平台行为（返回同号 / 新号 / 报错）；单批上限 | | 🔶 重复取号已测（报「不存在可取号商品」）；多 SKU / 合单 / 第二家快递 / 单批上限待测 |
+| API-06 | P1 | 取号扩展验证 | 目前只验证过 1 单、1 个 SKU、中通 | 至少覆盖：一批多单、一单多 SKU、合单、第二家快递；`fail_orders_list` 结构与常见错误码（超区 / 余额不足 / 地址异常）；**同一订单重复取号**的平台行为（返回同号 / 新号 / 报错）；单批上限 | | 🔶 重复取号报「不存在可取号商品」，**但需确认第二次取号时订单是否已发货**（若已发货，结论不成立；用「取号后不发货」的订单重测）；多 SKU / 合单 / 第二家快递 / 单批上限待测 |
 | API-07 | P1 | 打印数据转换 | 取号返回的 `print_data` + `sign` 是加密数据，转成打印组件 `documents` 的逻辑在前端 SDK 的 `mW()` 里，未搞清；打印链路目前不通 | 二选一给出结论：① 「借页面打印」（见 overall-design 第 2.6 节）可行性验证；② `mW()` 转换逻辑说明。另需在出单机用真实热敏打印机打出一张面单 | | 🔶 10 章 print 消息已验证；数据转换待解 |
 | API-08 | P1 | 面单作废接口 | 状态机「作废重取」依赖它；附录 A.2 标「未抓」 | 抓到路径、请求体、响应；说明作废后能否对同一订单重新取号 | | ✅ `batchCancelTrackingNos` 已验证（A.2.6）；作废后可重取号 |
 | API-09 | P1 | 发货扩展验证 | 目前只验证过 1 个包裹 | 覆盖：一批多包裹、部分失败时 `fail_package_list` 结构；**同一运单重复发货**的平台行为 | | 🔶 重复发货已测（返回 success，服务端不阻止）；多包裹 / 部分失败待测 |
 | API-10 | P1 | 地址解密的风控限制 | `receiveinfo` 返回 `verify_type`，说明有风控通道；多店批量解密是最容易触发风控的环节 | 实测：单店连续解密多少单会触发验证、触发后的返回形态、是否有日配额 | | ⏳ |
-| API-11 | P1 | 写接口被风控拦截时的表现 | 错误分类（见 overall-design 2.2）需要知道「风控拦截」长什么样，才能和业务拒绝、会话失效区分 | 记录至少一种风控拦截的 `code` / `msg` / 是否要求验证码 | | ✅ 已记录 `10001010A`（searchPackageList 无签名直连触发） |
+| API-11 | P1 | 写接口被风控拦截时的表现 | 错误分类（见 overall-design 2.2）需要知道「风控拦截」长什么样，才能和业务拒绝、会话失效区分 | 记录至少一种风控拦截的 `code` / `msg` / 是否要求验证码 | | 🔶 已记录风控样本 `10001010A`，但来自**只读**接口 `searchPackageList`；补完标准要求的写接口风控样本仍缺 |
 | API-12 | P1 | 拉单增量与分页上限 | 5.4 写了「cursor/时间窗减少重复拉取」，但 `searchlist` 的增量参数没验证；`pageSize` 上限只知道 100 可用 | 确认按 `create_time` / `update_time` 窗口拉取的参数；`pageSize` 上限；订单号多值输入的格式（拼接串还是数组） | | 🔶 pageSize 上限 200 已确认（201 报 602502051）；增量时间窗 / 订单号多值待测 |
-| API-13 | P2 | 取号 + 发货一体 `batchFetchTrackingNosAndDeliverGoods` | 打单台「打单并发货」按钮；源码结构已知，未真实调用 | 用测试单验证一次，记录请求与响应 | | ✅ `batchFetchTrackingNosAndDeliverGoods` 实测成功（A.2.5，运单号 79209905665503） |
+| API-13 | P2 | 取号 + 发货一体 `batchFetchTrackingNosAndDeliverGoods` | 打单台「打单并发货」按钮；源码结构已知，未真实调用 | 用测试单验证一次，记录请求与响应 | | 🔶 成功路径已实测（A.2.5，`success_deliver_list`）；**失败结构未记录；响应是否含 `print_data` 未确认**（不含则「打单并发货」后无法打印） |
 | API-14 | P2 | `/order/torder/batchsend` 去留 | 打单台发货已确认走 `batchDeliverGoodsByEES`；`batchsend` 是否还需要不明确 | 确认订单页发货是否走它；不需要就从设计里移除 | | ✅ 电子面单场景不需要 batchsend（A.2.7），已从 5.2 / 7.5 移除；订单页「自行寄件发货」是否走它未核查，不影响 MVP |
-| API-15 | P2 | 资金金额字段校准 | 资金账单 `CHARGE_BILL_ITEM` 金额字段名未知；保证金 `payable` / `balance` 单位（元/分）未知 | 用有账单、有保证金的店铺取样本，更新附录 F.4 | | 🔶 保证金单位已确认（分：basic_balance 50000=500元）；账单字段仍待有账单店铺；`margin_account` 暂存原始值（`payable` / `balance`），校准后迁移为 `*_cents` |
+| API-15 | P2 | 资金金额字段校准 | 资金账单 `CHARGE_BILL_ITEM` 金额字段名未知；保证金 `payable` / `balance` 单位（元/分）未知 | 用有账单、有保证金的店铺取样本，更新附录 F.4 | | 🔶 保证金单位：分（F.1c / F.4），`margin_account` 已改 `*_cents`；**待补对照依据**（50000 = 500 元是否与页面显示核对）；资金账单字段仍待有账单的店铺 |
 | API-16 | P2 | 阶段二写接口 | 售后（同意退款 / 代填运单号 / 延长收货）、商品创建提交、库存修改、改物流 | 按附录 A.2 的「必查项」逐个验证；不阻塞 MVP | | 🔶 改物流 ✅（`modifyLogistic`，A.2.8）；售后 / 商品创建 / 库存修改待验证 |
 | API-17 | P1 | 增值服务与产品类型接口 `POST /api/order/query_added_services_and_product_types` | 订单页「打单发货」链路第 3 步（A.2.7），只记了用途；一体接口的 `added_services`、`transport.expType` 可能取自这里 | 记录请求体与响应；确认是否必经、`added_services` / `expType` 取值怎么传 | | ⏳ |
 | API-18 | P2 | 改物流 `modifyLogistic` 的两个参数 | A.2.8：`deliverId`（原包裹 ID）来源未确认，候选 `getOrderLogistics` / `orderDetail` 都没收录；`sendType: "1"` 含义未写，样本疑似「自行寄件」方式 | ① 确认 `deliverId` 来源接口并收录 A.1，说明与 `packages.package_no` 的关系；② 补 `sendType` 枚举，至少覆盖「自行寄件」与「打单发货」两种重新发货方式 | | ⏳ |
+| API-19 | P0 | 取号超时 / 响应丢失后的恢复 | 平台拒绝对已取号订单再次取号（A.2.2 第 8 条），取号成功但响应丢失时，重试拿不回运单号（5.5） | 找到查询「已取号未发货订单的当前运单号」的接口（候选 `searchCombineOrder` 已打单列表 / 订单详情），确认免签名并收录 A.1；一体接口可用订单列表 `latest_logistic_info.tracking_no` 查回，需实测 | | ⏳ |
 
 ---
 
@@ -88,7 +89,7 @@
 | ID | 优先级 | 缺口 | 补完标准 | 负责人 | 状态 |
 |---|---|---|---|---|---|
 | ENG-01 | P0 | 本地 API 详细契约 | 在 overall-design 第 4 节草案基础上，给每个接口写 pydantic 请求/响应 schema 与错误码 | | ⏳ |
-| ENG-02 | P0 | 抖店错误码分类表 | 把已见过的 `code` 归入「会话失效 / 业务拒绝 / 风控拦截 / 瞬时故障 / 程序错误」五类，落到 `adapter/doudian/error_codes.py` 的设计说明 | | ⏳ |
+| ENG-02 | P0 | 抖店错误码分类表 | 把已见过的 `code` 归入「会话失效 / 业务拒绝 / 风控拦截 / 瞬时故障 / 程序错误」五类，落到 `adapter/doudian/error_codes.py` 的设计说明 | | 🔶 第 8 节已有错误码表（10008 / 10001010A / 310011 / 602500705 / 100000）；待按五类异常补全并落到 `error_codes.py` 设计 |
 | ENG-03 | P1 | 打印路径决策 | 依据 API-07 的结论，在 overall-design 2.6 的三条路径中定下 MVP 默认路径 | | ⏳ |
 | ENG-04 | P1 | 出单机部署与打包 | 打包方式、首次安装步骤、Edge / 打印组件依赖检查、升级方式；对应验收标准第 7 条 | | ⏳ |
 | ENG-05 | P1 | CI 守门脚本 | engineering-rules 第十节 7 个脚本全部「待建」，按其列出的顺序落地 | | ⏳ |
