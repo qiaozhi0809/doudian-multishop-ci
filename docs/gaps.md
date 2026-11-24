@@ -25,9 +25,9 @@
 
 | ID | 优先级 | 缺口 | 为什么要 | 补完标准 | 负责人 | 状态 |
 |---|---|---|---|---|---|---|
-| API-01 | P0 | `__token` / `_lid` / `aid` / `appid` 的来源与有效期 | 所有请求都带这几个公共参数；7.1 只写了「页面公共参数」，没写怎么拿。拿不到，协议直连通道就无法独立工作 | 写清每个参数：从哪个页面变量或接口取、浏览器外能否获取、有效期、失效时的返回 | | ✅ 已补（architecture 7.1 公共参数） |
+| API-01 | P0 | `__token` / `_lid` / `aid` / `appid` 的来源与有效期 | 所有请求都带这几个公共参数；7.1 只写了「页面公共参数」，没写怎么拿。拿不到，协议直连通道就无法独立工作 | 写清每个参数：从哪个页面变量或接口取、浏览器外能否获取、有效期、失效时的返回 | | 🔶 `__token` / `appid` / `aid` / `_bid` 已补（7.1）；**`_lid` 生成规则与服务端是否校验未确认**，验证方法见 7.1（真实值 / 随机值 / 不带 三组对照），需登录态真实店铺 |
 | API-02 | P0 | 会话有效期与 cookie 续期 | 决定会话探测频率和重登提示时机；协议直连响应若下发 `Set-Cookie` 需要回写，否则会话会提前过期 | 实测一个店从扫码到失效的时长；说明响应是否刷新 cookie、哪些 cookie 会变 | | 🔶 5.1 已补 60 天有效期；cookie 刷新待验证 |
-| API-03 | P0 | 面单账户接口 `GET /shopuser/power/getEbillAccountListByExpress` 正式收录 | 取号**必填**的 `net_code` / `ebill_id` 来自它；目前只在 A.2.2 的注释里提了一句，A.1 接口表、5.9 基础数据同步、表结构都没有 | 收录进附录 A.1：参数、返回结构、与快递/模板的对应关系；一个快递有多个网点或账户时选哪个 | | ✅ 5.9 已收录完整响应（实测 200） |
+| API-03 | P0 | 面单账户接口 `GET /shopuser/power/getEbillAccountListByExpress` 正式收录 | 取号**必填**的 `net_code` / `ebill_id` 来自它；目前只在 A.2.2 的注释里提了一句，A.1 接口表、5.9 基础数据同步、表结构都没有 | 收录进附录 A.1：参数、返回结构、与快递/模板的对应关系；一个快递有多个网点或账户时选哪个 | | 🔶 已收录 A.1 与 5.9；**多账户选择规则为建议稿**（5.9），待 DEC-05 确认 |
 | API-04 | P0 | 取号所需订单字段的来源 | 取号请求要 `combine_id`、`sku_order_id`、`sku_id`、`product_id`、`product_cnt`、`is_sub_bundle_item`；取号前置链路第 1 步的 `GET /api/order/orderListInfo` 不在 A.1 表里，`searchCombineOrder` 也没写返回结构 | 确认这些字段分别从哪个接口拿到（`searchlist` / `orderListInfo` / `searchCombineOrder`）；收录到 A.1 并附字段样本 | | 🔶 字段已补（6.2）；来源接口待确认 |
 | API-05 | P0 | 发货地址的行政区 ID | 取号与 `sendcheck` 的 `address` 要传 `province_id` / `city_id` / `town_id` / `street_id`；不清楚 `getAfterSaleList` 是否返回 | 确认 `getAfterSaleList` 返回字段；如不返回，找到 ID 的来源接口 | | ✅ 5.9（getAfterSaleList 已返回行政区 ID） |
 | API-06 | P1 | 取号扩展验证 | 目前只验证过 1 单、1 个 SKU、中通 | 至少覆盖：一批多单、一单多 SKU、合单、第二家快递；`fail_orders_list` 结构与常见错误码（超区 / 余额不足 / 地址异常）；**同一订单重复取号**的平台行为（返回同号 / 新号 / 报错）；单批上限 | | ⏳ |
@@ -39,7 +39,7 @@
 | API-12 | P1 | 拉单增量与分页上限 | 5.4 写了「cursor/时间窗减少重复拉取」，但 `searchlist` 的增量参数没验证；`pageSize` 上限只知道 100 可用 | 确认按 `create_time` / `update_time` 窗口拉取的参数；`pageSize` 上限；订单号多值输入的格式（拼接串还是数组） | | ⏳ |
 | API-13 | P2 | 取号 + 发货一体 `batchFetchTrackingNosAndDeliverGoods` | 打单台「打单并发货」按钮；源码结构已知，未真实调用 | 用测试单验证一次，记录请求与响应 | | 🔶 A.2.5 结构已知，待实测 |
 | API-14 | P2 | `/order/torder/batchsend` 去留 | 打单台发货已确认走 `batchDeliverGoodsByEES`；`batchsend` 是否还需要不明确 | 确认订单页发货是否走它；不需要就从设计里移除 | | ⏳ |
-| API-15 | P2 | 资金金额字段校准 | 资金账单 `CHARGE_BILL_ITEM` 金额字段名未知；保证金 `payable` / `balance` 单位（元/分）未知 | 用有账单、有保证金的店铺取样本，更新附录 F.4 | | ⏳ |
+| API-15 | P2 | 资金金额字段校准 | 资金账单 `CHARGE_BILL_ITEM` 金额字段名未知；保证金 `payable` / `balance` 单位（元/分）未知 | 用有账单、有保证金的店铺取样本，更新附录 F.4 | | ⏳ 需有账单、有保证金的店铺；`margin_account` 暂存原始值（`payable` / `balance`），校准后迁移为 `*_cents` |
 | API-16 | P2 | 阶段二写接口 | 售后（同意退款 / 代填运单号 / 延长收货）、商品创建提交、库存修改、改物流 | 按附录 A.2 的「必查项」逐个验证；不阻塞 MVP | | ⏳ |
 
 ---
@@ -56,7 +56,7 @@
 | DOC-06 | P0 | engineering-rules.md 8.3 | 「写接口签名要求未验证前，一律走浏览器兜底」；现已验证 4 个写接口免签名 | 改为「逐接口声明：已验证免签名的走协议直连；未验证的走浏览器兜底」 | | ✅ 8.3 改逐接口声明 |
 | DOC-07 | P0 | architecture.md 5.x / 11.4 与 engineering-rules.md 2.2 | 两份文档规定的目录不同（`channels/` `services/` `db/` vs `adapter/` `service/` `store/`） | 以工程规范为准（overall-design 第 2.1 节已采用），architecture.md 的模块路径全部改成新名 | | ✅ 目录树与命名已统一 |
 | DOC-08 | P1 | 2.1 与 2.3、附录 B.2 | 「面单作废与重打」2.1 列入 MVP，2.3 与 B.2 列入阶段二 | 定一个；建议 MVP 保留（状态机依赖作废），前提是 API-08 补齐 | | ✅ MVP 保留并注明依赖 API-08 |
-| DOC-09 | P1 | 6.1 状态机、6.2 `waybills.status`、7.4 | 7.4 用了 `print_failed`，但订单状态机与 `waybills.status` 枚举里都没有；「打单并发货」会从 `pending_label` 直达 `shipped`，状态机未画 | 补 `print_failed`（或明确它只是 `waybills.status=failed`）；补一体化直达路径 | | ✅ 补 print_failed 与快捷路径 |
+| DOC-09 | P1 | 6.1 状态机、6.2 `waybills.status`、7.4 | 7.4 用了 `print_failed`，但订单状态机与 `waybills.status` 枚举里都没有；「打单并发货」会从 `pending_label` 直达 `shipped`，状态机未画 | 补 `print_failed`（或明确它只是 `waybills.status=failed`）；补一体化直达路径 | | ✅ `print_failed` 已移出订单状态（6.1 / 7.4 / 第 10 节统一为 `print_job.status=failed`，订单停在 `label_obtained`）；快捷路径已补 |
 | DOC-10 | P1 | 文档头部、第 11.4 节、engineering-rules 3.3 | 引用的 `case/notes/*`、`case/forensic/` 不在仓库；项目路径写 `E:\抖店多店铺管理`、`docs/superpowers/specs/`；3.3 引用的文件名不存在 | 证据目录要么入库（先脱敏），要么注明存放位置；路径改成本仓库的实际路径 | | ✅ 路径改 artifacts/（不入库） |
 | DOC-11 | P2 | 7.5、10、A.2.x | 验证日期写 2026-11-25，晚于文档更新日期 2026-11-24 | 核对并统一日期 | | ✅ 日期已统一 |
 | DOC-12 | P2 | architecture.md 全文 | 2106 行，超出工程规范 600 行硬上限 | 按正文 / 附录 A~G 拆成多文件（engineering-rules 3.3 已列为待办） | | ⏳ 保留（P2） |
@@ -74,7 +74,7 @@
 | DM-04 | P1 | `waybills` 缺打印数据 | 明确 `label_payload` 存什么；加 `print_data`、`sign`、`logistics_template_code`、`ebill_id` | | ✅ 6.2 waybills 已补 |
 | DM-05 | P1 | 缺打印任务表 | 新增 `print_job`：批次、打印机、状态、组件回执、重试次数 | | ✅ 6.2 print_job 已补 |
 | DM-06 | P1 | 附录 G 的 `orders_snapshot` 未进 6.2 | 补表结构，并按 G.7 写明与 `orders` 的合并计划 | | ✅ 6.4 已引用 |
-| DM-07 | P1 | 只读聚合模块无表 | 补 `aftersale`（附录 E.7 已给字段）、`product_snapshot`、`stock_snapshot`、`fund_unsettled`、`margin_account` | | ✅ 6.4 已引用 |
+| DM-07 | P1 | 只读聚合模块无表 | 补 `aftersale`（附录 E.7 已给字段）、`product_snapshot`、`stock_snapshot`、`fund_unsettled`、`margin_account` | | ✅ 6.2 ⑯~⑳ 已建表（`stock_snapshot` 含 `future_stock_num`；`aftersale` 时间存 ISO、枚举存数字；`fund_unsettled` 唯一键列非空） |
 | DM-08 | P1 | 会话存储两处并存 | `session.cookies` 与 `cookies/` 目录二选一；存储需加密（overall-design 2.3 建议 DPAPI） | | ✅ 6.4 已定（DPAPI） |
 | DM-09 | P2 | 迁移机制 | 表结构变更的迁移方式（overall-design 建议 Alembic）与初始迁移脚本 | | ✅ 6.4 已定（Alembic） |
 
@@ -104,3 +104,4 @@
 | DEC-02 | 对账时间窗 | 7 天 / 30 天 | 30 天（附录 G.5 已发现 7 天会漏单） |
 | DEC-03 | 前端交付节奏 | 集中在 M6 / 随各里程碑交付对应页面 | 随里程碑交付（见 overall-design 第 6 节） |
 | DEC-04 | 面单作废是否进 MVP | 是 / 否 | 是（见 DOC-08） |
+| DEC-05 | 同一快递多个面单账户时选哪个 | 见 architecture 5.9 建议稿：用户指定 → `isDefault` → `balance` 最大 | 按建议稿；如有网点 / 结算上的业务考虑需调整 |

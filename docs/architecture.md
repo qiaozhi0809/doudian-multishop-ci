@@ -336,6 +336,9 @@ class Signer(Protocol):
   一个快递可返回多个账户，每个账户自带网点编码，
   唯一键取 `(shop_id, courier_code, ebill_id, net_code)`。
   余额不足时取号会失败，界面需提示。
+- **多账户选择规则（建议，待确认）**：同一快递返回多个账户时，
+  ① 用户在店铺设置里为该快递指定的账户；② 否则取 `isDefault=true`；
+  ③ 否则取 `balance` 最大的账户。所选账户 `balance=0` 时取号前即拦截并提示，不发请求。
 - 刷新时机：首次登录后、店铺配置变更提示、每日首次同步前。
 - 失效策略：取号失败且错误指向模板/地址时，强制刷新一次再重试。
 - **取号必须使用本店已配置的 `address_id` 与 `template_code`**，不能跨店复用。
@@ -700,10 +703,10 @@ CREATE TABLE aftersale (
   shop_id             INTEGER NOT NULL REFERENCES shop(id),
   after_sale_id       TEXT NOT NULL,
   order_no            TEXT,
-  type                TEXT,
-  status              INTEGER,
+  type                INTEGER,                -- after_sale_type（平台数字枚举）
+  status              INTEGER,                -- after_sale_status（平台数字枚举）
   refund_amount_cents INTEGER,
-  status_deadline     INTEGER,
+  status_deadline     TEXT,                   -- ISO-8601 UTC；平台值为 unix 秒，0 表示已完结 → 存 NULL
   apply_time          TEXT,
   detail_json         TEXT,
   synced_at           TEXT NOT NULL,
@@ -733,7 +736,8 @@ CREATE TABLE stock_snapshot (
   shop_id         INTEGER NOT NULL REFERENCES shop(id),
   product_id      TEXT NOT NULL,
   total_stock_num             INTEGER,
-  spot_stock_num              INTEGER,
+  spot_stock_num              INTEGER,       -- 现货
+  future_stock_num            INTEGER,       -- 未来库存；与现货分开展示，不可相加（附录 D.4）
   total_occupied_stock_num    INTEGER,
   total_unoccupied_stock_num  INTEGER,
   is_alarming     INTEGER,
@@ -746,8 +750,8 @@ CREATE TABLE stock_snapshot (
 CREATE TABLE fund_unsettled (
   id              INTEGER PRIMARY KEY,
   shop_id         INTEGER NOT NULL REFERENCES shop(id),
-  shop_order_no   TEXT,
-  sku_order_no    TEXT,
+  shop_order_no   TEXT NOT NULL,             -- 唯一键列必须非空：SQLite 中多个 NULL 互不冲突
+  sku_order_no    TEXT NOT NULL,
   product_id      TEXT,
   income_amount_cents         INTEGER,
   unsettled_amount_cents      INTEGER,
@@ -764,8 +768,8 @@ CREATE TABLE fund_unsettled (
 CREATE TABLE margin_account (
   id              INTEGER PRIMARY KEY,
   shop_id         INTEGER NOT NULL REFERENCES shop(id),
-  payable_cents   INTEGER,
-  balance_cents   INTEGER,
+  payable         INTEGER,                   -- 原样存平台值；单位（元/分）待校准（附录 F.4、gaps API-15），
+  balance         INTEGER,                   -- 校准后再迁移为 *_cents 列
   level           TEXT,
   raw_json        TEXT,
   synced_at       TEXT NOT NULL,
@@ -837,14 +841,17 @@ CREATE TABLE margin_account (
 | `aid` | 固定 `4272` | 永久 |
 | `_bid` | 按业务域选：`ffa_order`（订单）/ `ffa_goods`（商品）/ `ffa_aftersale`（售后） | 永久 |
 | `__token` | 登录后从页面请求 URL 提取，每店一个；随会话文件持久化（`token` 字段） | 跟随会话（约 60 天） |
-| `_lid` | 页面会话内递增计数器（12 位数字；见下方证据） | 单次请求 |
+| `_lid` | 12 位数字，单调递增；**生成规则与服务端是否校验均未确认**（见下方） | 单次请求 |
 
 - `__token` 在扫码登录成功后即可获取并保存，浏览器外协议直连时从会话文件读取
 - **`_lid` 证据（API-01 追加）**：10 个样本（2026-11-24 ~ 11-25）全部 12 位、
   单调递增（`331325398959` → `380214583677`），同一时刻的两次请求相差约 5000。
-  与标准时间戳位数不符（秒 10 位 / 毫秒 13 位 / 微秒 16 位），
-  判断为**页面会话内的高精度递增计数器**，不是时间戳。
-  实现时每请求生成 12 位递增数字；若平台校验严格，改从页面实时读取。
+  与标准时间戳位数不符（秒 10 位 / 毫秒 13 位 / 微秒 16 位）。
+  - ⚠️ 「同一时刻相差约 5000」与「计数器」矛盾（计数器相邻值应差 1），
+    更像某种时钟取 12 位（例如微秒级时钟截断）。**生成规则未确认。**
+  - 对实现真正重要的是**服务端是否校验 `_lid`**，待验证（gaps API-01）：
+    同一会话、同一只读接口，分别带「页面真实值 / 随机 12 位数 / 不带 `_lid`」各请求一次，比较返回。
+  - 验证前的实现约定：每请求生成 12 位、单调递增的数字；若验证发现服务端校验，改从页面实时读取。
 
 ### 7.2 拉单流程
 
@@ -907,7 +914,7 @@ CREATE TABLE margin_account (
   → 等待组件回执
   → 成功：waybills.printed，订单 → printed
   → 失败：渲染 100×150 PDF 交系统打印（兜底）
-  → 仍失败：标记 print_failed，提示人工打印
+  → 仍失败：print_job.status=failed，订单停在 label_obtained，提示人工打印
   → 重打不重复取号
 ```
 
@@ -1084,7 +1091,7 @@ CREATE TABLE margin_account (
 1. 启动时用 `getPrinters` 探测组件是否可用，并缓存打印机列表
 2. 取号成功后，用响应里的 `print_data` 组装打印任务
 3. 发送 `print` 并等待 `notifyPrintResult` 回执；超时视为失败
-4. 失败 → 方案 B；仍失败 → 标记 `print_failed`
+4. 失败 → 方案 B；仍失败 → `print_job.status=failed`，订单停在 `label_obtained`（打印结果不是订单状态，见 6.1）
 
 优点：模板、尺寸、快递要求与商家现状完全一致。
 注意：组件版本可能变化，需记录版本号，并可在启动时做一次自检打印（可选）。
@@ -1195,7 +1202,6 @@ doudian-multishop-admin/
 │   ├── tailwind.config.ts
 │   └── package.json
 ├── artifacts/                   # 接口记录样本、面单样本（不入库）
-├── cookies/                     # 每店会话（不入库、不提交）
 ├── docs/                        # 设计文档与工程规范
 └── scripts/                     # 启动、备份、部署脚本
 ```
@@ -1351,6 +1357,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 快递公司 | **POST** | `/api/order/expressList` | GET 返回 `404 路由错误`；无业务参数 |
 | 发货地址列表 | GET | `/shopuser/tshopuser/getAfterSaleList` | page **1-based**；`is_send_default=1` 为默认发货地址 |
 | 面单模板列表 | GET | `/shopuser/power/searchTemplates` | parentTempList / customTempList |
+| 面单账户列表 | GET | `/shopuser/power/getEbillAccountListByExpress?company=<快递编码>` | 返回 `accounts[]`（驼峰：`netCode` / `netName` / `eBillId` / `balance` 张数 / `accountType` / `isDefault`）；取号必需的 `net_code` / `ebill_id` 来源，见 5.9 |
 | 取号前置检查 | GET | `/api/order/getAftersaleAddressAndLogisticsTemplate` | 返回 4 个布尔位 |
 | 包裹列表 | GET | `/api/order/searchPackageList` | |
 | 包裹配置 | GET | `/api/order/getPackageConfig` | |
