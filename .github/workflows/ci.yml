@@ -21,6 +21,10 @@ jobs:
       - name: pytest
         working-directory: backend
         run: uv run pytest -q
+      - name: openapi.json 与后端一致
+        run: |
+          (cd backend && uv run python -m app.main --export-openapi ../frontend/openapi.json)
+          git diff --exit-code frontend/openapi.json
       - name: 守门脚本
         run: |
           bash scripts/ci/check-file-length.sh

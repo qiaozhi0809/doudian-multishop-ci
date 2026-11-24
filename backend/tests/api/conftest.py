@@ -115,7 +115,8 @@ def api(tmp_path, clock):
         return await env.scan_impl(profile_dir, channel, proxy, timeout_s)
 
     app = create_app(
-        Settings(data_dir=tmp_path / "data"), clock=clock, hasher=FAST_HASHER,
+        Settings(data_dir=tmp_path / "data", frontend_dist=tmp_path / "no-dist"),
+        clock=clock, hasher=FAST_HASHER,
         client_factory=factory, fetch_ip=fetch_ip, scan=scan,
     )
     with TestClient(app, base_url="http://127.0.0.1:8787") as client:

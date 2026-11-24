@@ -31,7 +31,9 @@ def clock():
 
 @pytest.fixture
 def app(tmp_path, clock):
-    return create_app(Settings(data_dir=tmp_path / "data"), clock=clock, hasher=FAST_HASHER)
+    # frontend_dist 指向不存在的目录：测试结果不受本机是否构建过前端影响
+    settings = Settings(data_dir=tmp_path / "data", frontend_dist=tmp_path / "no-dist")
+    return create_app(settings, clock=clock, hasher=FAST_HASHER)
 
 
 @pytest.fixture

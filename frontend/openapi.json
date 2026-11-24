@@ -1,332 +1,387 @@
 {
-  "openapi": "3.1.0",
-  "info": {
-    "title": "抖店多店铺管理 本地 API",
-    "version": "0.0.0-handwritten",
-    "description": "临时手写，后端 Task 14 导出后替换。仅覆盖 M1 前端 Task 1~4 所需：/api/health、/api/auth/*、/api/shops 列表、/api/orders、/api/orders/counts。字段依据 docs/design/local-api.md、data-model.md 与 M1 后端计划 Task 13/14，导出后以后端为准。"
-  },
-  "paths": {
-    "/api/health": {
-      "get": {
-        "summary": "总体健康",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Health"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "错误信封",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/status": {
-      "get": {
-        "summary": "登录状态",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthStatus"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "错误信封",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/setup": {
-      "post": {
-        "summary": "创建管理员",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthStatus"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "错误信封",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Credentials"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/login": {
-      "post": {
-        "summary": "登录",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthStatus"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "错误信封",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Credentials"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/logout": {
-      "post": {
-        "summary": "退出",
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "default": {
-            "description": "错误信封",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/password": {
-      "post": {
-        "summary": "修改密码",
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "default": {
-            "description": "错误信封",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangePassword"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/shops": {
-      "get": {
-        "summary": "店铺列表与会话健康",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ShopRow"
-                  }
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "错误信封",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/orders": {
-      "get": {
-        "summary": "跨店订单列表",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrderPage"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "错误信封",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "shop_ids",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 200,
-              "default": 50
-            }
-          }
-        ]
-      }
-    },
-    "/api/orders/counts": {
-      "get": {
-        "summary": "跨店 tab 计数（平台口径）",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrderCountsResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "错误信封",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "shop_ids",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ]
-      }
-    }
-  },
   "components": {
     "schemas": {
-      "ErrorBody": {
-        "type": "object",
+      "AccountOut": {
         "properties": {
-          "type": {
+          "balance": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance"
+          },
+          "courier_code": {
+            "title": "Courier Code",
             "type": "string"
           },
+          "ebill_id": {
+            "title": "Ebill Id",
+            "type": "string"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "net_code": {
+            "title": "Net Code",
+            "type": "string"
+          },
+          "net_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Name"
+          }
+        },
+        "required": [
+          "courier_code",
+          "ebill_id",
+          "net_code",
+          "net_name",
+          "balance",
+          "is_default"
+        ],
+        "title": "AccountOut",
+        "type": "object"
+      },
+      "AddressOut": {
+        "properties": {
+          "address_id": {
+            "title": "Address Id",
+            "type": "string"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          }
+        },
+        "required": [
+          "address_id",
+          "name",
+          "phone",
+          "region",
+          "is_default"
+        ],
+        "title": "AddressOut",
+        "type": "object"
+      },
+      "AuthStatus": {
+        "properties": {
+          "logged_in": {
+            "title": "Logged In",
+            "type": "boolean"
+          },
+          "setup_required": {
+            "title": "Setup Required",
+            "type": "boolean"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "setup_required",
+          "logged_in",
+          "username"
+        ],
+        "title": "AuthStatus",
+        "type": "object"
+      },
+      "BaseData": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "addresses": {
+            "items": {
+              "$ref": "#/components/schemas/AddressOut"
+            },
+            "title": "Addresses",
+            "type": "array"
+          },
+          "couriers": {
+            "items": {
+              "$ref": "#/components/schemas/CourierOut"
+            },
+            "title": "Couriers",
+            "type": "array"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateOut"
+            },
+            "title": "Templates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "addresses",
+          "couriers",
+          "templates",
+          "accounts"
+        ],
+        "title": "BaseData",
+        "type": "object"
+      },
+      "BaseSummary": {
+        "properties": {
+          "accounts": {
+            "title": "Accounts",
+            "type": "integer"
+          },
+          "addresses": {
+            "title": "Addresses",
+            "type": "integer"
+          },
+          "couriers": {
+            "title": "Couriers",
+            "type": "integer"
+          },
+          "not_ready_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Not Ready Reasons",
+            "type": "array"
+          },
+          "ready_for_label": {
+            "title": "Ready For Label",
+            "type": "boolean"
+          },
+          "templates": {
+            "title": "Templates",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "addresses",
+          "couriers",
+          "templates",
+          "accounts",
+          "ready_for_label",
+          "not_ready_reasons"
+        ],
+        "title": "BaseSummary",
+        "type": "object"
+      },
+      "ChangePassword": {
+        "properties": {
+          "new_password": {
+            "title": "New Password",
+            "type": "string"
+          },
+          "old_password": {
+            "title": "Old Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "old_password",
+          "new_password"
+        ],
+        "title": "ChangePassword",
+        "type": "object"
+      },
+      "CourierOut": {
+        "properties": {
+          "courier_code": {
+            "title": "Courier Code",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "courier_code",
+          "name"
+        ],
+        "title": "CourierOut",
+        "type": "object"
+      },
+      "Credentials": {
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Credentials",
+        "type": "object"
+      },
+      "EgressRequest": {
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "mode": {
+            "enum": [
+              "direct",
+              "proxy"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "paste": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "代理商格式 IP|端口|账号|密码|到期日",
+            "title": "Paste"
+          },
+          "proxy_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "http(s)://账号:密码@主机:端口",
+            "title": "Proxy Url"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "EgressRequest",
+        "type": "object"
+      },
+      "EgressStatusOut": {
+        "properties": {
+          "egress_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Egress Ip"
+          },
+          "egress_ip_pending": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Egress Ip Pending"
+          },
+          "egress_status": {
+            "enum": [
+              "unchecked",
+              "ok",
+              "unreachable",
+              "changed",
+              "duplicate"
+            ],
+            "title": "Egress Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "egress_ip",
+          "egress_ip_pending",
+          "egress_status"
+        ],
+        "title": "EgressStatusOut",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "detail": {
+            "title": "Detail"
+          },
           "message": {
+            "title": "Message",
             "type": "string"
           },
           "shop_id": {
@@ -337,17 +392,22 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Shop Id"
           },
-          "detail": {}
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
         },
         "required": [
           "type",
           "message"
-        ]
+        ],
+        "title": "ErrorBody",
+        "type": "object"
       },
       "ErrorEnvelope": {
-        "type": "object",
         "properties": {
           "error": {
             "$ref": "#/components/schemas/ErrorBody"
@@ -355,29 +415,81 @@
         },
         "required": [
           "error"
-        ]
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
       },
       "Health": {
-        "type": "object",
         "properties": {
           "status": {
+            "title": "Status",
             "type": "string"
           }
         },
         "required": [
           "status"
-        ]
+        ],
+        "title": "Health",
+        "type": "object"
       },
-      "AuthStatus": {
-        "type": "object",
+      "OrderCounts": {
         "properties": {
-          "setup_required": {
-            "type": "boolean"
+          "exp_ship": {
+            "title": "Exp Ship",
+            "type": "integer"
           },
-          "logged_in": {
-            "type": "boolean"
+          "in_aftersale": {
+            "title": "In Aftersale",
+            "type": "integer"
           },
-          "username": {
+          "ship_delay": {
+            "title": "Ship Delay",
+            "type": "integer"
+          },
+          "stock_up": {
+            "title": "Stock Up",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stock_up",
+          "exp_ship",
+          "ship_delay",
+          "in_aftersale"
+        ],
+        "title": "OrderCounts",
+        "type": "object"
+      },
+      "OrderCountsResponse": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopOrderCounts"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shops"
+        ],
+        "title": "OrderCountsResponse",
+        "type": "object"
+      },
+      "OrderItem": {
+        "properties": {
+          "price_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Cents"
+          },
+          "product_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -385,76 +497,318 @@
               {
                 "type": "null"
               }
-            ]
-          }
-        },
-        "required": [
-          "setup_required",
-          "logged_in",
-          "username"
-        ]
-      },
-      "Credentials": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "type": "string"
+            ],
+            "title": "Product Id"
           },
-          "password": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "username",
-          "password"
-        ]
-      },
-      "ChangePassword": {
-        "type": "object",
-        "properties": {
-          "old_password": {
-            "type": "string"
+          "product_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Name"
           },
-          "new_password": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "old_password",
-          "new_password"
-        ]
-      },
-      "ShopRow": {
-        "type": "object",
-        "properties": {
-          "id": {
+          "quantity": {
+            "title": "Quantity",
             "type": "integer"
           },
-          "name": {
+          "sku_order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku Order Id"
+          },
+          "sku_spec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku Spec"
+          }
+        },
+        "required": [
+          "sku_order_id",
+          "product_id",
+          "product_name",
+          "sku_spec",
+          "quantity",
+          "price_cents"
+        ],
+        "title": "OrderItem",
+        "type": "object"
+      },
+      "OrderPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "OrderPage",
+        "type": "object"
+      },
+      "OrderRow": {
+        "properties": {
+          "amount_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Cents"
+          },
+          "exception_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exception Reason"
+          },
+          "exp_ship_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exp Ship Time"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "order_no": {
+            "title": "Order No",
+            "type": "string"
+          },
+          "pay_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pay Time"
+          },
+          "platform_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Status"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
             "type": "string"
           },
           "status": {
             "enum": [
-              "active",
-              "needs_login",
-              "disabled"
+              "synced",
+              "pending_label",
+              "label_obtained",
+              "printed",
+              "shipped",
+              "exception",
+              "cancelled",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "shop_id",
+          "shop_name",
+          "order_no",
+          "platform_status",
+          "status",
+          "exception_reason",
+          "amount_cents",
+          "pay_time",
+          "exp_ship_time",
+          "items"
+        ],
+        "title": "OrderRow",
+        "type": "object"
+      },
+      "ShopCreate": {
+        "properties": {
+          "entity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "shop_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop No"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ShopCreate",
+        "type": "object"
+      },
+      "ShopOrderCounts": {
+        "properties": {
+          "counts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrderCounts"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
-          "health": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fetched_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "upstream",
+              "error"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "source"
+        ],
+        "title": "ShopOrderCounts",
+        "type": "object"
+      },
+      "ShopPatch": {
+        "properties": {
+          "channel": {
             "anyOf": [
               {
                 "enum": [
-                  "healthy",
-                  "expiring",
-                  "expired"
-                ]
+                  "protocol",
+                  "browser"
+                ],
+                "type": "string"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Channel"
           },
-          "expires_at": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "entity": {
             "anyOf": [
               {
                 "type": "string"
@@ -462,9 +816,10 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Entity"
           },
-          "paused_reason": {
+          "name": {
             "anyOf": [
               {
                 "type": "string"
@@ -472,31 +827,15 @@
               {
                 "type": "null"
               }
-            ]
-          },
-          "egress_mode": {
-            "anyOf": [
-              {
-                "enum": [
-                  "direct",
-                  "proxy"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "proxy_display": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "ShopPatch",
+        "type": "object"
+      },
+      "ShopRow": {
+        "properties": {
           "egress_ip": {
             "anyOf": [
               {
@@ -505,7 +844,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Egress Ip"
           },
           "egress_ip_pending": {
             "anyOf": [
@@ -515,7 +855,23 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Egress Ip Pending"
+          },
+          "egress_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "direct",
+                  "proxy"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Egress Mode"
           },
           "egress_status": {
             "enum": [
@@ -524,7 +880,73 @@
               "unreachable",
               "changed",
               "duplicate"
-            ]
+            ],
+            "title": "Egress Status",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "health": {
+            "anyOf": [
+              {
+                "enum": [
+                  "healthy",
+                  "expiring",
+                  "expired"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "not_ready_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Not Ready Reasons",
+            "type": "array"
+          },
+          "paused_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused Reason"
+          },
+          "proxy_display": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Display"
           },
           "proxy_expires_at": {
             "anyOf": [
@@ -534,16 +956,21 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Proxy Expires At"
           },
           "ready_for_label": {
+            "title": "Ready For Label",
             "type": "boolean"
           },
-          "not_ready_reasons": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "status": {
+            "enum": [
+              "active",
+              "needs_login",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
           }
         },
         "required": [
@@ -561,270 +988,980 @@
           "proxy_expires_at",
           "ready_for_label",
           "not_ready_reasons"
-        ]
+        ],
+        "title": "ShopRow",
+        "type": "object"
       },
-      "OrderItem": {
-        "type": "object",
+      "Started": {
         "properties": {
-          "sku_order_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "product_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "product_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "sku_spec": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "quantity": {
-            "type": "integer"
-          },
-          "price_cents": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "sku_order_id",
-          "product_id",
-          "product_name",
-          "sku_spec",
-          "quantity",
-          "price_cents"
-        ]
-      },
-      "OrderRow": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "shop_id": {
-            "type": "integer"
-          },
-          "shop_name": {
-            "type": "string"
-          },
-          "order_no": {
-            "type": "string"
-          },
-          "platform_status": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "status": {
-            "enum": [
-              "synced",
-              "pending_label",
-              "label_obtained",
-              "printed",
-              "shipped",
-              "exception",
-              "cancelled",
-              "closed"
-            ]
-          },
-          "exception_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "amount_cents": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "pay_time": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "exp_ship_time": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "items": {
-            "type": "array",
+            "const": "started",
+            "default": "started",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "Started",
+        "type": "object"
+      },
+      "SyncStarted": {
+        "properties": {
+          "already_running": {
             "items": {
-              "$ref": "#/components/schemas/OrderItem"
+              "type": "integer"
+            },
+            "title": "Already Running",
+            "type": "array"
+          },
+          "started": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Started",
+            "type": "array"
+          }
+        },
+        "required": [
+          "started",
+          "already_running"
+        ],
+        "title": "SyncStarted",
+        "type": "object"
+      },
+      "TemplateOut": {
+        "properties": {
+          "courier_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Courier Code"
+          },
+          "is_custom": {
+            "title": "Is Custom",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "template_code": {
+            "title": "Template Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "template_code",
+          "courier_code",
+          "name",
+          "is_custom"
+        ],
+        "title": "TemplateOut",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "抖店多店铺管理 本地 API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Logout Api Auth Logout Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/password": {
+      "post": {
+        "operationId": "change_password_api_auth_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Change Password Api Auth Password Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Change Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/setup": {
+      "post": {
+        "description": "创建管理员。不自动登录，需再调用登录接口。",
+        "operationId": "setup_api_auth_setup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Setup",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/status": {
+      "get": {
+        "operationId": "status_api_auth_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "events_api_events_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Events",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "operationId": "list_orders_api_orders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "synced",
+                    "pending_label",
+                    "label_obtained",
+                    "printed",
+                    "shipped",
+                    "exception",
+                    "cancelled",
+                    "closed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
             }
           }
-        },
-        "required": [
-          "id",
-          "shop_id",
-          "shop_name",
-          "order_no",
-          "platform_status",
-          "status",
-          "exception_reason",
-          "amount_cents",
-          "pay_time",
-          "exp_ship_time",
-          "items"
-        ]
-      },
-      "OrderPage": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OrderRow"
-            }
-          },
-          "total": {
-            "type": "integer"
-          },
-          "page": {
-            "type": "integer"
-          },
-          "page_size": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "page",
-          "page_size"
-        ]
-      },
-      "OrderCounts": {
-        "type": "object",
-        "properties": {
-          "stock_up": {
-            "type": "integer"
-          },
-          "exp_ship": {
-            "type": "integer"
-          },
-          "ship_delay": {
-            "type": "integer"
-          },
-          "in_aftersale": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "stock_up",
-          "exp_ship",
-          "ship_delay",
-          "in_aftersale"
-        ]
-      },
-      "ShopOrderCounts": {
-        "type": "object",
-        "properties": {
-          "shop_id": {
-            "type": "integer"
-          },
-          "counts": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OrderCounts"
-              },
-              {
-                "type": "null"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderPage"
+                }
               }
-            ]
+            },
+            "description": "Successful Response"
           },
-          "source": {
-            "enum": [
-              "upstream",
-              "error"
-            ]
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
               }
-            ]
+            },
+            "description": "错误信封"
           }
         },
-        "required": [
-          "shop_id",
-          "source"
+        "summary": "List Orders",
+        "tags": [
+          "orders"
         ]
-      },
-      "OrderCountsResponse": {
-        "type": "object",
-        "properties": {
-          "shops": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ShopOrderCounts"
+      }
+    },
+    "/api/orders/counts": {
+      "get": {
+        "operationId": "order_counts_api_orders_counts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderCountsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
         },
-        "required": [
+        "summary": "Order Counts",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/orders/sync": {
+      "post": {
+        "description": "显式指定的店铺先同步预检（暂停 / 出口 / 会话不通即报错）；不指定则只跑可用店铺。",
+        "operationId": "sync_orders_api_orders_sync_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Sync Orders",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/shops": {
+      "get": {
+        "operationId": "list_shops_api_shops_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShopRow"
+                  },
+                  "title": "Response List Shops Api Shops Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Shops",
+        "tags": [
+          "shops"
+        ]
+      },
+      "post": {
+        "operationId": "create_shop_api_shops_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShopCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Create Shop",
+        "tags": [
+          "shops"
+        ]
+      }
+    },
+    "/api/shops/{shop_id}": {
+      "patch": {
+        "operationId": "patch_shop_api_shops__shop_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShopPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Patch Shop",
+        "tags": [
+          "shops"
+        ]
+      }
+    },
+    "/api/shops/{shop_id}/base": {
+      "get": {
+        "operationId": "get_base_api_shops__shop_id__base_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseData"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Get Base",
+        "tags": [
+          "shops"
+        ]
+      }
+    },
+    "/api/shops/{shop_id}/egress": {
+      "put": {
+        "operationId": "set_egress_api_shops__shop_id__egress_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EgressRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Set Egress",
+        "tags": [
+          "shops"
+        ]
+      }
+    },
+    "/api/shops/{shop_id}/egress/check": {
+      "post": {
+        "operationId": "check_egress_api_shops__shop_id__egress_check_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "accept_change",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Accept Change",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EgressStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Check Egress",
+        "tags": [
+          "shops"
+        ]
+      }
+    },
+    "/api/shops/{shop_id}/login": {
+      "post": {
+        "operationId": "login_shop_api_shops__shop_id__login_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Started"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Login Shop",
+        "tags": [
+          "shops"
+        ]
+      }
+    },
+    "/api/shops/{shop_id}/probe": {
+      "post": {
+        "operationId": "probe_shop_api_shops__shop_id__probe_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Probe Shop",
+        "tags": [
+          "shops"
+        ]
+      }
+    },
+    "/api/shops/{shop_id}/resume": {
+      "post": {
+        "operationId": "resume_shop_api_shops__shop_id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Resume Shop",
+        "tags": [
+          "shops"
+        ]
+      }
+    },
+    "/api/shops/{shop_id}/sync-base": {
+      "post": {
+        "operationId": "sync_base_api_shops__shop_id__sync_base_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Sync Base",
+        "tags": [
           "shops"
         ]
       }
