@@ -1025,6 +1025,7 @@ CREATE TABLE margin_account (
 |---|---|---|---|
 | `10008` | 未登录 | 会话失效 | — |
 | `10001010A` | 当前环境存在风险，请稍后重试 | 风控拦截 | 无签名的 `searchPackageList` 直连触发（2026-11-25） |
+| `602502151` | 您的账户存在安全风险，请稍后再试 | 风控拦截 | **地址解密连续 13 次触发**（A.1 receiveinfo，2026-11-25） |
 | `310011` | 合并ID为空 | 请求错误 | 取号 `combine_id` 必填 |
 | `602500705` | 系统异常，请联系客服咨询 | 请求错误 | `searchlist` 参数不全时返回（需 `tab` + `order_status` 同时传，且为 GET） |
 | `100000` | 成功（字符串） | — | 与其他接口的 `0` 并存 |
@@ -1407,7 +1408,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 包裹配置 | GET | `/api/order/getPackageConfig` | |
 | 合单灰度 | GET | `/api/order/queryCombineOrderGrayShopStatus` | |
 | 公告 | GET | `/api/order/getNotice` | |
-| 收货信息解密 | GET | `/api/order/receiveinfo` | 参数名 `order_id`，**值传 `shop_order_id`**；返回明文 |
+| 收货信息解密 | GET | `/api/order/receiveinfo` | 参数名 `order_id`，**值传 `shop_order_id`**。响应 `data.receive_info`：`post_receiver` / `post_tel`（可能带分机号，形如 `-xxxx`）/ `post_addr.{province,city,town,street}.{name,id}` + `detail` / `can_view` / `expire_time`。`data.verify_type` 非空表示要验证。**风控：连续约 13 次（间隔 0.5-0.8s）触发 `602502151`**（2026-11-25） |
 | 订单物流 | GET | `/api/order/getOrderLogistics?order_id=<shop_order_id>` | 返回 `logistics[]`：`logistics_name` / **`logistics_code`（运单号）** / `logistics_send_time` / `send_type` / `send_method_name` / `items[]` / `trace[]`（轨迹）；`data` 另有 `logistics_list[]`（按包裹分组）。**API-19 取号恢复的关键接口**；无 `deliverId` |
 | 订单详情 | GET | `/api/order/orderDetail?order_id=<shop_order_id>&source=shop_order_view_upgrade` | 返回 `order_base` / `receiver` / `delivery` / `product` / `action_map` / `url_map` 等；**不含运单号**（`delivery.labels` 只有「送货方式」） |
 | 店铺资质画像 | GET | `/center/qualification/shop/info` | 资质 ID / 地址 / 类目 / 审核状态 |
