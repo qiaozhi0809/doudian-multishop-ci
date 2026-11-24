@@ -314,23 +314,9 @@ CREATE TABLE logistics_events (
 );
 CREATE INDEX idx_logistics_waybill ON logistics_events(waybill_no, event_time);
 
--- ⑮ 跨店对账快照（[附录 G.4](../api/reconcile.md)）
-CREATE TABLE orders_snapshot (
-  id              INTEGER PRIMARY KEY,
-  shop_id         INTEGER NOT NULL REFERENCES shop(id),
-  shop_order_id   TEXT NOT NULL,
-  order_status    INTEGER,
-  tracking_no     TEXT,
-  company_code    TEXT,
-  pay_time        TEXT,
-  ship_time       TEXT,
-  raw_json        TEXT,
-  first_seen_at   TEXT NOT NULL,
-  last_synced_at  TEXT NOT NULL,
-  UNIQUE(shop_id, shop_order_id)
-);
+-- ⑮ 跨店对账快照：已并入经营仪表盘的订单事实表 order_fact（design/dashboard.md 第 3 节），不再单独建表
 
--- ⑯ 售后聚合（[附录 E](../api/aftersale.md)）
+-- ⑯ 售后聚合（附录 E）
 CREATE TABLE aftersale (
   id                  INTEGER PRIMARY KEY,
   shop_id             INTEGER NOT NULL REFERENCES shop(id),
@@ -346,7 +332,7 @@ CREATE TABLE aftersale (
   UNIQUE(shop_id, after_sale_id)
 );
 
--- ⑰ 商品快照（[附录 D.1](../api/catalog.md)）
+-- ⑰ 商品快照（附录 D.1）
 CREATE TABLE product_snapshot (
   id              INTEGER PRIMARY KEY,
   shop_id         INTEGER NOT NULL REFERENCES shop(id),
@@ -363,7 +349,7 @@ CREATE TABLE product_snapshot (
   UNIQUE(shop_id, product_id)
 );
 
--- ⑱ 库存快照（[附录 D.2](../api/catalog.md)）
+-- ⑱ 库存快照（附录 D.2）
 CREATE TABLE stock_snapshot (
   id              INTEGER PRIMARY KEY,
   shop_id         INTEGER NOT NULL REFERENCES shop(id),
@@ -379,7 +365,7 @@ CREATE TABLE stock_snapshot (
   UNIQUE(shop_id, product_id)
 );
 
--- ⑲ 待结算订单（[附录 F.1b](../api/fund.md)）
+-- ⑲ 待结算订单（附录 F.1b）
 CREATE TABLE fund_unsettled (
   id              INTEGER PRIMARY KEY,
   shop_id         INTEGER NOT NULL REFERENCES shop(id),
@@ -397,7 +383,7 @@ CREATE TABLE fund_unsettled (
   UNIQUE(shop_id, shop_order_no, sku_order_no)
 );
 
--- ⑳ 保证金账户（[附录 F.1c](../api/fund.md)）
+-- ⑳ 保证金账户（附录 F.1c）
 CREATE TABLE margin_account (
   id              INTEGER PRIMARY KEY,
   shop_id         INTEGER NOT NULL REFERENCES shop(id),
@@ -431,7 +417,7 @@ CREATE TABLE margin_account (
 
 | 表 | 用途 | 字段依据 |
 |---|---|---|
-| `orders_snapshot` | 跨店对账快照 | [附录 G.4](../api/reconcile.md) |
+| `order_fact`（替代原 `orders_snapshot`） | 跨店对账快照 + 仪表盘订单事实 | [附录 G.4](../api/reconcile.md)、[dashboard.md](dashboard.md) |
 | `aftersale` | 售后聚合 | [附录 E.1](../api/aftersale.md) / E.7 |
 | `product_snapshot` / `stock_snapshot` | 商品与库存快照 | [附录 D.1](../api/catalog.md) / D.2 |
 | `fund_unsettled` / `margin_account` | 资金待结算与保证金 | [附录 F.1b](../api/fund.md) / F.1c |

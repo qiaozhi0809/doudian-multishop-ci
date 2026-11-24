@@ -40,7 +40,7 @@
 
 对账不依赖正式的订单同步模块，改用自建快照表：
 
-1. 建 `orders_snapshot(shop_id, shop_order_id)` 唯一键，保存平台最近一次同步的
+1. 建快照表（现为 `order_fact`，见 G.7），`(shop_id, shop_order_id)` 唯一键，保存平台最近一次同步的
    `order_status / tracking_no / company_code / pay_time / ship_time / raw_json`
 2. 每次对账在**同一事务**内：先逐单读旧快照 → 比较 → 全部读完再统一 upsert
    （保证比较基准是本次同步之前的快照）
@@ -68,10 +68,10 @@
 
 ### G.7 与正式订单模块的关系
 
-`orders_snapshot` 是**对账专用快照**，不是订单主表。M1 完成正式订单同步后：
+**已决定（2026-11-25）**：`orders_snapshot` 并入经营仪表盘的订单事实表 `order_fact`（[dashboard.md](../design/dashboard.md) 第 3 节），不再单独建表。
 
-- 对账应改为「平台数据 vs `orders` 表」比对
-- `orders_snapshot` 可保留为对账历史，或迁移合并
+- 对账读 `order_fact`：先读出本次同步前的状态，比较后再统一 upsert（同 G.4 的事务要求）
+- `order_fact` 同步所有状态，覆盖对账窗口；`first_seen_at` 语义不变
 - 避免两套订单数据长期并存
 
 > 索引见 [README.md](README.md)。
