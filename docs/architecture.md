@@ -942,6 +942,35 @@ CREATE TABLE margin_account (
 （`has_aftersale_address` / `has_template` / `has_logistics_service`）；
 `has_printer` 反映打印组件侧配置，不影响取号本身。
 
+**地址解密额度（2026-11-25 实测 + 官方页面确认）**：
+
+抖店的收货信息解密是**配额制**，不是无限调用。官方页面在
+「店铺设置 → 订单信息解密额度」：
+
+| 项 | 含义 |
+|---|---|
+| 剩余解密次数 | 当日还能解密多少单（样本店实测剩 8 次） |
+| 已解密总次数 | 当日已用额度（含抖店后台、服务商应用分别统计） |
+| 剩余提额次数 | 「申请提额」的可用次数 |
+| 解密环境风险数 | 当日风险检测结果 |
+
+**额度消耗规则**：
+
+- 每次 `receiveinfo` 成功返回明文计 1 次；**重复解密同一订单每次都计**
+- 多次解密「已取消 / 已发货 / 已完成」订单会触发官方警告：
+  「请停止非必要的解密（包含但不限于多次解密已取消、已发货、已完成等状态订单）」
+- 触发后 **3 小时自动恢复**（实测：连续约 13 次、间隔 0.5~0.8s 返回
+  `602502151`「您的账户存在安全风险，请稍后再试」）
+
+**实现约束（必须遵守）**：
+
+1. **解密前判状态**：只对「待发货 / 待打单」订单解密；已发货 / 已完成 / 已取消不解密
+2. **解密结果必须缓存**：`orders.receiver_address` 非空即视为已解密，不再调 `receiveinfo`
+3. **限速**：单店连续解密间隔 ≥ 2 秒
+4. **额度感知**：捕获 `602502151` 后标记店铺「解密冷却中」，暂停该店取号队列，
+   提示用户「约 3 小时后恢复」或引导到官方页面申请提额
+5. **不预解密**：拉单时不批量解密，只在取号批次真正执行前解密
+
 ### 7.4 打印流程
 
 ```
@@ -1408,7 +1437,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 包裹配置 | GET | `/api/order/getPackageConfig` | |
 | 合单灰度 | GET | `/api/order/queryCombineOrderGrayShopStatus` | |
 | 公告 | GET | `/api/order/getNotice` | |
-| 收货信息解密 | GET | `/api/order/receiveinfo` | 参数名 `order_id`，**值传 `shop_order_id`**。响应 `data.receive_info`：`post_receiver` / `post_tel`（可能带分机号，形如 `-xxxx`）/ `post_addr.{province,city,town,street}.{name,id}` + `detail` / `can_view` / `expire_time`。`data.verify_type` 非空表示要验证。**风控：连续约 13 次（间隔 0.5-0.8s）触发 `602502151`**（2026-11-25） |
+| 收货信息解密 | GET | `/api/order/receiveinfo` | 参数名 `order_id`，**值传 `shop_order_id`**。响应 `data.receive_info`：`post_receiver` / `post_tel`（可能带分机号，形如 `-xxxx`）/ `post_addr.{province,city,town,street}.{name,id}` + `detail` / `can_view` / `expire_time`。`data.verify_type` 非空表示要验证。**配额制**：每日有解密额度（官方页面可见，样本店剩 8 次）；**连续约 13 次（间隔 0.5-0.8s）触发 `602502151`，3 小时恢复**（2026-11-25）。实现约束见 7.3 |
 | 包裹发货信息 | GET | `/api/order/get_manual_send_order_info?shop_order_no=<shop_order_id>&action=resend&version=1` | **改物流 `deliverId` 的来源**。响应 `data.order_info.package_list[]`：`deliver_id` / `track_no` / `company` / `company_name` / `can_re_send` / `no_re_send_reason` / `can_re_deliver` / `product_info[]` |
 | 订单物流 | GET | `/api/order/getOrderLogistics?order_id=<shop_order_id>` | 返回 `logistics[]`：`logistics_name` / **`logistics_code`（运单号）** / `logistics_send_time` / `send_type` / `send_method_name` / `items[]` / `trace[]`（轨迹）；`data` 另有 `logistics_list[]`（按包裹分组）。**API-19 取号恢复的关键接口**；无 `deliverId` |
 | 订单详情 | GET | `/api/order/orderDetail?order_id=<shop_order_id>&source=shop_order_view_upgrade` | 返回 `order_base` / `receiver` / `delivery` / `product` / `action_map` / `url_map` 等；**不含运单号**（`delivery.labels` 只有「送货方式」） |
