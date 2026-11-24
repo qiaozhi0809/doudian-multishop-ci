@@ -52,6 +52,7 @@ class ShopOrderCounts(BaseModel):
     counts: OrderCounts | None = None
     source: Literal["upstream", "error"]
     error: str | None = None
+    fetched_at: str | None = None  # 计数取自平台的时间，缓存 60 秒
 
 
 class OrderCountsResponse(BaseModel):

@@ -1,5 +1,6 @@
 """待发货订单同步（backend 5.4、flows 7.2）：分页拉取、每页立即入库、离队订单补查。"""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -39,19 +40,24 @@ def _now() -> str:
 class OrderSyncService:
     def __init__(
         self, engine: Engine, runner: ShopRunner, sessions: SessionManager, events: EventBus,
-        max_pages: int = MAX_PAGES,
+        max_pages: int = MAX_PAGES, on_synced: Callable[[int], None] | None = None,
     ) -> None:
         self._engine = engine
         self._runner = runner
         self._sessions = sessions  # 会话失效由 ShopRunner 统一处理，这里不重复判断
         self._events = events
         self._max_pages = max_pages
+        self._on_synced = on_synced
 
     async def sync_pending(self, shop_id: int, actor: str) -> SyncResult:
         async def job(client: FxgClient) -> SyncResult:
             return await self._sync(client, shop_id)
 
-        return await self._runner.run(shop_id, job, actor=actor)
+        try:
+            return await self._runner.run(shop_id, job, actor=actor)
+        finally:
+            if self._on_synced:  # 订单已变：该店的 tab 计数缓存作废
+                self._on_synced(shop_id)
 
     async def _sync(self, client: FxgClient, shop_id: int) -> SyncResult:
         fetched, seen, complete = 0, set[str](), False

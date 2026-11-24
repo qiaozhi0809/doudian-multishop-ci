@@ -42,7 +42,7 @@ def test_backend_covers_frontend_contract():
     for name, schema in theirs["components"]["schemas"].items():
         got = mine["components"]["schemas"].get(name)
         assert got is not None, f"后端缺少模型 {name}"
-        assert set(schema["properties"]) == set(got["properties"]), name
+        assert set(schema["properties"]) <= set(got["properties"]), name  # 后端可以有更多可选字段
         assert set(schema.get("required", [])) == set(got.get("required", [])), name
 
 

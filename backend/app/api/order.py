@@ -46,6 +46,7 @@ async def order_counts(
     return OrderCountsResponse(shops=[
         ShopOrderCounts(
             shop_id=r.shop_id, source=r.source, error=r.error,  # type: ignore[arg-type]
+            fetched_at=r.fetched_at,
             counts=OrderCounts(**r.counts) if r.counts else None,
         )
         for r in results
