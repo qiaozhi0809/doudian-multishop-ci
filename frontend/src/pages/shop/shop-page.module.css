@@ -1,0 +1,131 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.notices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* 宽表格只在自身卡片内横向滚动，首列（店铺名）固定。 */
+.tableWrap table {
+  min-width: 56rem;
+}
+
+.tableWrap :is(td, th):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+}
+
+.cellStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+}
+
+.cellRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.muted {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.shopName {
+  font-weight: 500;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tip {
+  display: inline-flex;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.sectionTitle {
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+}
+
+.listMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

@@ -83,6 +83,13 @@ describe("api client", () => {
     expect(new Headers(calls[0][1].headers).get("Content-Type")).toBe("application/json");
   });
 
+  it("post 可带查询参数", async () => {
+    const fetchMock = mockFetch(json({}));
+    await api.post("/api/shops/1/egress/check", undefined, { accept_change: true });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/shops/1/egress/check?accept_change=true");
+    expect((fetchMock.mock.calls[0][1] as RequestInit).body).toBeUndefined();
+  });
+
   it("204 空响应返回 undefined", async () => {
     mockFetch(new Response(null, { status: 204 }));
     await expect(api.post("/api/auth/logout")).resolves.toBeUndefined();
