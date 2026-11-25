@@ -15,6 +15,7 @@
 | [frontend.md](design/frontend.md) | 前端结构、数据层、表格、危险操作、技术栈、页面 → Arc 组件、Arc 安装 |
 | [local-api.md](design/local-api.md) | 前端调用的本地 API 草案 |
 | [dashboard.md](design/dashboard.md) | 经营仪表盘（多店订单量 / 销售额 / 售后率 / 出单 / 排行）——草案 |
+| [deployment.md](design/deployment.md) | 出单机部署与运维：安装、依赖检查、配置项、演练模式、每日任务、备份与恢复、升级与回滚、排障 |
 
 ## 抖店接口（`api/`）
 

@@ -32,6 +32,7 @@ export interface ReconcileFilters {
 /** 查询 key 统一在此定义；带店铺筛选条件。`*Root()` 用于前缀失效。 */
 export const queryKeys = {
   authStatus: () => ["auth", "status"] as const,
+  systemInfo: () => ["system", "info"] as const,
   shops: () => ["shops"] as const,
   shopBase: (id: number) => ["shops", id, "base"] as const,
   ordersRoot: () => ["orders"] as const,
@@ -74,4 +75,6 @@ export const queryKeys = {
   reconcileRoot: () => ["reconcile"] as const,
   reconcileFindings: (shopIds: number[], filters: ReconcileFilters) =>
     ["reconcile", "findings", shopIds, filters] as const,
+  // ---- M7 备份 ----
+  backupSnapshots: () => ["backup", "snapshots"] as const,
 };

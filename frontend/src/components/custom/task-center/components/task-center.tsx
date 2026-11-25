@@ -47,12 +47,18 @@ export function TaskCenter({ tasks, runningCount, onDismiss, onClearFinished }: 
                 <div className={styles.rowHead}>
                   <span className={styles.rowTitle}>{task.title}</span>
                   <Badge
-                    tone={task.status === "running" ? "info" : task.counts.failed > 0 ? "warning" : "success"}
+                    tone={
+                      task.status === "running"
+                        ? "info"
+                        : task.status === "alert" || task.counts.failed > 0
+                          ? "warning"
+                          : "success"
+                    }
                     size="sm"
                   >
                     {statusText(task)}
                   </Badge>
-                  {task.status === "done" && (
+                  {task.status !== "running" && (
                     <Button
                       variant="ghost"
                       size="sm"

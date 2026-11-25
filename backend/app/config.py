@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path, PureWindowsPath
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 APP_DIR_NAME = "doudian-multishop"
@@ -24,10 +25,25 @@ class Settings(BaseSettings):
     printer_name: str = ""  # 取号请求的 printer 字段；M3 接打印组件前默认不传
     frontend_dist: Path = REPO_ROOT / "frontend" / "dist"
 
+    # ---- M7 打磨：每日定时对账 / 备份 / 临近超时告警（overview 13、gaps ENG-04/06/07）----
+    reconcile_daily: bool = True
+    reconcile_hour: int = Field(3, ge=0, le=23)  # 每天本地时间几点跑全店对账
+    reconcile_window_days: int = Field(30, ge=1, le=90)
+    backup_daily: bool = True
+    backup_hour: int = Field(4, ge=0, le=23)  # 与对账错开一小时
+    backup_keep: int = Field(7, ge=1, le=365)  # 保留最近 N 份快照
+    ship_deadline_warn_hours: int = Field(6, ge=1, le=72)  # 剩余发货时间 < N 小时告警
+    ship_deadline_scan_interval_s: int = Field(1800, ge=60)
+
     @property
     def profiles_dir(self) -> Path:
         """每店一个持久化浏览器用户目录：profiles/<shop_id>/。"""
         return self.data_dir / "profiles"
+
+    @property
+    def backups_dir(self) -> Path:
+        """SQLite 每日快照目录：backups/（ENG-06）。"""
+        return self.data_dir / "backups"
 
     def __init__(self, _platform: str | None = None, **values):
         super().__init__(**values)

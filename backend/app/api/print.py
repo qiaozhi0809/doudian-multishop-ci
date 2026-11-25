@@ -27,7 +27,9 @@ async def submit(
 ) -> PrintStarted:
     started = await request.app.state.printing.submit(
         payload.waybill_ids, admin, payload.printer_name)
-    return PrintStarted(job_ids=started.job_ids, waybill_ids=started.waybill_ids)
+    return PrintStarted(
+        job_ids=started.job_ids, waybill_ids=started.waybill_ids,
+        simulated=started.simulated)
 
 
 @router.get("/jobs/{job_id}", response_model=PrintJobRow)

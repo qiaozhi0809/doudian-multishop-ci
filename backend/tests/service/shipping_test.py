@@ -7,13 +7,13 @@ import pytest
 from app.adapter.browser.login import LoginResult
 from app.adapter.doudian.errors import TransientError
 from app.adapter.doudian.transport import TransportResponse
-from app.domain.errors import DryRunBlocked, InvalidRequest
+from app.domain.errors import InvalidRequest
 from app.service.shipping_plan import group_packages, load_targets
 from app.store import shipping_store
 from tests.fakes import reply
 from tests.service.label_support import add_address, add_shop
 from tests.service.m4_support import NOW_ISO, M4Env, wait_until
-from tests.service.support import TOKEN
+from tests.service.support import TOKEN, audit_rows
 
 M4 = Path(__file__).resolve().parents[1] / "fixtures" / "doudian" / "m4"
 
@@ -128,11 +128,24 @@ async def test_blocked_orders_are_reported_not_shipped(env):
         await env.shipping.ship([oid], "admin")
 
 
-async def test_dry_run_blocks_ship(env):
+async def test_dry_run_records_without_any_request(env):
+    """演练模式：连 sendcheck 都不发，不写 shipment，返回模拟批次并写审计。"""
     oid = add_printed_order(env)
     env.shipping._dry_run = True
-    with pytest.raises(DryRunBlocked):
-        await env.shipping.ship([oid], "admin")
+
+    started = await env.shipping.ship([oid], "admin")
+
+    assert started.simulated is True
+    assert started.batch_id.startswith("dryrun-")
+    assert started.package_count == 1 and started.order_count == 1
+    assert env.transport.requests == []
+    assert env.shipments(started.batch_id) == []
+    audit = audit_rows(env.engine)
+    deliver = [r for r in audit if r["action"] == "dry_run_batch_deliver"]
+    assert len(deliver) == 1
+    packages = deliver[0]["req_summary"]["batch_deliver_packages"]
+    assert packages == [{"logistics_company_code": "zhongtong",
+                         "tracking_no": "79200000000001"}]
 
 
 def test_prepare_is_idempotent_when_shipment_exists(env):

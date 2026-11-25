@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import type { ShopPage } from "../hooks/use-shop-page";
 import styles from "../shop-page.module.css";
 import { AddShopDialog } from "./add-shop-dialog";
+import { BackupCard } from "./backup-card";
 import { BaseDataDrawer } from "./base-data-drawer";
 import { EgressDialog } from "./egress-dialog";
 import { EmptyShops } from "./empty-shops";
@@ -47,6 +48,7 @@ export function ShopPageView({ page }: { page: ShopPage }) {
       {page.status === "ready" && (
         <ShopTable shops={page.shops} pending={actions.pending} waitingShopIds={actions.waitingShopIds} actionsFor={(s) => rowActions(s)} />
       )}
+      <BackupCard backup={page.backup} />
 
       <AddShopDialog
         open={dialogs.addOpen}

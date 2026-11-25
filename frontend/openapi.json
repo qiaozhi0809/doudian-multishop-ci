@@ -485,6 +485,125 @@
         "title": "AuthStatus",
         "type": "object"
       },
+      "BackupCreated": {
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "pruned": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Pruned",
+            "type": "array"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_name",
+          "size_bytes",
+          "trigger",
+          "actor",
+          "created_at",
+          "pruned"
+        ],
+        "title": "BackupCreated",
+        "type": "object"
+      },
+      "BackupSnapshot": {
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "exists": {
+            "default": true,
+            "title": "Exists",
+            "type": "boolean"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_name",
+          "size_bytes",
+          "trigger",
+          "actor",
+          "created_at"
+        ],
+        "title": "BackupSnapshot",
+        "type": "object"
+      },
+      "BackupSnapshotList": {
+        "properties": {
+          "backups_dir": {
+            "title": "Backups Dir",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BackupSnapshot"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "keep": {
+            "title": "Keep",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "backups_dir",
+          "keep"
+        ],
+        "title": "BackupSnapshotList",
+        "type": "object"
+      },
       "BaseData": {
         "properties": {
           "accounts": {
@@ -884,6 +1003,11 @@
             },
             "title": "Shop Ids",
             "type": "array"
+          },
+          "simulated": {
+            "default": false,
+            "title": "Simulated",
+            "type": "boolean"
           }
         },
         "required": [
@@ -1845,6 +1969,11 @@
             },
             "title": "Job Ids",
             "type": "array"
+          },
+          "simulated": {
+            "default": false,
+            "title": "Simulated",
+            "type": "boolean"
           },
           "waybill_ids": {
             "items": {
@@ -2860,6 +2989,11 @@
             },
             "title": "Shop Ids",
             "type": "array"
+          },
+          "simulated": {
+            "default": false,
+            "title": "Simulated",
+            "type": "boolean"
           }
         },
         "required": [
@@ -4124,6 +4258,49 @@
         "title": "SyncStarted",
         "type": "object"
       },
+      "SystemInfo": {
+        "properties": {
+          "backup_daily": {
+            "title": "Backup Daily",
+            "type": "boolean"
+          },
+          "backup_keep": {
+            "title": "Backup Keep",
+            "type": "integer"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "reconcile_daily": {
+            "title": "Reconcile Daily",
+            "type": "boolean"
+          },
+          "reconcile_hour": {
+            "title": "Reconcile Hour",
+            "type": "integer"
+          },
+          "ship_deadline_warn_hours": {
+            "title": "Ship Deadline Warn Hours",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dry_run",
+          "version",
+          "reconcile_daily",
+          "reconcile_hour",
+          "backup_daily",
+          "backup_keep",
+          "ship_deadline_warn_hours"
+        ],
+        "title": "SystemInfo",
+        "type": "object"
+      },
       "TemplateOut": {
         "properties": {
           "courier_code": {
@@ -4685,7 +4862,7 @@
   },
   "info": {
     "title": "抖店多店铺管理 本地 API",
-    "version": "0.1.0"
+    "version": "0.7.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -5267,6 +5444,68 @@
         "summary": "Status",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/backup/run": {
+      "post": {
+        "operationId": "run_api_backup_run_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Run",
+        "tags": [
+          "backup"
+        ]
+      }
+    },
+    "/api/backup/snapshots": {
+      "get": {
+        "operationId": "snapshots_api_backup_snapshots_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSnapshotList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Snapshots",
+        "tags": [
+          "backup"
         ]
       }
     },
@@ -7698,6 +7937,37 @@
         "summary": "Sync Base",
         "tags": [
           "shops"
+        ]
+      }
+    },
+    "/api/system/info": {
+      "get": {
+        "operationId": "info_api_system_info_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Info",
+        "tags": [
+          "system"
         ]
       }
     }

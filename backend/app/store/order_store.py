@@ -137,6 +137,23 @@ def get_by_ids(conn: sa.Connection, order_ids: Sequence[int]) -> list[dict[str, 
     return [dict(r) for r in rows]
 
 
+def ship_deadline_due(
+    conn: sa.Connection, statuses: Sequence[str], warn_until: str, limit: int = 200,
+) -> list[dict[str, Any]]:
+    """未发货且 exp_ship_time 不晚于 warn_until 的订单，按最紧急排序（ENG-07）。"""
+    if len(statuses) == 0:
+        return []
+    rows = conn.execute(
+        sa.select(orders).where(
+            orders.c.status.in_(list(statuses)),
+            orders.c.exp_ship_time.is_not(None),
+            orders.c.exp_ship_time != "",
+            orders.c.exp_ship_time <= warn_until,
+        ).order_by(orders.c.exp_ship_time, orders.c.id).limit(limit)
+    ).mappings()
+    return [dict(r) for r in rows]
+
+
 def pool_orders(
     conn: sa.Connection, shop_ids: Sequence[int] | None, statuses: Sequence[str],
     page: int, page_size: int,

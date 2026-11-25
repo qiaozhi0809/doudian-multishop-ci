@@ -64,17 +64,19 @@ export function CheckDialog({ check, busy, onClose, onConfirm }: CheckDialogProp
           </Alert>
         )}
         {check.dry_run && (
-          <Alert tone="warning" title="演练模式：不能执行写操作">关闭演练模式后再提交</Alert>
+          <Alert tone="warning" title="演练模式：本次只记录请求，不发真实发货请求">
+            确认后会生成一条审计记录并返回模拟结果；关闭演练模式后再次提交才会真正发货。
+          </Alert>
         )}
         <div className={styles.dialogFooter}>
           <span className={styles.muted}>
             {check.total_orders > 0 ? `共 ${check.total_orders} 单将回传平台` : "没有可执行的订单"}
           </span>
           <HoldToConfirm
-            label={confirmLabel(check)}
+            label={`${confirmLabel(check)}${check.dry_run ? "（演练）" : ""}`}
             confirmedLabel="已提交"
             onConfirm={onConfirm}
-            disabled={busy || check.dry_run || check.total_orders === 0}
+            disabled={busy || check.total_orders === 0}
           />
         </div>
       </DialogContent>

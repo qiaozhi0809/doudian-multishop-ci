@@ -37,6 +37,10 @@ interface PrintDone {
   manual: number;
   skipped: number;
 }
+interface DeadlineWarning {
+  count: number;
+  warn_hours: number;
+}
 
 /** 订阅任务相关的 SSE 事件，推进全应用共用的任务状态。 */
 export function useTaskCenter() {
@@ -66,6 +70,9 @@ export function useTaskCenter() {
   );
   useEventSubscription<PrintDone>("print_done", (e) =>
     taskStore.publish({ type: "print_done", ok: e.ok, failed: e.failed, manual: e.manual, skipped: e.skipped }),
+  );
+  useEventSubscription<DeadlineWarning>("ship_deadline_warning", (e) =>
+    taskStore.publish({ type: "deadline_warning", count: e.count, warnHours: e.warn_hours }),
   );
 
   return {

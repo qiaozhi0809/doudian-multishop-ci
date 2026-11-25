@@ -1,7 +1,8 @@
-"""定时任务：固定间隔循环、对所有可用店铺逐个执行（单店失败不影响其他店）。"""
+"""定时任务：固定间隔循环、每日定点任务、对所有可用店铺逐个执行（单店失败不影响其他店）。"""
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from datetime import datetime, timedelta
 from typing import Any
 
 import structlog
@@ -31,6 +32,37 @@ async def run_every(
             await asyncio.wait_for(stop.wait(), interval_s)
         except TimeoutError:
             pass
+
+
+def seconds_until_daily(hour: int, now: datetime) -> float:
+    """距离下一次 `hour:00` 还有多少秒；正好整点时算明天（避免启动瞬间连跑两次）。"""
+    target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+    if target <= now:
+        target += timedelta(days=1)
+    return (target - now).total_seconds()
+
+
+async def run_daily_at(
+    hour: int, fn: Callable[[], Awaitable[Any]], stop: asyncio.Event,
+    *, now: Callable[[], datetime] = lambda: datetime.now(),  # noqa: DTZ005 本地时间（出单机时区）
+) -> None:
+    """每天 `hour` 点（出单机本地时间）执行一次；启动后先等到下一个时间点，不立即执行。"""
+    while not stop.is_set():
+        try:
+            await asyncio.wait_for(stop.wait(), seconds_until_daily(hour, now()))
+        except TimeoutError:
+            pass
+        if stop.is_set():
+            return
+        try:
+            await fn()
+        except Exception:
+            log.exception("periodic.daily_failed", fn=getattr(fn, "__name__", "fn"))
+            # 失败后多等一分钟再进入下一轮计算，避免同一分钟内反复重试
+            try:
+                await asyncio.wait_for(stop.wait(), 60)
+            except TimeoutError:
+                pass
 
 
 def active_shop_ids(engine: Engine) -> list[int]:

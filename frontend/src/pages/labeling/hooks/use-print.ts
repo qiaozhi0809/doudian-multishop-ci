@@ -20,6 +20,7 @@ export function usePrint(visibleWaybillIds: number[]) {
   const client = useQueryClient();
   const [printing, setPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [simulated, setSimulated] = useState(false);
 
   const statusQuery = useQuery({
     queryKey: queryKeys.printStatus(),
@@ -57,9 +58,11 @@ export function usePrint(visibleWaybillIds: number[]) {
       }),
     onMutate: () => {
       setError(null);
+      setSimulated(false);
       setPrinting(true);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setSimulated(data.simulated === true);
       void client.invalidateQueries({ queryKey: queryKeys.printWaybillsRoot() });
     },
     onError: (e) => setError(actionErrorMessage(e)),
@@ -87,6 +90,7 @@ export function usePrint(visibleWaybillIds: number[]) {
     print,
     printing,
     error,
+    simulated,
     clearError: () => setError(null),
   };
 }

@@ -6,12 +6,12 @@
   平台不阻止重复发货（write.md A.2.4），本地必须先查键；`shipment` 的
   success 唯一索引是数据库兜底。
 - 失败：整批瞬时错误退避重试 3 次；仍失败逐店 / 逐包裹标记失败，订单状态不动，可重试。
-- 写操作：演练模式拒绝；每批写审计（逐次 HTTP 调用另由 ShopRunner 审计）。
+- 演练模式：不调用 sendcheck / 发货接口、不写 shipment，只把「将发出的请求」记审计，
+  返回模拟批次（batch_id 以 dryrun- 开头）。
 """
 
 import asyncio
 from collections.abc import Awaitable, Callable, Mapping, Sequence
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -24,14 +24,14 @@ from app.adapter.doudian.errors import BizRejected, EgressUnavailable, Transient
 from app.adapter.doudian.shipping_parsers import parse_deliver_result
 from app.adapter.doudian.shipping_request import deliver_body
 from app.domain.audit import CallRecord
-from app.domain.errors import DryRunBlocked, InvalidRequest
+from app.domain.errors import InvalidRequest
 from app.domain.idempotency import ship_key
-from app.domain.models import DeliverResult, SendCheckResult
+from app.domain.models import DeliverResult
 from app.domain.task_status import TaskStatus, TaskType
+from app.service import dry_run, shipping_dry_run
 from app.service.background import TaskAlreadyRunning, TaskRegistry
 from app.service.events import SHIP_DONE, SHIP_PROGRESS, EventBus
 from app.service.shipping_plan import (
-    BlockedShip,
     PackageGroup,
     ShipTarget,
     call_sendcheck,
@@ -40,6 +40,14 @@ from app.service.shipping_plan import (
     group_packages,
     load_targets,
     pool_view,
+)
+from app.service.shipping_types import (
+    CheckView,
+    Counter,
+    ShipStarted,
+    ShipSummary,
+    ShopCheck,
+    ShopCheckError,
 )
 from app.service.shop_runner import ShopRunner
 from app.store import audit_store, shipping_store, task_store
@@ -53,63 +61,12 @@ NO_RESULT_REASON = "平台未返回该包裹的发货结果"
 UNKNOWN_RESULT_REASON = "发货结果不明（重试后仍失败），可人工核对后重试"
 ALREADY_SHIPPED_REASON = "已发货（幂等跳过）"
 BUSY_REASON = "同一运单号正在发货"
+DRY_RUN_BATCH_PREFIX = "dryrun-"
 _TASK_NAME = "shipping"
 
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
-
-
-@dataclass(frozen=True)
-class ShopCheck:
-    shop_id: int
-    shop_name: str
-    order_nos: tuple[str, ...]
-    result: SendCheckResult
-
-
-@dataclass(frozen=True)
-class ShopCheckError:
-    shop_id: int
-    shop_name: str
-    reason: str
-
-
-@dataclass(frozen=True)
-class CheckView:
-    shops: tuple[ShopCheck, ...]
-    blocked: tuple[BlockedShip, ...]
-    shop_errors: tuple[ShopCheckError, ...]
-    targets: tuple[ShipTarget, ...] = ()
-
-    @property
-    def double_check_total(self) -> int:
-        return sum(s.result.double_check_num for s in self.shops)
-
-
-@dataclass(frozen=True)
-class ShipStarted:
-    batch_id: str
-    shop_ids: list[int]
-    package_count: int
-    order_count: int
-
-
-@dataclass(frozen=True)
-class ShipSummary:
-    ok: int = 0
-    failed: int = 0
-    skipped: int = 0
-
-
-@dataclass
-class _Counter:
-    ok: int = 0
-    failed: int = 0
-    skipped: int = 0
-
-    def summary(self) -> ShipSummary:
-        return ShipSummary(self.ok, self.failed, self.skipped)
 
 
 class ShippingService:
@@ -171,7 +128,7 @@ class ShippingService:
         self, order_ids: Sequence[int], actor: str, double_check_ack: bool = False,
     ) -> ShipStarted:
         if self._dry_run:
-            raise DryRunBlocked("演练模式下不能执行发货")
+            return self._simulate(order_ids, actor)
         if self._busy or self._tasks.is_running(_TASK_NAME):
             raise TaskAlreadyRunning("已有发货批次进行中，请稍候")
         self._busy = True  # 同步占位：检查是网络请求，期间不许第二个批次进入
@@ -206,12 +163,28 @@ class ShippingService:
             batch_id, sorted({t.shop_id for t in view.targets}), len(packages),
             len(view.targets))
 
+    # ---- 演练模式：不请求平台，只记审计并返回模拟批次 ----
+
+    def _simulate(self, order_ids: Sequence[int], actor: str) -> ShipStarted:
+        plan = shipping_dry_run.plan(self._engine, order_ids, actor)
+        dry_run.record(self._engine, plan.intents, self._clock)
+        batch_id = f"{DRY_RUN_BATCH_PREFIX}{uuid4().hex[:12]}"
+        for target in plan.targets:
+            self._publish(batch_id, target, "skipped", dry_run.REASON)
+        self._events.publish(SHIP_DONE, {
+            "batch_id": batch_id, "ok": 0, "failed": 0, "skipped": len(plan.targets),
+            "simulated": True,
+        })
+        return ShipStarted(
+            batch_id, sorted({t.shop_id for t in plan.targets}), len(plan.packages),
+            len(plan.targets), simulated=True)
+
     # ---- 执行 ----
 
     async def _run(
         self, batch_id: str, view: CheckView, packages: list[PackageGroup], actor: str,
     ) -> ShipSummary:
-        counter = _Counter()
+        counter = Counter()
         try:
             errors = {e.shop_id: e.reason for e in view.shop_errors}
             for shop_id in sorted({p.shop_id for p in packages}):
@@ -244,7 +217,7 @@ class ShippingService:
 
     async def _deliver_shop(
         self, client: FxgClient, batch_id: str, packages: list[PackageGroup],
-        counter: _Counter, actor: str,
+        counter: Counter, actor: str,
     ) -> None:
         ready: list[tuple[PackageGroup, Mapping]] = []
         for package in packages:
@@ -289,7 +262,7 @@ class ShippingService:
 
     def _apply_result(
         self, batch_id: str, ready: list[tuple[PackageGroup, Mapping]],
-        result: DeliverResult, counter: _Counter,
+        result: DeliverResult, counter: Counter,
     ) -> None:
         ok_tracking = {s.tracking_no for s in result.success}
         fail_msgs = {f.tracking_no: f.fail_msg for f in result.failures if f.tracking_no}
@@ -329,7 +302,7 @@ class ShippingService:
         return "started", task
 
     def _finish_done(
-        self, batch_id: str, package: PackageGroup, counter: _Counter,
+        self, batch_id: str, package: PackageGroup, counter: Counter,
     ) -> None:
         self._write_success(batch_id, package, None)
         for target in package.targets:
@@ -337,7 +310,7 @@ class ShippingService:
             self._publish(batch_id, target, "skipped", ALREADY_SHIPPED_REASON)
 
     def _finish_success(
-        self, batch_id: str, package: PackageGroup, task: Mapping, counter: _Counter,
+        self, batch_id: str, package: PackageGroup, task: Mapping, counter: Counter,
     ) -> None:
         self._write_success(batch_id, package, task)
         for target in package.targets:
@@ -359,7 +332,7 @@ class ShippingService:
 
     def _fail_all(
         self, batch_id: str, packages: list[PackageGroup], reason: str,
-        counter: _Counter, tasks: list[Mapping] | None,
+        counter: Counter, tasks: list[Mapping] | None,
     ) -> None:
         now = self._now()
         with self._engine.begin() as conn:

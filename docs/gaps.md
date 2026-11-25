@@ -98,10 +98,10 @@
 | ENG-01 | P0 | 本地 API 详细契约 | 在 [design/local-api.md](design/local-api.md) 草案基础上，给每个接口写 pydantic 请求/响应 schema 与错误码 | | 🔶 打单台与解密接口 schema 已落地（`api/label_schemas.py` / `api/order_schemas.py`，OpenAPI 随代码生成）；其余分组待补 |
 | ENG-02 | P0 | 抖店错误码分类表 | 把已见过的 `code` 归入「会话失效 / 业务拒绝 / 风控拦截 / 瞬时故障 / 程序错误」五类，落到 `adapter/doudian/error_codes.py` 的设计说明 | | 🔶 第 8 节已有错误码表（10008 / 10001010A / 310011 / 602500705 / 100000）；待按五类异常补全并落到 `error_codes.py` 设计 |
 | ENG-03 | P1 | 打印路径决策 | 依据 API-07 的结论，在 design/flows.md 第 10 节的路径中定下 MVP 默认路径 | | ✅ P1 直连组件为默认路径，M3 已实现（`adapter/print` + `service/printing` + `api/print`）；P3 手动补打为保底 |
-| ENG-04 | P1 | 出单机部署与打包 | 打包方式、首次安装步骤、Edge / 打印组件依赖检查、升级方式；对应验收标准第 7 条 | | ⏳ |
+| ENG-04 | P1 | 出单机部署与打包 | 打包方式、首次安装步骤、Edge / 打印组件依赖检查、升级方式；对应验收标准第 7 条 | | ✅ [design/deployment.md](design/deployment.md)：zip + venv（`backend/requirements.txt` 锁定）+ `scripts/start|stop.ps1|.bat`；首次安装、依赖检查清单、升级 / 回滚、排障齐全；PyInstaller 记作未验证的备选 |
 | ENG-05 | P1 | CI 守门脚本 | engineering-rules 第十节 7 个脚本全部「待建」，按其列出的顺序落地 | | ⏳ |
-| ENG-06 | P2 | 备份与恢复 | SQLite 每日快照的保留策略、恢复演练步骤 | | ⏳ |
-| ENG-07 | P2 | 通知通道 | 掉线 / 打印失败 / 临近超时发货的通知方式（界面内 / 系统通知 / 外部 IM） | | ⏳ |
+| ENG-06 | P2 | 备份与恢复 | SQLite 每日快照的保留策略、恢复演练步骤 | | ✅ `service/backup.py`（sqlite3 在线备份，WAL 安全）+ `backup_run` 表（0007）+ 每日 04:00 快照、保留 `DD_BACKUP_KEEP`（默认 7）+ `GET /api/backup/snapshots` / `POST /api/backup/run` + 设置页「立即备份」；恢复步骤与演练见 deployment.md §7 |
+| ENG-07 | P2 | 通知通道 | 掉线 / 打印失败 / 临近超时发货的通知方式（界面内 / 系统通知 / 外部 IM） | | ✅ 界面内 SSE：掉线走会话健康指示（一键重登）、打印失败走任务中心 / 打单台、临近超时新增 `ship_deadline_warning`（每 30 分钟扫描 `exp_ship_time`，阈值 `DD_SHIP_DEADLINE_WARN_HOURS`）；不接外部 IM |
 
 ---
 

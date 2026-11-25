@@ -180,7 +180,7 @@ describe("发货台", () => {
     expect(screen.getByRole("button", { name: /按住确认发货/ })).toBeDisabled();
   });
 
-  it("演练模式：确认按钮禁用并标注", async () => {
+  it("演练模式：提示只记录请求，确认按钮标注（演练）且仍可提交", async () => {
     mockFetch({
       "GET /api/shops": jsonResponse(shops),
       "GET /api/shipping/pool": pool([row(1)]),
@@ -190,7 +190,7 @@ describe("发货台", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByLabelText("选择订单 69000001"));
     await user.click(screen.getByRole("button", { name: "发货前检查" }));
-    expect(await screen.findByText("演练模式：不能执行写操作")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /按住确认发货/ })).toBeDisabled();
+    expect(await screen.findByText(/演练模式：本次只记录请求/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /按住确认发货（演练）/ })).toBeEnabled();
   });
 });

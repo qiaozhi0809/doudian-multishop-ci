@@ -275,7 +275,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | **M4 发货前检查 + 发货 + 对账** | `sendcheck`、`batchDeliverGoodsByEES`、每日对账 | 待开始 |
 | **M5 多店聚合（只读）** | 售后 / 商品 / 库存 / 资金四类聚合服务与数据表 | 待开始 |
 | **M6 前端后台** | Arc 组件搭完整后台（见 [frontend.md](frontend.md)） | 待开始 |
-| **M7 打磨** | 掉线重登、异常处理、日志、限速、备份、演练模式 | 待开始 |
+| **M7 打磨** | 掉线重登、异常处理、日志、限速、备份、演练模式 | **已完成**：每日定时对账（默认 03:00）、SQLite 每日快照 + 保留策略 + 手动备份（`service/backup.py`、0007）、演练模式覆盖全部写操作（只记审计不发请求，界面横幅与按钮标识）、临近超时发货告警、重启 / 掉线任务恢复（`store/task_store.recover_after_restart` / `verify_running_for_shop`）、出单机部署文档与启动脚本（[deployment.md](deployment.md)、`scripts/start|stop`） |
 
 ---
 

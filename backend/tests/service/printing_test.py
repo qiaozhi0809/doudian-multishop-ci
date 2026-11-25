@@ -4,13 +4,14 @@ import pytest
 
 from app.adapter.doudian.errors import TransientError
 from app.adapter.print.protocol import PrintOutcome
-from app.domain.errors import DryRunBlocked, InvalidRequest, NotFound
+from app.domain.errors import InvalidRequest, NotFound
 from app.domain.print_status import PrintJobStatus
 from app.service.background import TaskAlreadyRunning
 from app.service.events import PRINT_DONE, PRINT_PROGRESS
 from app.service.printing import PrintSummary
 from app.store import shop_store
 from tests.service.print_support import FakeComponent, PrintEnv, info, infos
+from tests.service.support import audit_rows
 
 W1 = "79200000000001"
 W2 = "79200000000002"
@@ -207,13 +208,21 @@ async def test_reprint_printed_waybill_is_allowed(engine, tmp_path, clock):
     assert env.latest_jobs([wid])[wid]["status"] == "success"
 
 
-async def test_dry_run_blocks_before_any_work(engine, tmp_path, clock):
+async def test_dry_run_records_without_any_call(engine, tmp_path, clock):
+    """演练模式：不探测组件、不取补打数据、不写 print_job，只写审计。"""
     env = PrintEnv(engine, tmp_path, clock, [], dry_run=True)
     wid = env.add_waybill(env.add_order())
-    with pytest.raises(DryRunBlocked):
-        await env.service.run_inline([wid], "admin")
+
+    summary = await env.service.run_inline([wid], "admin")
+
+    assert summary == PrintSummary(ok=0, failed=0, manual=0, skipped=1)
+    assert env.component.probe_calls == 0
     assert env.component.print_calls == []
     assert env.transport.requests == []
+    assert env.latest_jobs([wid]) == {}
+    assert env.waybill(wid)["status"] == "active"  # 没有被标记已打印
+    audit = [r for r in audit_rows(engine) if r["action"] == "dry_run_print_local"]
+    assert audit and audit[0]["req_summary"]["waybill_no"] == W1
 
 
 async def test_explicit_printer_name_wins(engine, tmp_path, clock):

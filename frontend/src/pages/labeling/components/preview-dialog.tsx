@@ -83,18 +83,20 @@ export function PreviewDialog({ preview, mode, busy, onClose, onConfirm }: Previ
           </Alert>
         )}
         {preview.dry_run && (
-          <Alert tone="warning" title="演练模式：不能执行写操作">关闭演练模式后再提交</Alert>
+          <Alert tone="warning" title="演练模式：本次只记录请求，不发真实写请求">
+            确认后会生成一条审计记录并返回模拟结果；关闭演练模式后再次提交才会真正执行。
+          </Alert>
         )}
         <div className={styles.dialogFooter}>
           <span className={styles.muted}>
             {totals.ready > 0 ? `预计发出 ${totals.shops} 个批量请求` : "没有可执行的订单"}
           </span>
           <HoldToConfirm
-            label={`按住确认${MODE_LABELS[mode]}`}
+            label={`按住确认${MODE_LABELS[mode]}${preview.dry_run ? "（演练）" : ""}`}
             confirmedLabel="已提交"
             tone={mode === "void" ? "danger" : "accent"}
             onConfirm={onConfirm}
-            disabled={busy || preview.dry_run || totals.ready === 0}
+            disabled={busy || totals.ready === 0}
           />
         </div>
       </DialogContent>

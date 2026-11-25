@@ -41,6 +41,11 @@ export function ShippingPageView({ page }: { page: ShippingPage }) {
       {actions.error && (
         <Alert tone="danger" title={actions.error} onDismiss={actions.clearError} />
       )}
+      {actions.simulated && (
+        <Alert tone="warning" title="演练模式：已记录发货请求，未真实发货">
+          本次提交只写入了审计记录并返回模拟结果；关闭演练模式后重新检查并确认才会真实回传平台。
+        </Alert>
+      )}
       <ShipProgress progress={actions.progress} />
 
       {pool.query.isLoading && <Skeleton label="正在读取待发货订单" lines={6} />}

@@ -307,6 +307,16 @@
   padding: var(--space-6);
 }
 
+/* 演练模式横幅（M7）：全局可见，避免把模拟结果当成真实操作。 */
+.dryRunBanner {
+  padding: var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--warning);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
 .popoverTrigger {
   padding: 0;
   border: 0;

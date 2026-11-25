@@ -76,6 +76,7 @@ async def ship(
     return ShipStartedOut(
         batch_id=started.batch_id, shop_ids=started.shop_ids,
         package_count=started.package_count, order_count=started.order_count,
+        simulated=started.simulated,
     )
 
 

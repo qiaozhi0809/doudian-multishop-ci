@@ -21,6 +21,7 @@ class PrintRequest(BaseModel):
 class PrintStarted(BaseModel):
     job_ids: list[int]
     waybill_ids: list[int]
+    simulated: bool = False
 
 
 class PrintJobRow(BaseModel):

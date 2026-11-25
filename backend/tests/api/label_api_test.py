@@ -66,14 +66,19 @@ def test_pool_shows_blocked_reason(api):
     assert "combine_id" in items[0]["blocked_reason"]
 
 
-def test_dry_run_execute_returns_409(api):
+def test_dry_run_execute_simulates_without_requests(api):
     shop_id = ready_shop(api)
     oid = add_order(api.app.state.engine, shop_id, "o1")
+    api.app.state.settings.dry_run = True
     api.app.state.label_preview._dry_run = True
+    api.app.state.labeling._dry_run = True
     preview = api.client.post("/api/labels/preview", json={"order_ids": [oid]}).json()
+    assert preview["dry_run"] is True
+    before = len(api.transport.requests)
     resp = api.client.post("/api/labels/execute", json={"preview_id": preview["preview_id"]})
-    assert resp.status_code == 409
-    assert resp.json()["error"]["type"] == "DryRunBlocked"
+    assert resp.status_code == 202
+    assert resp.json()["simulated"] is True
+    assert len(api.transport.requests) == before  # 演练模式一条真实请求都没发
 
 
 def test_unknown_preview_returns_422(api):

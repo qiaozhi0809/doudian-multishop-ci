@@ -1,10 +1,11 @@
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
 import { useShops, type ShopRow } from "@/lib/use-shops";
+import { useBackup } from "./use-backup";
 import { useShopActions } from "./use-shop-actions";
 import { useShopBase } from "./use-shop-base";
 import { useShopDialogs } from "./use-shop-dialogs";
 
-/** 店铺页的全部数据与动作：列表（按全局店铺筛选）、操作、对话框状态。 */
+/** 店铺页的全部数据与动作：列表（按全局店铺筛选）、操作、对话框状态、数据备份。 */
 export function useShopPage() {
   const query = useShops();
   const { shopIds } = useShopFilter();
@@ -13,6 +14,7 @@ export function useShopPage() {
   const actions = useShopActions(all);
   const dialogs = useShopDialogs();
   const base = useShopBase(dialogs.baseShopId);
+  const backup = useBackup();
   const byId = (id: number | null): ShopRow | null => all.find((s) => s.id === id) ?? null;
 
   return {
@@ -21,6 +23,7 @@ export function useShopPage() {
     shops,
     actions,
     dialogs,
+    backup,
     base: { query: base, shop: byId(dialogs.baseShopId) },
     egressShop: byId(dialogs.egressShopId),
     resumeShop: byId(dialogs.resumeShopId),

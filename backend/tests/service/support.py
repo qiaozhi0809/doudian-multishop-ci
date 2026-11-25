@@ -1,5 +1,9 @@
 """service 层测试共用环境：真实库 + 假出口 + FakeTransport。"""
 
+import json
+
+import sqlalchemy as sa
+
 from app.adapter.browser.login import LoginResult
 from app.adapter.doudian.client import FxgClient, ShopCredentials
 from app.adapter.doudian.pacer import ShopPacer
@@ -14,6 +18,20 @@ from tests.fakes import FakeTransport, ok
 TOKEN = "tok_" + "x" * 8
 PROXY = "http://u1:p1@203.0.113.5:8000"
 NOW = "2026-11-25T00:00:00Z"
+
+
+def audit_rows(engine) -> list[dict]:
+    """按写入顺序返回审计记录，req_summary 已解析为 dict。"""
+    with engine.connect() as conn:
+        rows = conn.execute(sa.text(
+            "SELECT action, actor, result, req_summary FROM audit_log ORDER BY id"
+        )).mappings()
+        out = []
+        for row in rows:
+            item = dict(row)
+            item["req_summary"] = json.loads(item["req_summary"] or "{}")
+            out.append(item)
+        return out
 
 
 class FakeEgress:

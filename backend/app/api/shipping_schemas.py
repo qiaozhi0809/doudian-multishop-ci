@@ -75,6 +75,7 @@ class ShipStartedOut(BaseModel):
     shop_ids: list[int]
     package_count: int
     order_count: int
+    simulated: bool = False
 
 
 class ShipmentRow(BaseModel):

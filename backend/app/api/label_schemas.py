@@ -122,3 +122,4 @@ class ExecuteStarted(BaseModel):
     preview_id: str
     mode: str
     shop_ids: list[int]
+    simulated: bool = False

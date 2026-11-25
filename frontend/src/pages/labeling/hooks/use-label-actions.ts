@@ -36,6 +36,7 @@ export function useLabelActions() {
   const [runningPreviewId, setRunningPreviewId] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressState>(initialProgress());
   const [error, setError] = useState<string | null>(null);
+  const [simulated, setSimulated] = useState(false);
 
   const previewMutation = useMutation({
     mutationFn: (vars: PreviewVars) =>
@@ -45,6 +46,7 @@ export function useLabelActions() {
       setPreviewMode(vars.mode);
       setProgress(initialProgress());
       setRunningPreviewId(null);
+      setSimulated(false);
       setError(null);
     },
     onError: (e) => setError(actionErrorMessage(e)),
@@ -55,9 +57,11 @@ export function useLabelActions() {
       api.post<components["schemas"]["ExecuteStarted"]>(executePath(vars.mode), {
         preview_id: vars.previewId,
       }),
-    onSuccess: (_data, vars) => {
+    onSuccess: (data, vars) => {
       setPreview(null);
-      setRunningPreviewId(vars.previewId);
+      setSimulated(data.simulated);
+      // 演练模式：服务端没有真正执行，不进入进度等待（SSE 不会有逐单事件）
+      setRunningPreviewId(data.simulated ? null : vars.previewId);
       setProgress(initialProgress());
       setError(null);
     },
@@ -91,6 +95,7 @@ export function useLabelActions() {
     previewMode,
     progress,
     error,
+    simulated,
     clearError: () => setError(null),
     previewBusy: previewMutation.isPending,
     executeBusy: executeMutation.isPending,

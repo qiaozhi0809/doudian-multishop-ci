@@ -27,6 +27,7 @@ export function useShippingActions() {
   const [batchId, setBatchId] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressState>(initialProgress());
   const [error, setError] = useState<string | null>(null);
+  const [simulated, setSimulated] = useState(false);
 
   const checkMutation = useMutation({
     mutationFn: (orderIds: number[]) =>
@@ -34,6 +35,7 @@ export function useShippingActions() {
     onSuccess: (data, orderIds) => {
       setCheck(data);
       setRequestedIds(orderIds);
+      setSimulated(false);
       setError(null);
     },
     onError: (e) => setError(actionErrorMessage(e)),
@@ -47,7 +49,9 @@ export function useShippingActions() {
       }),
     onSuccess: (data) => {
       setCheck(null);
-      setBatchId(data.batch_id);
+      setSimulated(data.simulated);
+      // 演练模式：没有真实发货，不进入进度等待（SSE 不会有逐单事件）
+      setBatchId(data.simulated ? null : data.batch_id);
       setProgress(initialProgress());
       setError(null);
     },
@@ -84,6 +88,7 @@ export function useShippingActions() {
     progress,
     batchId,
     error,
+    simulated,
     clearError: () => setError(null),
     checkBusy: checkMutation.isPending,
     shipBusy: shipMutation.isPending,

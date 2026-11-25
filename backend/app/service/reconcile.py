@@ -30,6 +30,7 @@ from app.domain.reconcile_rules import (
 )
 from app.service.background import TaskAlreadyRunning, TaskRegistry
 from app.service.events import RECONCILE_DONE, EventBus
+from app.service.periodic import SYSTEM_ACTOR, active_shop_ids
 from app.service.shipping_plan import describe
 from app.service.shop_runner import ShopRunner
 from app.store import reconcile_store, shop_store
@@ -59,7 +60,7 @@ class ReconcileService:
     def __init__(
         self, engine: Engine, runner: ShopRunner, events: EventBus | None = None, *,
         tasks: TaskRegistry | None = None, clock: Callable[[], datetime] = utc_now,
-        max_pages: int = MAX_PAGES,
+        max_pages: int = MAX_PAGES, default_window_days: int = DEFAULT_WINDOW_DAYS,
     ) -> None:
         self._engine = engine
         self._runner = runner
@@ -67,13 +68,15 @@ class ReconcileService:
         self._tasks = tasks or TaskRegistry()
         self._clock = clock
         self._max_pages = max_pages
+        self._default_window = default_window_days
 
     # ---- 入口 ----
 
     async def run(
         self, shop_ids: Sequence[int], actor: str, window_days: int | None = None,
+        *, wait: bool = False,
     ) -> dict:
-        window = DEFAULT_WINDOW_DAYS if window_days is None else int(window_days)
+        window = self._default_window if window_days is None else int(window_days)
         if not 1 <= window <= MAX_WINDOW_DAYS:
             raise InvalidRequest(f"对账窗口必须在 1~{MAX_WINDOW_DAYS} 天之间")
         ids = list(dict.fromkeys(int(i) for i in shop_ids))
@@ -85,10 +88,28 @@ class ReconcileService:
         now = self._now()
         with self._engine.begin() as conn:
             reconcile_store.create_run(conn, run_id, ids, window, now)
-        self._tasks.spawn(_TASK_NAME, self._run(run_id, ids, actor, window))
+        coro = self._run(run_id, ids, actor, window)
+        if wait:
+            await coro
+        else:
+            self._tasks.spawn(_TASK_NAME, coro)
         return {
             "run_id": run_id, "status": "running", "shop_ids": ids,
             "window_days": window, "started_at": now,
+        }
+
+    async def run_daily(self, actor: str = SYSTEM_ACTOR) -> dict:
+        """定时全店对账（M7）：同步等待完成，避免与下一轮 / 手动批次重叠。"""
+        ids = active_shop_ids(self._engine)
+        if not ids:
+            return {"run_id": None, "status": "skipped", "reason": "没有可对账的店铺"}
+        if self._tasks.is_running(_TASK_NAME):
+            return {"run_id": None, "status": "skipped", "reason": "已有对账批次进行中"}
+        started = await self.run(ids, actor, wait=True)
+        latest = self.latest_run() or {}
+        return {
+            **started, "status": latest.get("status", "success"),
+            "scanned": latest.get("scanned"), "findings": latest.get("finding_count"),
         }
 
     async def _run(

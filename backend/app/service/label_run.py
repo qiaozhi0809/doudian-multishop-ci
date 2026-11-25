@@ -54,6 +54,7 @@ class ExecuteStarted:
     preview_id: str
     mode: str
     shop_ids: list[int]
+    simulated: bool = False  # 演练模式：只记了审计，没有发真实写请求
 
 
 @dataclass

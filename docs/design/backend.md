@@ -240,6 +240,12 @@ class Signer(Protocol):
 - 任务落 `tasks` 表（[data-model.md](data-model.md) 6.2 ⑥），进程重启时把 `running` 改回 `queued`；
   其中结果不明的写任务（取号 / 一体）改为「待核实」，按 5.12 处理，不直接重跑。
 - 定时任务（拉单 5 分钟、售后 5 分钟、商品库存 15 分钟、资金 30 分钟、每日对账）用进程内 asyncio 循环实现。
+- **M7 落地**：每日全店对账（默认本地 03:00，`DD_RECONCILE_DAILY` / `DD_RECONCILE_HOUR` / `DD_RECONCILE_WINDOW_DAYS`）、
+  每日数据库快照（默认 04:00，`DD_BACKUP_DAILY` / `DD_BACKUP_KEEP`）、临近超时发货扫描（每 30 分钟，
+  `DD_SHIP_DEADLINE_WARN_HOURS`）都挂在同一个 `run_daily_at` / `run_every` 循环上；
+  启动时把 `running` 写任务转「待核实」、其余转 `queued`（`task_store.recover_after_restart`），
+  会话失效时把该店 `running` 写任务转「待核实」（`mark_expired`），重登后按幂等键重试。
+  部署说明见 [deployment.md](deployment.md)。
 - 仪表盘：热窗口（今天 + 昨天）每 10~15 分钟、近 30 天每晚重拉并重算日汇总、`tabcnt` 定时快照（[dashboard.md](dashboard.md) 2.2）。
 
 ### 5.8 审计与对账（`service/reconcile.py`）

@@ -13,7 +13,7 @@ from app.domain.errors import NotFound
 from app.domain.session_health import health_from_expiry
 from app.service.events import SHOP_STATUS_CHANGED, EventBus
 from app.shared.secret_box import SecretBox
-from app.store import session_store, shop_store
+from app.store import session_store, shop_store, task_store
 from app.store.session_store import SessionRow
 
 ACTIVE = "active"
@@ -82,8 +82,11 @@ class SessionManager:
         )
 
     def mark_expired(self, shop_id: int) -> None:
+        now = self._clock().strftime(_ISO_FMT)
         with self._engine.begin() as conn:
-            shop_store.set_status(conn, shop_id, NEEDS_LOGIN, self._clock().strftime(_ISO_FMT))
+            shop_store.set_status(conn, shop_id, NEEDS_LOGIN, now)
+            # 该店进行中的写任务结果不明：转 verifying，重登后可按幂等键重试（5.12）
+            task_store.verify_running_for_shop(conn, shop_id, now)
         self._events.publish(SHOP_STATUS_CHANGED, {
             "shop_id": shop_id, "status": NEEDS_LOGIN, "health": "expired",
         })

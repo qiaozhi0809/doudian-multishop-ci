@@ -194,7 +194,7 @@ describe("打单台", () => {
     expect(screen.getByText(/没有默认发货地址/)).toBeInTheDocument();
   });
 
-  it("演练模式：确认按钮禁用并标注", async () => {
+  it("演练模式：提示只记录请求，确认按钮标注（演练）且仍可提交", async () => {
     mockFetch({
       ...printRoutes(),
       "GET /api/shops": jsonResponse(shops),
@@ -205,8 +205,8 @@ describe("打单台", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByLabelText("选择订单 69000001"));
     await user.click(screen.getByRole("button", { name: "打面单" }));
-    expect(await screen.findByText("演练模式：不能执行写操作")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /按住确认打面单/ })).toBeDisabled();
+    expect(await screen.findByText(/演练模式：本次只记录请求/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /按住确认打面单（演练）/ })).toBeEnabled();
   });
 
   it("阶段切换写入 URL 并请求对应阶段", async () => {

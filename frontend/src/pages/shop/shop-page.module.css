@@ -11,6 +11,30 @@
   gap: var(--space-3);
 }
 
+/* 数据备份卡片（ENG-06）：最近一次快照与手动触发。 */
+.backupCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.backupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.backupHint {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
 .notices {
   display: flex;
   flex-direction: column;

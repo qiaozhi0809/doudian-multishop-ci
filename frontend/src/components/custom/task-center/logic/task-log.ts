@@ -1,7 +1,7 @@
-/** 任务中心的纯状态机：SSE 事件 → 进行中的取号 / 打印 / 发货任务。 */
+/** 任务中心的纯状态机：SSE 事件 → 进行中的取号 / 打印 / 发货任务与提醒。 */
 
-export type TaskKind = "label" | "ship" | "print";
-export type TaskStatus = "running" | "done";
+export type TaskKind = "label" | "ship" | "print" | "deadline";
+export type TaskStatus = "running" | "done" | "alert";
 
 export interface TaskCounts {
   ok: number;
@@ -34,10 +34,12 @@ export type TaskEvent =
   | { type: "ship_done"; batchId: string; ok: number; failed: number; skipped: number }
   | { type: "print_progress"; jobId: number; result: string }
   | { type: "print_done"; ok: number; failed: number; manual: number; skipped: number }
+  | { type: "deadline_warning"; count: number; warnHours: number }
   | { type: "dismiss"; id: string }
   | { type: "clear_finished" };
 
 export const TASK_LIMIT = 8;
+export const DEADLINE_TASK_ID = "deadline";
 
 const MODE_TITLES: Record<string, string> = {
   obtain: "取号（打面单）",
@@ -65,11 +67,11 @@ function bump(counts: TaskCounts, result: string): TaskCounts {
   }
 }
 
-/** 最多保留 8 条：先丢最早的已完成任务，再丢最早的进行中任务。 */
+/** 最多保留 8 条：先丢最早的已结束任务，再丢最早的进行中任务。 */
 function trim(tasks: TaskItem[]): TaskItem[] {
   const next = [...tasks];
   while (next.length > TASK_LIMIT) {
-    const finished = next.map((task) => task.status).lastIndexOf("done");
+    const finished = next.map((task) => task.status !== "running").lastIndexOf(true);
     next.splice(finished >= 0 ? finished : next.length - 1, 1);
   }
   return next;
@@ -120,12 +122,35 @@ function finish(
   return { ...state, tasks };
 }
 
+function deadline(state: TaskCenterState, count: number, warnHours: number): TaskCenterState {
+  if (count <= 0) return dismiss(state, DEADLINE_TASK_ID);
+  const item: TaskItem = {
+    id: DEADLINE_TASK_ID,
+    kind: "deadline",
+    title: `临近发货超时（${warnHours} 小时内）`,
+    status: "alert",
+    counts: { ok: 0, failed: 0, waiting: count, skipped: 0 },
+    seen: [],
+  };
+  const exists = state.tasks.some((task) => task.id === DEADLINE_TASK_ID);
+  const tasks = exists
+    ? state.tasks.map((task) => (task.id === DEADLINE_TASK_ID ? item : task))
+    : [item, ...state.tasks];
+  return { tasks: trim(tasks), seq: state.seq };
+}
+
+function dismiss(state: TaskCenterState, id: string): TaskCenterState {
+  return { ...state, tasks: state.tasks.filter((task) => task.id !== id) };
+}
+
 export function applyTaskEvent(state: TaskCenterState, event: TaskEvent): TaskCenterState {
   switch (event.type) {
     case "dismiss":
-      return { ...state, tasks: state.tasks.filter((task) => task.id !== event.id) };
+      return dismiss(state, event.id);
     case "clear_finished":
       return { ...state, tasks: state.tasks.filter((task) => task.status === "running") };
+    case "deadline_warning":
+      return deadline(state, event.count, event.warnHours);
     case "label_progress": {
       if (event.orderId === null) return state;
       return upsertProgress(
@@ -179,6 +204,7 @@ const WAITING_LABEL: Record<TaskKind, string> = {
   label: "待核实",
   ship: "待处理",
   print: "需补打",
+  deadline: "临近超时",
 };
 
 /** 结果摘要：只列非零项；还没有结果时提示等待。 */
@@ -194,5 +220,6 @@ export function countsText(task: TaskItem): string {
 
 export function statusText(task: TaskItem): string {
   if (task.status === "running") return "进行中";
+  if (task.status === "alert") return "提醒";
   return task.counts.failed > 0 ? "完成，有失败" : "完成";
 }

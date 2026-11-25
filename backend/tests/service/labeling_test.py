@@ -3,18 +3,17 @@
 import json
 from pathlib import Path
 
-import pytest
 import sqlalchemy as sa
 
 from app.adapter.doudian.errors import TransientError
 from app.adapter.doudian.transport import TransportResponse
-from app.domain.errors import DryRunBlocked
 from app.service.events import LABEL_DONE, LABEL_PROGRESS
 from app.service.labeling import RunSummary
 from app.store import shop_store
 from app.store.schema import orders
 from tests.fakes import ok, reply
 from tests.service.label_support import LabelExecEnv
+from tests.service.support import audit_rows
 
 WRITE = Path(__file__).resolve().parents[1] / "fixtures" / "doudian" / "write"
 ORDER1 = "6900000000000000001"
@@ -207,13 +206,23 @@ async def test_paused_shop_fails_without_requests(engine, tmp_path, clock):
 
 # ---- 演练模式 ----
 
-async def test_dry_run_blocks_execute(engine, tmp_path, clock):
+async def test_dry_run_records_intent_without_any_request(engine, tmp_path, clock):
+    """演练模式：不发任何 HTTP 请求，只写一条 dry_run 审计；状态机不推进。"""
     env = LabelExecEnv(engine, tmp_path, clock, [], dry_run=True)
     oid = env.add_order(ORDER1)
     record = env.previews.preview_obtain([oid], {}, actor="admin")
-    with pytest.raises(DryRunBlocked):
-        await env.service.execute_inline(record.preview_id, "admin")
+
+    summary = await env.service.execute_inline(record.preview_id, "admin")
+
+    assert summary == RunSummary(ok=0, failed=0, verifying=0, skipped=1)
     assert env.transport.requests == []
+    assert env.waybills(oid) == []  # 没有假面单写库
+    assert env.order(oid)["status"] == "pending_label"  # 状态机没推进
+    audit = [r for r in audit_rows(engine) if r["action"] == "dry_run_label_fetch"]
+    assert len(audit) == 1
+    assert audit[0]["result"] == "dry_run"
+    assert audit[0]["req_summary"]["order_nos"] == [ORDER1]
+    assert audit[0]["req_summary"]["courier_code"] == "zhongtong"
 
 
 # ---- 作废与重新取号 ----

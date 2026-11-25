@@ -2,9 +2,11 @@ import { Outlet, useLocation } from "react-router-dom";
 import { TaskCenter } from "@/components/custom/task-center";
 import { useEvents } from "@/lib/use-events";
 import { useShops } from "@/lib/use-shops";
+import { useSystemInfo } from "@/lib/use-system-info";
 import { useAuth } from "@/pages/auth/hooks/use-auth";
 import { AdminMenu } from "./components/admin-menu";
 import { ChangePasswordDialog } from "./components/change-password-dialog";
+import { DryRunBanner } from "./components/dry-run-banner";
 import { HealthIndicator } from "./components/health-indicator";
 import { ShopFilterSelect } from "./components/shop-filter-select";
 import { SideNav } from "./components/side-nav";
@@ -30,6 +32,7 @@ export function AppShell() {
   const groups = useNavGroups();
   const login = useQuickLogin();
   const password = useChangePassword();
+  const system = useSystemInfo();
 
   const healthState = shopsQuery.isError ? "error" : shopsQuery.isLoading ? "loading" : "ready";
   return (
@@ -57,6 +60,7 @@ export function AppShell() {
           }
           admin={<AdminMenu username={auth.status?.username ?? "管理员"} onChangePassword={() => password.setOpen(true)} onLogout={() => void auth.logout()} />}
         />
+        {system.dryRun && <DryRunBanner active />}
         <main className={styles.content}>
           <Outlet />
         </main>

@@ -62,6 +62,14 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
       {actions.error && (
         <Alert tone="danger" title={actions.error} onDismiss={actions.clearError} />
       )}
+      {actions.simulated && (
+        <Alert tone="warning" title="演练模式：已记录请求，未真实执行">
+          本次执行只写入了审计记录并返回模拟结果；关闭演练模式后重新预览并提交才会真实生效。
+        </Alert>
+      )}
+      {print.simulated && (
+        <Alert tone="warning" title="演练模式：已记录打印请求，未真正打印" />
+      )}
       <LabelProgress progress={actions.progress} />
 
       {pool.query.isLoading && <Skeleton label="正在读取订单池" lines={6} />}

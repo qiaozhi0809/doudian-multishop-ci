@@ -198,4 +198,26 @@ describe("任务文案", () => {
       "完成，有失败",
     );
   });
+
+  it("临近发货超时：生成提醒任务，重复事件更新计数，清零后移除", () => {
+    let state = run([{ type: "deadline_warning", count: 3, warnHours: 6 }]);
+    expect(state.tasks).toHaveLength(1);
+    expect(state.tasks[0]).toMatchObject({
+      id: "deadline",
+      kind: "deadline",
+      status: "alert",
+      counts: { ok: 0, failed: 0, waiting: 3, skipped: 0 },
+    });
+    expect(state.tasks[0].title).toContain("6 小时");
+    expect(countsText(state.tasks[0])).toBe("临近超时 3");
+    expect(statusText(state.tasks[0])).toBe("提醒");
+    expect(runningCount(state.tasks)).toBe(0);
+
+    state = applyTaskEvent(state, { type: "deadline_warning", count: 2, warnHours: 6 });
+    expect(state.tasks).toHaveLength(1);
+    expect(state.tasks[0].counts.waiting).toBe(2);
+
+    state = applyTaskEvent(state, { type: "deadline_warning", count: 0, warnHours: 6 });
+    expect(state.tasks).toHaveLength(0);
+  });
 });

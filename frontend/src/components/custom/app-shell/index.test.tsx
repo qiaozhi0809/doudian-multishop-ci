@@ -235,3 +235,29 @@ describe("App Shell", () => {
     });
   });
 });
+
+describe("演练模式横幅", () => {
+  const INFO = {
+    dry_run: true,
+    version: "0.7.0",
+    reconcile_daily: true,
+    reconcile_hour: 3,
+    backup_daily: true,
+    backup_keep: 7,
+    ship_deadline_warn_hours: 6,
+  };
+
+  it("dry_run 开启时顶部有醒目横幅", async () => {
+    renderShell("/orders", { "GET /api/system/info": jsonResponse(INFO) });
+    const banner = await screen.findByText(/演练模式（dry run）已开启/);
+    expect(banner).toHaveTextContent("只记录请求");
+  });
+
+  it("dry_run 关闭（或接口不可用）时没有横幅", async () => {
+    renderShell("/orders", {
+      "GET /api/system/info": jsonResponse({ ...INFO, dry_run: false }),
+    });
+    expect(await screen.findByRole("heading", { level: 1, name: "订单" })).toBeInTheDocument();
+    expect(screen.queryByText(/演练模式（dry run）已开启/)).not.toBeInTheDocument();
+  });
+});

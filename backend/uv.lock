@@ -223,7 +223,7 @@ wheels = [
 
 [[package]]
 name = "doudian-multishop-backend"
-version = "0.1.0"
+version = "0.7.0"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },

@@ -7,6 +7,14 @@ import { makeShop } from "@/test/fixtures";
 import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
 import ShopPage from "./index";
 
+/** 店铺页测试统一带上备份快照的空响应，避免每个用例重复登记。 */
+function mockPageFetch(routes: Parameters<typeof mockFetch>[0]) {
+  return mockFetch({
+    "GET /api/backup/snapshots": jsonResponse({ items: [], backups_dir: "", keep: 7 }),
+    ...routes,
+  });
+}
+
 function renderPage(path = "/shops") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -28,7 +36,7 @@ afterEach(() => restore());
 
 describe("店铺与设置页", () => {
   it("还没有店铺：显示引导添加店铺的空状态，而不是空表格", async () => {
-    mockFetch({ "GET /api/shops": jsonResponse([]) });
+    mockPageFetch({ "GET /api/shops": jsonResponse([]) });
     renderPage();
     expect(await screen.findByText("还没有店铺")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "添加店铺" })).toBeInTheDocument();
@@ -37,7 +45,7 @@ describe("店铺与设置页", () => {
 
   it("读取失败：区块内显示原因与重试按钮", async () => {
     let fail = true;
-    mockFetch({ "GET /api/shops": () => (fail ? errorResponse(500, "Internal", "boom") : jsonResponse([makeShop()])) });
+    mockPageFetch({ "GET /api/shops": () => (fail ? errorResponse(500, "Internal", "boom") : jsonResponse([makeShop()])) });
     renderPage();
     expect(await screen.findByText("读取店铺失败，请确认本地服务已启动后重试")).toBeInTheDocument();
     fail = false;
@@ -46,7 +54,7 @@ describe("店铺与设置页", () => {
   });
 
   it("表格按规范显示会话、出口、取号就绪状态", async () => {
-    mockFetch({
+    mockPageFetch({
       "GET /api/shops": jsonResponse([
         makeShop({ id: 1, name: "店铺甲" }),
         makeShop({ id: 2, name: "店铺乙", status: "needs_login", health: "expired", egress_status: "duplicate", ready_for_label: false, not_ready_reasons: ["缺少默认发货地址"] }),
@@ -64,7 +72,7 @@ describe("店铺与设置页", () => {
   });
 
   it("只有店铺名与到期时间可排序，操作、状态等列没有排序按钮", async () => {
-    mockFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
+    mockPageFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
     renderPage();
     await screen.findByRole("table");
     const sortable = (name: string) => within(screen.getByRole("columnheader", { name })).queryByRole("button");
@@ -74,7 +82,7 @@ describe("店铺与设置页", () => {
   });
 
   it("全局店铺筛选只显示选中的店铺", async () => {
-    mockFetch({ "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" }), makeShop({ id: 2, name: "店铺乙" })]) });
+    mockPageFetch({ "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" }), makeShop({ id: 2, name: "店铺乙" })]) });
     renderPage("/shops?shops=2");
     await screen.findByRole("row", { name: /店铺乙/ });
     expect(screen.queryByRole("row", { name: /店铺甲/ })).not.toBeInTheDocument();
@@ -82,7 +90,7 @@ describe("店铺与设置页", () => {
 
   it("出口未检查：直接显示「检查出口」按钮，不显示扫码登录；检查通过后换成扫码登录", async () => {
     let checked = false;
-    mockFetch({
+    mockPageFetch({
       "GET /api/shops": () => jsonResponse([makeShop({ egress_status: checked ? "ok" : "unchecked" })]),
       "POST /api/shops/1/egress/check": () => {
         checked = true;
@@ -100,7 +108,7 @@ describe("店铺与设置页", () => {
   });
 
   it("还没有设置出口：直接显示「设置出口」，不显示扫码登录", async () => {
-    mockFetch({ "GET /api/shops": jsonResponse([makeShop({ egress_mode: null, egress_status: "unchecked" })]) });
+    mockPageFetch({ "GET /api/shops": jsonResponse([makeShop({ egress_mode: null, egress_status: "unchecked" })]) });
     renderPage();
     const row = within(await screen.findByRole("row", { name: /店铺甲/ }));
     expect(row.getByRole("button", { name: "设置出口" })).toBeInTheDocument();
@@ -108,14 +116,14 @@ describe("店铺与设置页", () => {
   });
 
   it("风控暂停的店铺出口正常时，扫码登录保持可见但禁用", async () => {
-    mockFetch({ "GET /api/shops": jsonResponse([makeShop({ paused_reason: "risk_blocked:1" })]) });
+    mockPageFetch({ "GET /api/shops": jsonResponse([makeShop({ paused_reason: "risk_blocked:1" })]) });
     renderPage();
     const row = within(await screen.findByRole("row", { name: /店铺甲/ }));
     expect(row.getByRole("button", { name: "扫码登录" })).toBeDisabled();
   });
 
   it("扫码登录：提示去扫码并进入等待态，收到事件后提示成功", async () => {
-    mockFetch({
+    mockPageFetch({
       "GET /api/shops": jsonResponse([makeShop()]),
       "POST /api/shops/1/login": jsonResponse({ status: "started" }, 202),
     });
@@ -129,7 +137,7 @@ describe("店铺与设置页", () => {
   });
 
   it("扫码登录失败（409 预检）显示后端的中文原因", async () => {
-    mockFetch({
+    mockPageFetch({
       "GET /api/shops": jsonResponse([makeShop()]),
       "POST /api/shops/1/login": errorResponse(409, "TaskAlreadyRunning", "该店已有扫码登录在进行", 1),
     });
@@ -139,7 +147,7 @@ describe("店铺与设置页", () => {
   });
 
   it("风控暂停：只显示风控暂停，恢复需要先确认", async () => {
-    const fetchMock = mockFetch({
+    const fetchMock = mockPageFetch({
       "GET /api/shops": jsonResponse([makeShop({ paused_reason: "risk_blocked:602502151" })]),
       "POST /api/shops/1/resume": jsonResponse(makeShop()),
     });
@@ -157,7 +165,7 @@ describe("店铺与设置页", () => {
 
   describe("设置出口", () => {
     it("粘贴代理商一行并保存：提交 paste 字段", async () => {
-      const fetchMock = mockFetch({
+      const fetchMock = mockPageFetch({
         "GET /api/shops": jsonResponse([makeShop({ status: "needs_login", egress_status: "unchecked" })]),
         "PUT /api/shops/1/egress": jsonResponse(makeShop()),
       });
@@ -173,7 +181,7 @@ describe("店铺与设置页", () => {
     });
 
     it("粘贴格式不对时提示，不发请求", async () => {
-      const fetchMock = mockFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
+      const fetchMock = mockPageFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
       renderPage();
       const user = userEvent.setup();
       await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "设置出口" }));
@@ -185,7 +193,7 @@ describe("店铺与设置页", () => {
     });
 
     it("已登录的店铺修改出口前提示需要重新扫码；后端拒绝时就地显示原因", async () => {
-      mockFetch({
+      mockPageFetch({
         "GET /api/shops": jsonResponse([makeShop()]),
         "PUT /api/shops/1/egress": errorResponse(422, "InvalidRequest", "端口必须是数字"),
       });
@@ -200,7 +208,7 @@ describe("店铺与设置页", () => {
     });
 
     it("出口 IP 变化时提供确认新 IP", async () => {
-      const fetchMock = mockFetch({
+      const fetchMock = mockPageFetch({
         "GET /api/shops": jsonResponse([makeShop({ egress_status: "changed", egress_ip_pending: "1.2.3.5" })]),
         "POST /api/shops/1/egress/check": jsonResponse({ egress_ip: "1.2.3.5", egress_ip_pending: null, egress_status: "ok" }),
       });
@@ -217,7 +225,7 @@ describe("店铺与设置页", () => {
   it("添加店铺：成功后接着打开设置出口", async () => {
     const created = makeShop({ id: 9, name: "新店", egress_mode: null, egress_status: "unchecked", status: "needs_login" });
     let added = false;
-    mockFetch({
+    mockPageFetch({
       "GET /api/shops": () => jsonResponse(added ? [created] : []),
       "POST /api/shops": () => {
         added = true;
@@ -236,7 +244,7 @@ describe("店铺与设置页", () => {
   });
 
   it("查看基础数据：列出各项，空的显示暂无", async () => {
-    mockFetch({
+    mockPageFetch({
       "GET /api/shops": jsonResponse([makeShop()]),
       "GET /api/shops/1/base": jsonResponse({
         addresses: [{ address_id: "a1", is_default: true, name: "仓库", phone: "138****0000", region: "某省某市" }],

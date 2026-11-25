@@ -87,14 +87,17 @@ def test_blocked_order_shown_in_check(api):
         "/api/shipping/ship", json={"order_ids": [oid]}).status_code == 422
 
 
-def test_dry_run_returns_409(api):
+def test_dry_run_ship_simulates_without_requests(api):
     shop_id = ready_shop(api)
     oid, _ = add_shippable(api, shop_id)
     api.app.state.settings.dry_run = True
     api.app.state.shipping._dry_run = True
+    before = len(api.transport.requests)
     resp = api.client.post("/api/shipping/ship", json={"order_ids": [oid]})
-    assert resp.status_code == 409
-    assert resp.json()["error"]["type"] == "DryRunBlocked"
+    assert resp.status_code == 202
+    body = resp.json()
+    assert body["simulated"] is True and body["batch_id"].startswith("dryrun-")
+    assert len(api.transport.requests) == before  # 演练模式没有发出任何发货请求
 
 
 def test_requires_admin(api):

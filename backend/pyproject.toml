@@ -1,6 +1,6 @@
 [project]
 name = "doudian-multishop-backend"
-version = "0.1.0"
+version = "0.7.0"
 description = "抖店多店铺管理后台（本机）"
 requires-python = ">=3.12,<3.13"
 dependencies = [

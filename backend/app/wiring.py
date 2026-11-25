@@ -13,6 +13,7 @@ from app.config import Settings
 from app.service.aftersale import AftersaleService
 from app.service.auth import AuthService
 from app.service.background import TaskRegistry
+from app.service.backup import BackupService
 from app.service.base_data import BaseDataService
 from app.service.catalog import CatalogService
 from app.service.egress import EgressService
@@ -29,6 +30,7 @@ from app.service.receiver import ReceiverService
 from app.service.reconcile import ReconcileService
 from app.service.scheduler import ShopScheduler
 from app.service.session_manager import SessionManager
+from app.service.ship_deadline import ShipDeadlineWatcher
 from app.service.shipping import ShippingService
 from app.service.shop_admin import ShopAdminService
 from app.service.shop_login import ScanFn, ShopLoginFlow
@@ -93,7 +95,15 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         "shipping": ShippingService(
             engine, runner, events, dry_run=settings.dry_run, tasks=tasks, **clock_kw,
         ),
-        "reconcile": ReconcileService(engine, runner, events, tasks=tasks, **clock_kw),
+        "reconcile": ReconcileService(
+            engine, runner, events, tasks=tasks,
+            default_window_days=settings.reconcile_window_days, **clock_kw,
+        ),
+        # M7 打磨：备份 / 临近超时告警
+        "backup": BackupService(
+            engine, settings.backups_dir, keep=settings.backup_keep, **clock_kw),
+        "ship_deadline": ShipDeadlineWatcher(
+            engine, events, warn_hours=settings.ship_deadline_warn_hours, **clock_kw),
         "shop_admin": ShopAdminService(engine, events, **clock_kw),
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,

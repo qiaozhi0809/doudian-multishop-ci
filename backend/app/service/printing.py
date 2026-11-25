@@ -5,6 +5,7 @@
 - 组件回执失败重试一次（MAX_ATTEMPTS）；仍失败记 print_job(failed) 并提示手动补打；
 - 每次提交一张面单一条 print_job（attempts 记组件尝试次数），所有失败可追溯；
 - 不自动降级到自渲染 PDF（flows 7.4）：没有打印数据时只提示手动补打。
+- 演练模式：不请求补打接口、不连接打印组件、不写 print_job，只记「将打印」的审计。
 """
 
 from collections.abc import Callable, Sequence
@@ -20,10 +21,11 @@ from app.adapter.doudian.print_parsers import parse_print_infos
 from app.adapter.doudian.print_request import print_infos_body
 from app.adapter.print.component import PrintComponent, PrinterProbe
 from app.adapter.print.protocol import DocumentSpec, PrintOutcome
-from app.domain.errors import DryRunBlocked, InvalidRequest, NotFound
+from app.domain.errors import InvalidRequest, NotFound
 from app.domain.models import PrintInfo
 from app.domain.order_status import LocalOrderStatus
 from app.domain.print_status import RESULT_NO_PRINT_DATA, PrintJobStatus
+from app.service import dry_run
 from app.service.background import TaskAlreadyRunning, TaskRegistry
 from app.service.events import PRINT_DONE, PRINT_PROGRESS, EventBus
 from app.service.shop_runner import ShopRunner
@@ -48,6 +50,7 @@ def utc_now() -> datetime:
 class PrintStarted:
     job_ids: list[int]
     waybill_ids: list[int]
+    simulated: bool = False  # 演练模式：没有提交给打印组件
 
 
 @dataclass(frozen=True)
@@ -125,6 +128,8 @@ class PrintingService:
     async def submit(
         self, waybill_ids: Sequence[int], actor: str, printer_name: str | None = None
     ) -> PrintStarted:
+        if self._dry_run:
+            return self._simulate(waybill_ids, actor, printer_name)
         # 打印机是本机资源：同一时刻只跑一个批次，避免多店同时打单抢占（flows 10）
         if self._tasks.is_running(_TASK_NAME):
             raise TaskAlreadyRunning("已有打印任务进行中，请稍候")
@@ -138,16 +143,36 @@ class PrintingService:
     async def run_inline(
         self, waybill_ids: Sequence[int], actor: str, printer_name: str | None = None
     ) -> PrintSummary:
+        if self._dry_run:
+            started = self._simulate(waybill_ids, actor, printer_name)
+            return PrintSummary(ok=0, failed=0, manual=0, skipped=len(started.waybill_ids))
         targets = self._load(waybill_ids)
         printer = await self._resolve_printer(printer_name)
         jobs = self._create_jobs(targets, printer)
         return await self._run(jobs, targets, printer, actor)
 
+    def _simulate(
+        self, waybill_ids: Sequence[int], actor: str, printer_name: str | None
+    ) -> PrintStarted:
+        targets = self._load(waybill_ids)
+        printer = (printer_name or self._default_printer or "(默认打印机)").strip()
+        dry_run.record(self._engine, [
+            dry_run.Intent(
+                action="print_local", actor=actor, shop_id=t.shop_id,
+                request={"waybill_no": t.waybill_no, "printer_name": printer},
+            )
+            for t in targets
+        ], self._clock)
+        for index, target in enumerate(targets, start=1):
+            self._publish(-index, target, "skipped", dry_run.REASON)
+        self._events.publish(PRINT_DONE, {
+            "ok": 0, "failed": 0, "manual": 0, "skipped": len(targets), "simulated": True,
+        })
+        return PrintStarted([], [t.waybill_id for t in targets], simulated=True)
+
     # ---- 读取与校验 ----
 
     def _load(self, waybill_ids: Sequence[int]) -> list[_Target]:
-        if self._dry_run:
-            raise DryRunBlocked("演练模式下不能打印面单")
         unique = list(dict.fromkeys(int(i) for i in waybill_ids))
         if not unique:
             raise InvalidRequest("请选择要打印的面单")

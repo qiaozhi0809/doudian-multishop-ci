@@ -13,6 +13,7 @@
 | [总体设计](docs/design/overview.md) | 定位、范围、架构、技术栈、里程碑、验收、风险 |
 | [后端](docs/design/backend.md) · [数据模型](docs/design/data-model.md) · [核心流程](docs/design/flows.md) | 模块设计、表结构、取号 / 打印 / 发货 / 对账流程 |
 | [前端](docs/design/frontend.md) · [本地 API](docs/design/local-api.md) · [经营仪表盘](docs/design/dashboard.md) | 界面、接口草案、多店经营指标（草案） |
+| [部署与运维](docs/design/deployment.md) | 出单机安装、备份与恢复、升级与回滚、演练模式、排障 |
 | [抖店接口](docs/api/README.md) | 已验证的只读 / 写接口与各页面字段映射 |
 | [工程规范](docs/engineering-rules.md) | 分层结构、命名、文件长度、硬编码、提交守则 |
 | [缺口清单](docs/gaps.md) | 待验证接口、文档矛盾、数据模型缺口、待拍板决策（可认领） |
@@ -42,11 +43,16 @@
 
 ## 状态
 
-**M1（登录 + 基础数据 + 拉单）已完成**：后端 FastAPI 服务（`backend/app`，15 个 service 模块）
-与前端后台骨架（`frontend/src`，auth / shop / order 页面）可运行，后端 44 个测试。
-M2 起（取号 / 打印 / 发货 / 对账 / 只读聚合）待实现。
+**M1 ~ M7 全部完成**（当前版本 0.7.0）：
 
-主链路抖店接口已用测试单验证，剩余缺口见 [docs/gaps.md](docs/gaps.md)。
+- 后端：FastAPI + 每店串行队列 + 固定出口，覆盖登录 / 拉单 / 取号 / 打印 / 发货 / 对账 /
+  售后 / 商品 / 库存 / 资金 / 每日对账 / 每日备份 / 演练模式 / 掉线恢复；迁移链 `0001` ~ `0007`，
+  测试 538 个全部通过。
+- 前端：React 后台（仪表盘、订单、打单台、发货台、对账、售后、商品、库存、资金、店铺与设置），
+  演练模式全局横幅、临近发货超时提醒、备份卡片；测试 379 个全部通过。
+
+主链路抖店接口已用测试单验证，剩余缺口见 [docs/gaps.md](docs/gaps.md)；
+出单机安装与升级见 [docs/design/deployment.md](docs/design/deployment.md)。
 
 ## 许可
 
