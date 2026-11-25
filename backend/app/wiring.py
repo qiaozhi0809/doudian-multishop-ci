@@ -9,12 +9,15 @@ from argon2 import PasswordHasher
 from sqlalchemy import Engine
 
 from app.config import Settings
+from app.service.aftersale import AftersaleService
 from app.service.auth import AuthService
 from app.service.background import TaskRegistry
 from app.service.base_data import BaseDataService
+from app.service.catalog import CatalogService
 from app.service.egress import EgressService
 from app.service.egress_probe import FetchIp, make_fetch_ip
 from app.service.events import EventBus
+from app.service.fund import FundService
 from app.service.label_pool import LabelPoolService
 from app.service.label_preview import LabelPreviewService
 from app.service.labeling import LabelingService
@@ -64,6 +67,10 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         "order_sync": OrderSyncService(
             engine, runner, sessions, events, on_synced=order_query.invalidate),
         "order_query": order_query,
+        # M5 只读聚合：售后 / 商品与库存 / 资金
+        "aftersale": AftersaleService(engine, runner, **clock_kw),
+        "catalog": CatalogService(engine, runner, **clock_kw),
+        "fund": FundService(engine, runner, **clock_kw),
         "label_preview": label_preview,
         "labeling": LabelingService(
             engine, runner, label_preview, events,
