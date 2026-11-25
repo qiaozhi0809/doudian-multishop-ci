@@ -1,8 +1,13 @@
-"""每店固定出口的纯规则（backend 5.17）：代理 URL 校验、代理商格式解析、出口判定、到期状态。"""
+"""每店固定出口的纯规则（backend 5.17）。
 
+代理 URL 校验、代理商格式解析、归一化（代理池去重键）、出口判定、到期状态。
+"""
+
+import hashlib
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Literal
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 from app.shared.time_bj import BEIJING
 
@@ -54,6 +59,42 @@ def display_proxy(url: str) -> str:
     """只显示 主机:端口，用于界面与日志。"""
     u = urlparse(url)
     return f"{u.hostname}:{u.port}"
+
+
+@dataclass(frozen=True)
+class ProxyParts:
+    """拆开的代理地址；账号密码为解码后的原文。"""
+
+    scheme: str
+    host: str
+    port: int
+    username: str
+    password: str
+
+
+def split_proxy_url(url: str) -> ProxyParts:
+    """URL → 各部分（账号密码已 unquote）。调用方应先用 validate_proxy_url 校验。"""
+    u = urlparse(url)
+    return ProxyParts(
+        scheme=u.scheme, host=u.hostname or "", port=u.port or 0,
+        username=unquote(u.username or ""), password=unquote(u.password or ""),
+    )
+
+
+def join_proxy_url(parts: ProxyParts) -> str:
+    """各部分 → URL；账号密码按 quote(safe='') 编码，无账号时不带 @。"""
+    netloc = f"{parts.host}:{parts.port}"
+    if parts.username or parts.password:
+        cred = f"{quote(parts.username, safe='')}:{quote(parts.password, safe='')}"
+        netloc = f"{cred}@{netloc}"
+    return f"{parts.scheme}://{netloc}"
+
+
+def proxy_identity(url: str) -> str:
+    """代理池去重键：先拆解再拼接后取 sha256，粘贴格式与手填 URL 一致，且不可还原凭证。"""
+    p = split_proxy_url(url)
+    raw = f"{p.scheme}://{p.username}:{p.password}@{p.host.lower()}:{p.port}"
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def judge_egress(current_ip: str | None, new_ip: str | None, other_ips: set[str]) -> EgressVerdict:

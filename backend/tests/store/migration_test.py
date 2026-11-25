@@ -25,7 +25,7 @@ TABLES = {
     "waybills", "tasks", "print_job",
     "aftersale", "product_snapshot", "stock_snapshot", "fund_unsettled", "margin_account",
     "order_fact", "reconcile_run", "reconcile_findings", "shipment",
-    "backup_run",
+    "backup_run", "proxy_pool",
 }
 
 
@@ -89,7 +89,7 @@ def test_backup_skipped_when_at_head(tmp_path):
 
 def test_backup_copies_db_when_behind_head(tmp_path):
     db = tmp_path / "app.db"
-    _upgrade_to(db, "0006")  # 当前 head 是 0007，落后一版才需要备份
+    _upgrade_to(db, "0006")  # 落后于 head 才需要备份
     assert current_revision(db) == "0006"
     out = backup_before_upgrade(db, tmp_path / "bk", NOW)
     assert out.name == "pre-upgrade-0006-20261201T000000Z.db"

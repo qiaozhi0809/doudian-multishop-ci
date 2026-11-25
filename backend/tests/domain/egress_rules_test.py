@@ -5,8 +5,11 @@ import pytest
 from app.domain.egress_rules import (
     display_proxy,
     expiry_state,
+    join_proxy_url,
     judge_egress,
     parse_provider_line,
+    proxy_identity,
+    split_proxy_url,
     validate_proxy_url,
 )
 
@@ -74,3 +77,36 @@ def test_expiry_state():
     assert expiry_state("2026-11-30", NOW) == "expired"
     assert expiry_state("2026-12-01T00:00:00Z", NOW) == "expired"
     assert expiry_state("2026-12-03T00:00:00Z", NOW) == "expiring"
+
+
+# ---- 代理归一化（proxy-pool 1.1） ----
+
+def test_identity_same_for_paste_and_url():
+    pasted, _ = parse_provider_line("203.0.113.5|8000|u@x|p:w|2026-12-31")
+    assert proxy_identity(pasted) == proxy_identity("http://u%40x:p%3Aw@203.0.113.5:8000")
+
+
+def test_identity_ignores_host_case_and_differs_by_password():
+    a = proxy_identity("http://u:p@Proxy.Example:8000")
+    assert a == proxy_identity("http://u:p@proxy.example:8000")
+    assert a != proxy_identity("http://u:q@proxy.example:8000")
+
+
+def test_identity_is_sha256_hex_without_credentials():
+    ident = proxy_identity("http://user-x:secret-y@203.0.113.5:8000")
+    assert len(ident) == 64 and "secret-y" not in ident
+
+
+def test_split_join_round_trip():
+    url = "http://u%40x:p%3Aw@203.0.113.5:8000"
+    parts = split_proxy_url(url)
+    assert (parts.username, parts.password) == ("u@x", "p:w")
+    assert (parts.scheme, parts.host, parts.port) == ("http", "203.0.113.5", 8000)
+    assert join_proxy_url(parts) == url
+
+
+def test_join_without_account_has_no_at():
+    parts = split_proxy_url("https://203.0.113.5:8443")
+    assert parts.username == "" and parts.password == ""
+    assert join_proxy_url(parts) == "https://203.0.113.5:8443"
+

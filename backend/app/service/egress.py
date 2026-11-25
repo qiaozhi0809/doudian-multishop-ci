@@ -19,6 +19,7 @@ from app.domain.egress_rules import (
     expiry_state,
     judge_egress,
     parse_provider_line,
+    proxy_identity,
     validate_proxy_url,
 )
 from app.domain.errors import NotFound
@@ -26,7 +27,7 @@ from app.service.egress_probe import FetchIp
 from app.service.events import SHOP_STATUS_CHANGED, EventBus
 from app.service.session_manager import ACTIVE, DISABLED, NEEDS_LOGIN
 from app.shared.secret_box import SecretBox
-from app.store import audit_store, shop_store
+from app.store import audit_store, proxy_pool_store, shop_store
 
 log = structlog.get_logger()
 
@@ -103,12 +104,17 @@ class EgressService:
                     raise NotFound(f"店铺不存在: {shop_id}", shop_id)
                 if mode == "direct":
                     self._ensure_no_other_direct(conn, shop)
+                pool_id = None
+                if url:  # 先按 identity 进池（已存在则复用），再绑定到店铺
+                    pool_id = proxy_pool_store.upsert(
+                        conn, identity=proxy_identity(url),
+                        proxy_url=self._box.encrypt(url.encode()),
+                        proxy_display=display_proxy(url), expires_at=expiry, now=now,
+                    )
                 shop_store.set_egress(
-                    conn, shop_id, now, egress_mode=mode,
-                    proxy_url=self._box.encrypt(url.encode()) if url else None,
-                    proxy_display=display_proxy(url) if url else None,
+                    conn, shop_id, now, egress_mode=mode, proxy_pool_id=pool_id,
                     egress_ip=None, egress_status="unchecked", egress_checked_at=None,
-                    egress_ip_pending=None, proxy_expires_at=expiry,
+                    egress_ip_pending=None,
                 )
                 new_status = shop["status"]
                 if shop["status"] == ACTIVE:

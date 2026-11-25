@@ -246,7 +246,7 @@ async def test_proxy_mode_without_url_never_probes_direct(env):
     sid = await _ready_shop(env)
     env.fetch_calls.clear()
     with env.engine.begin() as conn:  # 模拟数据异常或手工改库
-        shop_store.set_egress(conn, sid, "2026-12-01T00:00:00Z", proxy_url=None)
+        shop_store.set_egress(conn, sid, "2026-12-01T00:00:00Z", proxy_pool_id=None)
     env.now += timedelta(minutes=11)
     for call in (env.svc.check(sid), env.svc.ensure_ready(sid)):
         with pytest.raises(EgressNotReady, match="代理地址缺失"):

@@ -5,12 +5,20 @@ from typing import Any
 
 import sqlalchemy as sa
 
-from app.store.schema import shop
+from app.store.schema import proxy_pool, shop
 
 _EGRESS_FIELDS = frozenset({
-    "egress_mode", "proxy_url", "proxy_display", "egress_ip", "egress_status",
-    "egress_checked_at", "egress_ip_pending", "proxy_expires_at",
+    "egress_mode", "proxy_pool_id", "egress_ip", "egress_status",
+    "egress_checked_at", "egress_ip_pending",
 })
+
+# 代理信息存在 proxy_pool；读出时以 shop 的旧列名带出，读路径无需改动（proxy-pool 1.3）
+_VIEW = sa.select(
+    shop,
+    proxy_pool.c.proxy_url,
+    proxy_pool.c.proxy_display,
+    proxy_pool.c.expires_at.label("proxy_expires_at"),
+).select_from(shop.outerjoin(proxy_pool, proxy_pool.c.id == shop.c.proxy_pool_id))
 
 
 def create(
@@ -25,12 +33,12 @@ def create(
 
 
 def get(conn: sa.Connection, shop_id: int) -> Mapping[str, Any] | None:
-    row = conn.execute(sa.select(shop).where(shop.c.id == shop_id)).mappings().first()
+    row = conn.execute(_VIEW.where(shop.c.id == shop_id)).mappings().first()
     return dict(row) if row else None
 
 
 def list(conn: sa.Connection) -> Sequence[Mapping[str, Any]]:  # noqa: A001
-    rows = conn.execute(sa.select(shop).order_by(shop.c.id)).mappings().all()
+    rows = conn.execute(_VIEW.order_by(shop.c.id)).mappings().all()
     return [dict(r) for r in rows]
 
 
