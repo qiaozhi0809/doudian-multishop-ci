@@ -22,7 +22,7 @@ class FakeScan:
     def __init__(self, result=None, error: Exception | None = None) -> None:
         self.result, self.error, self.calls = result, error, []
 
-    async def __call__(self, profile_dir, channel, proxy, timeout_s):
+    async def __call__(self, profile_dir, channel, proxy, timeout_s, use_cloak=False):
         self.calls.append((profile_dir, channel, proxy, timeout_s))
         if self.error:
             raise self.error

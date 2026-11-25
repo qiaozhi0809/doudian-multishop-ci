@@ -2,10 +2,11 @@
 
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import Protocol
 
 import structlog
 
-from app.adapter.browser.login import LoginCancelled, LoginResult, scan_login
+from app.adapter.browser.login import CloakUnavailable, LoginCancelled, LoginResult, scan_login
 from app.adapter.doudian import endpoints as ep
 from app.adapter.doudian.client import FxgClient
 from app.adapter.doudian.errors import DoudianError
@@ -18,10 +19,19 @@ from app.service.shop_runner import ShopPaused, ShopRunner
 
 log = structlog.get_logger()
 
-ScanFn = Callable[[Path, str, str | None, int], Awaitable[LoginResult]]
+
+class ScanFn(Protocol):
+    """注入点：与 scan_login 同签名的扫码函数，测试可替换。"""
+
+    def __call__(
+        self, profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = ...,
+        use_cloak: bool = ...,
+    ) -> Awaitable[LoginResult]: ...
+
+
 SCAN_TIMEOUT_S = 300
 _USER_FACING = (DoudianError, EgressNotReady, EgressConflict, ShopPaused, NotFound,
-                LoginCancelled)
+                LoginCancelled, CloakUnavailable)
 
 
 class ShopLoginFlow:
@@ -29,6 +39,7 @@ class ShopLoginFlow:
         self, runner: ShopRunner, sessions: SessionManager, base_data: BaseDataService,
         events: EventBus, profiles_dir: Path, channel: str,
         scan: ScanFn = scan_login, timeout_s: int = SCAN_TIMEOUT_S,
+        use_cloak: bool = False,
     ) -> None:
         self._runner = runner
         self._sessions = sessions
@@ -38,6 +49,7 @@ class ShopLoginFlow:
         self._channel = channel
         self._scan = scan
         self._timeout_s = timeout_s
+        self._use_cloak = use_cloak
 
     async def login(self, shop_id: int, actor: str) -> None:
         try:
@@ -55,7 +67,8 @@ class ShopLoginFlow:
             profile = self._profiles_dir / str(shop_id)
             profile.mkdir(parents=True, exist_ok=True)
             proxy = self._runner.proxy_for(shop_id)  # 扫码浏览器必须走该店出口
-            result = await self._scan(profile, self._channel, proxy, self._timeout_s)
+            result = await self._scan(
+                profile, self._channel, proxy, self._timeout_s, use_cloak=self._use_cloak)
             self._sessions.save_login(shop_id, result)
 
         return job

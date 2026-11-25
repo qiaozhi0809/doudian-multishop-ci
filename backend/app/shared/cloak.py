@@ -6,6 +6,7 @@
 检测并重建，避免两家店呈现同一台设备。
 """
 
+import os
 import random
 from pathlib import Path
 
@@ -85,3 +86,14 @@ def get_or_create_seed(profile_dir: Path) -> int:
 def cloak_launch_args(seed: int) -> list[str]:
     """CloakBrowser 启动参数：固定指纹 + 声称 Windows 平台。"""
     return [f"--fingerprint={seed}", "--fingerprint-platform=windows"]
+
+
+def apply_env(cache_dir: Path) -> None:
+    """把 CloakBrowser 的缓存目录锁到项目内，并关闭全部自动更新。
+
+    CLOAKBROWSER_AUTO_UPDATE 必须是小写字面量 "false"：库只在值为 false 时
+    才跳过「二进制更新」和「PyPI 包更新」两个后台检查。必须在 import
+    cloakbrowser 之前调用，否则 import 触发的后台线程已经发出去了。
+    """
+    os.environ.setdefault("CLOAKBROWSER_CACHE_DIR", str(cache_dir))
+    os.environ.setdefault("CLOAKBROWSER_AUTO_UPDATE", "false")

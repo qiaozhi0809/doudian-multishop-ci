@@ -111,7 +111,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         "shop_admin": ShopAdminService(engine, events, egress, **clock_kw),
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,
-            settings.browser_channel, **login_kw,
+            settings.browser_channel, use_cloak=settings.use_cloak, **login_kw,
         ),
         "auth": AuthService(
             engine, **clock_kw, **({"hasher": ov.hasher} if ov.hasher else {})

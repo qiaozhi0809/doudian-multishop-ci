@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from app.shared.cloak import SEED_MAX, SEED_MIN, cloak_launch_args, get_or_create_seed
+from app.shared.cloak import SEED_MAX, SEED_MIN, apply_env, cloak_launch_args, get_or_create_seed
 
 
 def test_creates_seed_once_and_reuses_it(tmp_path):
@@ -85,3 +85,25 @@ def test_copied_profile_gets_a_different_seed(tmp_path):
     shutil.copytree(source, copy)
 
     assert get_or_create_seed(copy) != original
+
+
+def test_apply_env_pins_cache_dir_and_disables_auto_update(monkeypatch, tmp_path):
+    import os
+
+    monkeypatch.delenv("CLOAKBROWSER_CACHE_DIR", raising=False)
+    monkeypatch.delenv("CLOAKBROWSER_AUTO_UPDATE", raising=False)
+
+    apply_env(tmp_path)
+
+    assert os.environ["CLOAKBROWSER_CACHE_DIR"] == str(tmp_path)
+    assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "false"
+
+
+def test_apply_env_does_not_override_explicit_values(monkeypatch, tmp_path):
+    import os
+
+    monkeypatch.setenv("CLOAKBROWSER_AUTO_UPDATE", "true")
+
+    apply_env(tmp_path)
+
+    assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "true"

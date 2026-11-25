@@ -35,6 +35,10 @@ class LoginResult:
     device_headers: dict[str, str]
 
 
+class CloakUnavailable(RuntimeError):
+    """CloakBrowser 不可用（未安装或启动失败）；消息面向用户，可直接展示。"""
+
+
 def playwright_proxy(url: str | None) -> dict | None:
     """代理 URL → Playwright 代理参数。带凭证的 socks5 不被 Chromium 支持，抛 ValueError。"""
     if url is None:
@@ -147,7 +151,7 @@ async def scan_login(
         try:
             from cloakbrowser import launch_persistent_context_async
         except ImportError as exc:
-            raise RuntimeError(
+            raise CloakUnavailable(
                 "未安装 cloakbrowser，请先执行：pip install cloakbrowser==0.3.30"
             ) from exc
 

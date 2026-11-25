@@ -47,6 +47,7 @@ from app.service.periodic import (
 )
 from app.service.shop_login import ScanFn
 from app.service.shop_runner import ClientFactory
+from app.shared.cloak import apply_env
 from app.shared.version import APP_VERSION
 from app.store import task_store
 from app.store.db import DB_FILE_NAME, make_engine
@@ -73,6 +74,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.data_dir.mkdir(parents=True, exist_ok=True)
+        apply_env(settings.cloak_cache_dir)
         db_path = settings.data_dir / DB_FILE_NAME
         backup = backup_before_upgrade(
             db_path, settings.backups_dir, (overrides.clock or _utc_now)())
