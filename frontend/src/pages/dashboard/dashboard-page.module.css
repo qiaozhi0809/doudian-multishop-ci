@@ -76,16 +76,6 @@
 
 .chartCard,
 .tableCard,
-.pendingCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  padding: var(--space-5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  background: var(--surface);
-}
 
 .tableWrap {
   min-width: 0;
@@ -184,40 +174,9 @@
   font-size: var(--text-sm);
 }
 
-.pendingList {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
 
-.pendingItem {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-control);
-  background: var(--surface-muted);
-}
 
-.pendingHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  color: var(--foreground);
-  font-size: var(--text-sm);
-}
 
-.pendingReason {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  line-height: var(--leading-body);
-}
 
 /* 可点的指标卡：整张卡是链接。悬停底色变浅，名称后出现「›」；键盘聚焦显示焦点框 */
 .kpiLink {

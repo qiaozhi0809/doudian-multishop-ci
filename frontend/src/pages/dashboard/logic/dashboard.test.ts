@@ -1,5 +1,5 @@
 import { makeShop } from "@/test/fixtures";
-import { PENDING_METRICS, buildDashboard, shopState, topBars } from "./dashboard";
+import { buildDashboard, shopState, topBars } from "./dashboard";
 
 const baseSources = () => ({
   shops: [makeShop({ id: 1, name: "甲" }), makeShop({ id: 2, name: "乙" })],
@@ -105,12 +105,6 @@ describe("仪表盘聚合", () => {
     expect(model.ranking).toEqual([]);
     expect(model.shipBars).toEqual([]);
     expect(model.updatedAt).toBeNull();
-  });
-
-  it("待补指标覆盖 GMV、售后率与退款", () => {
-    const labels = PENDING_METRICS.map((metric) => metric.label);
-    expect(labels).toEqual(expect.arrayContaining(["支付 GMV", "售后率", "退款金额"]));
-    expect(PENDING_METRICS.every((metric) => metric.reason.length > 0)).toBe(true);
   });
 });
 

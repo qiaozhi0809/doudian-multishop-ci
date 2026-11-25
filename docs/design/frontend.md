@@ -60,7 +60,7 @@
 - 当前页显示 active 态
 - 分组顺序与页面顺序固定，MVP 不做用户自定义排序
 
-**实现**：`nav-items.ts` 拆为 `NAV_SECTIONS`（仪表盘独立入口 + 订单处理 / 售后 / 商品与库存 / 财务四个分组）
+**实现**：`nav-items.ts` 拆为 `NAV_SECTIONS`（概览独立入口 + 订单 / 商品 / 资金三个分组）
 与「设置」组 `FOOTER_NAV`。版式照壹帆智播的「桌面工具档」：浮动侧栏 + 左下角个人中心（`components/custom/user-menu`），
 主题存 `doudian.theme`（浅色 / 深色 / 跟随系统）。
 

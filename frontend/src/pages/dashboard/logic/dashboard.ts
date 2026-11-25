@@ -54,11 +54,6 @@ export interface ChartBar {
   value: number;
 }
 
-export interface PendingMetric {
-  label: string;
-  reason: string;
-}
-
 export interface SourceFailure {
   shopId: number;
   error: string | null;
@@ -74,16 +69,6 @@ export interface DashboardModel {
   productFailures: SourceFailure[];
   updatedAt: string | null;
 }
-
-/** 需要订单事实表或售后时间字段才能算的指标：先标注，不显示假数字。 */
-export const PENDING_METRICS: PendingMetric[] = [
-  { label: "支付 GMV", reason: "需订单事实表（order_fact）按支付时间聚合，现有接口只同步待发货订单" },
-  { label: "支付订单数", reason: "同支付 GMV，需全状态订单" },
-  { label: "客单价", reason: "由支付 GMV ÷ 支付订单数推导，两者都待补" },
-  { label: "出单店铺数", reason: "需按支付时间的全量订单，现有计数只覆盖待发货" },
-  { label: "售后率", reason: "需售后按申请时间筛选与退款成功时间（API-25）" },
-  { label: "退款金额", reason: "同上，退款成功时间未验证" },
-];
 
 const upstream = <T extends { source: string }>(shops: T[]): T[] => shops.filter((shop) => shop.source === "upstream");
 

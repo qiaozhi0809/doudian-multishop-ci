@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useRef } from "react";
 import type { ReactNode } from "react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import styles from "./dropdown-menu.module.css";
@@ -26,10 +26,17 @@ export interface DropdownMenuProps {
 
 /** 一个锚在触发元素上的操作列表。数据驱动：菜单项用 items 数组给。 */
 export function DropdownMenu({ trigger, items, align = "end", side = "bottom" }: DropdownMenuProps) {
+  // 用鼠标关菜单时不把焦点还给触发按钮：还回去会让按钮上的悬停提示（如「更多操作」）自己弹出来停着。
+  // 用键盘关时照常还焦点，键盘用户不丢位置。
+  const byPointer = useRef(false);
   return <Menu.Root>
     <Menu.Trigger asChild>{trigger}</Menu.Trigger>
     <Menu.Portal>
-      <Menu.Content className={styles.content} align={align} side={side} sideOffset={6} collisionPadding={12}>
+      <Menu.Content className={styles.content} align={align} side={side} sideOffset={6} collisionPadding={12}
+        onPointerDown={() => { byPointer.current = true; }}
+        onPointerDownOutside={() => { byPointer.current = true; }}
+        onKeyDown={() => { byPointer.current = false; }}
+        onCloseAutoFocus={event => { if (byPointer.current) event.preventDefault(); byPointer.current = false; }}>
         {items.map(item => <Fragment key={item.label}>
           {item.separatorBefore ? <Menu.Separator className={styles.separator} /> : null}
           <Menu.Item className={`${styles.item} ${item.destructive ? styles.destructive : ""}`} disabled={item.disabled} onSelect={() => item.onSelect?.()}>

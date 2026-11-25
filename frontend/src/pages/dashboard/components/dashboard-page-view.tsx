@@ -4,14 +4,13 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import type { DashboardPage } from "../hooks/use-dashboard";
-import { PENDING_METRICS } from "../logic/dashboard";
 import styles from "../dashboard-page.module.css";
 import { FundBarsChart, ShipPressureChart } from "./chart-panels";
-import { PendingMetrics, SourceFailures } from "./dashboard-sections";
+import { SourceFailures } from "./dashboard-sections";
 import { KpiGrid } from "./kpi-grid";
 import { ShopRanking } from "./shop-ranking";
 
-/** 仪表盘：多店经营概览。数据全部来自已有聚合接口，缺的指标明确标「待补」。 */
+/** 仪表盘：多店经营概览。数据全部来自已有聚合接口；没有数据源的指标（GMV、售后率等）不显示，见 dashboard.md。 */
 export function DashboardPageView({ page }: { page: DashboardPage }) {
   if (page.shopsState === "loading") return <Skeleton label="正在读取店铺" lines={4} />;
   if (page.shopsState === "error") {
@@ -46,7 +45,6 @@ export function DashboardPageView({ page }: { page: DashboardPage }) {
         <FundBarsChart bars={model.fundBars} section={sections.fund} />
       </div>
       <ShopRanking rows={model.ranking} />
-      <PendingMetrics items={PENDING_METRICS} />
     </div>
   );
 }

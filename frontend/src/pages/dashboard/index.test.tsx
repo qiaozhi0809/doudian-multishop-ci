@@ -66,7 +66,7 @@ function renderPage(entry = "/dashboard") {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("仪表盘", () => {
-  it("用已有聚合接口展示真实指标、店铺排行与待补说明", async () => {
+  it("用已有聚合接口展示真实指标与店铺排行，不显示没有数据源的「待补」指标", async () => {
     mockFetch(routes());
     renderPage();
 
@@ -94,8 +94,8 @@ describe("仪表盘", () => {
     const firstRow = within(rankingTable).getByRole("row", { name: /店铺甲/ });
     expect(within(firstRow).getByText("正常")).toBeInTheDocument();
 
-    expect(screen.getAllByText("待补").length).toBeGreaterThan(0);
-    expect(screen.getByText("支付 GMV")).toBeInTheDocument();
+    expect(screen.queryByText("待补")).not.toBeInTheDocument();
+    expect(screen.queryByText("支付 GMV")).not.toBeInTheDocument();
   });
 
   it("单个数据源失败时只有对应卡片显示暂无，其他指标照常", async () => {

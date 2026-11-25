@@ -44,9 +44,6 @@ export function ReconcilePageView({ page }: { page: ReconcilePageState }) {
         onRun={state.runNow}
       />
       <Alert tone={runTone(state.run)} title={runSummary(state.run)} />
-      <p className={styles.muted}>
-        首次检查会给已发货订单建立基线，全部报「平台已发本地无」属正常（附录 G.6）。
-      </p>
       {state.error && (
         <Alert tone="danger" title={state.error} onDismiss={state.clearError} />
       )}
