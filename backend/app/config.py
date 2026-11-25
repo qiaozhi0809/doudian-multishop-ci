@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8787
     browser_channel: str = "chrome"
-    egress_echo_url: str = "https://api.ipify.org"
+    egress_echo_url: str = "https://ifconfig.me/ip"
     dev_mode: bool = False
     dry_run: bool = False
     max_concurrent_shops: int = 3

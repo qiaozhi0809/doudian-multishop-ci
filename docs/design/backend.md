@@ -415,7 +415,8 @@ class Signer(Protocol):
 | 一致性 | 同一家店的扫码浏览器、协议通道（curl_cffi）、浏览器兜底通道**都走同一出口** |
 | 先配出口再扫码 | 店铺出口未配置或未通过检查时，不允许扫码登录；会话在哪个出口建立，就只在那个出口使用 |
 | 更换出口 | 改代理地址 → 清空 `egress_ip`、状态复位为 `unchecked`，该店转 `needs_login`，必须重新扫码 |
-| 出口检查 | 经该出口请求 IP 回显地址（设置项 `egress_echo_url`，默认 `https://api.ipify.org`）。**只有结果为 `ok` 时才写入 `egress_ip`**；`changed` / `duplicate` 时新 IP 写入 `egress_ip_pending`。时机：配置后、扫码前、每轮该店任务开始前（同一轮内缓存 10 分钟） |
+| 出口检查 | 经该出口请求 IP 回显地址（设置项 `egress_echo_url`，默认 `https://ifconfig.me/ip`）。**只有结果为 `ok` 时才写入 `egress_ip`**；`changed` / `duplicate` 时新 IP 写入 `egress_ip_pending`。时机：配置后、扫码前、每轮该店任务开始前（同一轮内缓存 10 分钟） |
+| CA 证书 | 启动时把 certifi 的 `cacert.pem` 复制到 `data_dir` 并设 `CURL_CA_BUNDLE`：libcurl 在 Windows 上按 ANSI 代码页解释路径，证书位于中文目录时加载失败（`curl: (77)`），会让**所有** HTTPS 请求报错 |
 | 出口不通 | 该店 `egress_status=unreachable`，暂停该店全部请求并提示；**绝不自动退回直连** |
 | 出口 IP 变化 | 与 `egress_ip` 不同 → `egress_status=changed`，新 IP 存 `egress_ip_pending`，暂停该店；人工确认后 pending 转正、状态 `ok` |
 | 出口 IP 重复 | 与其他启用店铺的 `egress_ip` 相同 → **`created_at` 较晚**的那家店 `egress_status=duplicate`（新 IP 存 `egress_ip_pending`），暂停 |

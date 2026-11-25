@@ -32,5 +32,5 @@ def test_data_dir_default_non_windows_is_repo_data(monkeypatch):
 def test_defaults():
     s = Settings(_platform="darwin")
     assert (s.host, s.port) == ("127.0.0.1", 8787)
-    assert s.egress_echo_url == "https://api.ipify.org"
+    assert s.egress_echo_url == "https://ifconfig.me/ip"
     assert s.dev_mode is False and s.dry_run is False
