@@ -7,14 +7,8 @@
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--space-3);
-}
-
-.hint {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
 }
 
 .notices {

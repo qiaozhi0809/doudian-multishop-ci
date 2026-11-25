@@ -15,7 +15,7 @@ interface DeleteDialogProps {
 export function DeleteDialog({ item, onOpenChange, pending, onConfirm }: DeleteDialogProps) {
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
-      <DialogContent title={`删除代理 ${item?.proxy_display ?? ""}`} description="删除后不可恢复，需要时请重新导入。" variant="confirm">
+      <DialogContent title={`删除代理 ${item?.proxy_display ?? ""}`} variant="confirm">
         {item && <DeleteBody key={item.id} item={item} pending={pending} onConfirm={onConfirm} onDone={() => onOpenChange(false)} />}
       </DialogContent>
     </Dialog>

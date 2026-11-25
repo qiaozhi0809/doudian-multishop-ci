@@ -17,10 +17,7 @@ export function PoolPageView({ page }: { page: PoolPage }) {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <p className={styles.hint}>代理池里的代理每个只能给一家启用的店铺使用。</p>
-        {!pool.loading && !pool.failed && importButton}
-      </div>
+      {pool.items.length > 0 && <div className={styles.toolbar}>{importButton}</div>}
       {page.notices.length > 0 && (
         <div className={styles.notices} role="status" aria-live="polite">
           {page.notices.map((n) => (
@@ -40,7 +37,7 @@ export function PoolPageView({ page }: { page: PoolPage }) {
         </div>
       )}
       {!pool.loading && !pool.failed && pool.items.length === 0 && (
-        <EmptyState title="代理池是空的" description="导入代理商给的代理后，添加店铺时可以直接选用。" action={importButton} />
+        <EmptyState title="代理池是空的" action={importButton} />
       )}
       {pool.items.length > 0 && (
         <PoolTable
