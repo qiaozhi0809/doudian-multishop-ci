@@ -20,4 +20,7 @@ export const queryKeys = {
   labelPoolRoot: () => ["labelPool"] as const,
   labelPool: (shopIds: number[], filters: LabelPoolFilters) =>
     ["labelPool", shopIds, filters] as const,
+  printStatus: () => ["printStatus"] as const,
+  printWaybillsRoot: () => ["printWaybills"] as const,
+  printWaybills: (waybillIds: number[]) => ["printWaybills", waybillIds] as const,
 };

@@ -9,6 +9,7 @@ import {
   rowStatusBadge,
   type LabelOrder,
 } from "../logic/label-columns";
+import { jobBadge, type WaybillPrint } from "../logic/print-status";
 import styles from "../labeling-page.module.css";
 
 
@@ -19,20 +20,34 @@ interface LabelTableProps {
   onToggle: (id: number) => void;
   onToggleAll: () => void;
   onReceiver: (id: number) => void;
+  printRows?: ReadonlyMap<number, WaybillPrint>;
 }
 
-function WaybillCell({ row }: { row: LabelOrder }) {
-  if (row.waybill) {
-    return (
+function WaybillCell({ row, printRow }: { row: LabelOrder; printRow?: WaybillPrint }) {
+  if (!row.waybill) {
+    if (row.blocked_reason) {
+      return <span className={styles.blocked} title={row.blocked_reason}>{row.blocked_reason}</span>;
+    }
+    return <span className={styles.muted}>暂无</span>;
+  }
+  const badge = jobBadge(printRow?.job);
+  const noPrintData = printRow !== undefined && !printRow.has_print_data && !badge;
+  return (
+    <span className={styles.waybillCell}>
       <span className={styles.waybill}>
         {row.waybill.courier_code} · <span className={styles.tabular}>{row.waybill.waybill_no ?? "暂无"}</span>
       </span>
-    );
-  }
-  if (row.blocked_reason) {
-    return <span className={styles.blocked} title={row.blocked_reason}>{row.blocked_reason}</span>;
-  }
-  return <span className={styles.muted}>暂无</span>;
+      {badge && <Badge tone={badge.tone} dot>{badge.label}</Badge>}
+      {noPrintData && (
+        <span
+          className={styles.muted}
+          title="恢复的面单没有打印数据：打印时会先尝试补打，失败需到抖店后台手动补打"
+        >
+          无打印数据
+        </span>
+      )}
+    </span>
+  );
 }
 
 /** 打单台表格：首列勾选，阻断行禁用勾选并显示原因（跨页勾选由外部状态维护）。 */
@@ -43,6 +58,7 @@ export function LabelTable({
   onToggle,
   onToggleAll,
   onReceiver,
+  printRows,
 }: LabelTableProps) {
   const someSelected = selected.size > 0 && !allChecked;
   return (
@@ -94,7 +110,7 @@ export function LabelTable({
                     {row.amount_cents === null ? "暂无" : formatCents(row.amount_cents)}
                   </td>
                   <td className={styles.tabular}>{formatBjTimeSmart(row.pay_time)}</td>
-                  <td><WaybillCell row={row} /></td>
+                  <td><WaybillCell row={row} printRow={printRows?.get(row.waybill?.id ?? -1)} /></td>
                   <td>
                     <Button variant="ghost" size="sm" onClick={() => onReceiver(row.id)}>
                       查看收件人
