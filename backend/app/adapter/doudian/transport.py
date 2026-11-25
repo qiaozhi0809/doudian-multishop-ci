@@ -28,9 +28,12 @@ class Transport(Protocol):
 class CurlTransport:
     """proxy 为 None 即直连；配置了代理后连接失败只会抛 EgressUnavailable，不会改走直连。"""
 
-    def __init__(self, proxy: str | None, impersonate: str = "chrome") -> None:
+    def __init__(
+        self, proxy: str | None, impersonate: str = "chrome", timeout_s: float = REQUEST_TIMEOUT_S
+    ) -> None:
         self._proxy = proxy
         self._impersonate = impersonate
+        self._timeout_s = timeout_s
 
     async def request(
         self, method: str, url: str, *, params: dict | None = None, json: Any = None,
@@ -41,7 +44,7 @@ class CurlTransport:
             async with AsyncSession(impersonate=self._impersonate) as s:
                 resp = await s.request(
                     method, url, params=params, json=json, data=data, cookies=cookies,
-                    headers=headers, proxy=self._proxy, timeout=REQUEST_TIMEOUT_S,
+                    headers=headers, proxy=self._proxy, timeout=self._timeout_s,
                     allow_redirects=False,
                 )
             return TransportResponse(resp.status_code, resp.content)

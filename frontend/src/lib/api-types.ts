@@ -4,145 +4,6 @@
  */
 
 export interface paths {
-    "/api/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 总体健康 */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Health"];
-                    };
-                };
-                /** @description 错误信封 */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorEnvelope"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auth/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 登录状态 */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuthStatus"];
-                    };
-                };
-                /** @description 错误信封 */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorEnvelope"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auth/setup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 创建管理员 */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["Credentials"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuthStatus"];
-                    };
-                };
-                /** @description 错误信封 */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorEnvelope"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/auth/login": {
         parameters: {
             query?: never;
@@ -152,40 +13,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 登录 */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["Credentials"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuthStatus"];
-                    };
-                };
-                /** @description 错误信封 */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorEnvelope"];
-                    };
-                };
-            };
-        };
+        /** Login */
+        post: operations["login_api_auth_login_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -201,34 +30,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 退出 */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description 错误信封 */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorEnvelope"];
-                    };
-                };
-            };
-        };
+        /** Logout */
+        post: operations["logout_api_auth_logout_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -244,81 +47,77 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 修改密码 */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ChangePassword"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description 错误信封 */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorEnvelope"];
-                    };
-                };
-            };
-        };
+        /** Change Password */
+        post: operations["change_password_api_auth_password_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/shops": {
+    "/api/auth/setup": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 店铺列表与会话健康 */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ShopRow"][];
-                    };
-                };
-                /** @description 错误信封 */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorEnvelope"];
-                    };
-                };
-            };
+        get?: never;
+        put?: never;
+        /**
+         * Setup
+         * @description 创建管理员。不自动登录，需再调用登录接口。
+         */
+        post: operations["setup_api_auth_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
+        /** Status */
+        get: operations["status_api_auth_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Events */
+        get: operations["events_api_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health */
+        get: operations["health_api_health_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -334,41 +133,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 跨店订单列表 */
-        get: {
-            parameters: {
-                query?: {
-                    shop_ids?: string;
-                    status?: string;
-                    page?: number;
-                    page_size?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["OrderPage"];
-                    };
-                };
-                /** @description 错误信封 */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorEnvelope"];
-                    };
-                };
-            };
-        };
+        /** List Orders */
+        get: operations["list_orders_api_orders_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -384,40 +150,184 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 跨店 tab 计数（平台口径） */
-        get: {
-            parameters: {
-                query?: {
-                    shop_ids?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["OrderCountsResponse"];
-                    };
-                };
-                /** @description 错误信封 */
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorEnvelope"];
-                    };
-                };
-            };
-        };
+        /** Order Counts */
+        get: operations["order_counts_api_orders_counts_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Orders
+         * @description 显式指定的店铺先同步预检（暂停 / 出口 / 会话不通即报错）；不指定则只跑可用店铺。
+         */
+        post: operations["sync_orders_api_orders_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Shops */
+        get: operations["list_shops_api_shops_get"];
+        put?: never;
+        /** Create Shop */
+        post: operations["create_shop_api_shops_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shops/{shop_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Shop */
+        patch: operations["patch_shop_api_shops__shop_id__patch"];
+        trace?: never;
+    };
+    "/api/shops/{shop_id}/base": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Base */
+        get: operations["get_base_api_shops__shop_id__base_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shops/{shop_id}/egress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Egress */
+        put: operations["set_egress_api_shops__shop_id__egress_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shops/{shop_id}/egress/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Egress */
+        post: operations["check_egress_api_shops__shop_id__egress_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shops/{shop_id}/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login Shop */
+        post: operations["login_shop_api_shops__shop_id__login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shops/{shop_id}/probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Probe Shop */
+        post: operations["probe_shop_api_shops__shop_id__probe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shops/{shop_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Shop */
+        post: operations["resume_shop_api_shops__shop_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shops/{shop_id}/sync-base": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Base */
+        post: operations["sync_base_api_shops__shop_id__sync_base_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -428,92 +338,310 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        ErrorBody: {
-            type: string;
-            message: string;
-            shop_id?: number | null;
-            detail?: unknown;
+        /** AccountOut */
+        AccountOut: {
+            /** Balance */
+            balance: number | null;
+            /** Courier Code */
+            courier_code: string;
+            /** Ebill Id */
+            ebill_id: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Net Code */
+            net_code: string;
+            /** Net Name */
+            net_name: string | null;
         };
+        /** AddressOut */
+        AddressOut: {
+            /** Address Id */
+            address_id: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Name */
+            name: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Region */
+            region: string | null;
+        };
+        /** AuthStatus */
+        AuthStatus: {
+            /** Logged In */
+            logged_in: boolean;
+            /** Setup Required */
+            setup_required: boolean;
+            /** Username */
+            username: string | null;
+        };
+        /** BaseData */
+        BaseData: {
+            /** Accounts */
+            accounts: components["schemas"]["AccountOut"][];
+            /** Addresses */
+            addresses: components["schemas"]["AddressOut"][];
+            /** Couriers */
+            couriers: components["schemas"]["CourierOut"][];
+            /** Templates */
+            templates: components["schemas"]["TemplateOut"][];
+        };
+        /** BaseSummary */
+        BaseSummary: {
+            /** Accounts */
+            accounts: number;
+            /** Addresses */
+            addresses: number;
+            /** Couriers */
+            couriers: number;
+            /** Not Ready Reasons */
+            not_ready_reasons: string[];
+            /** Ready For Label */
+            ready_for_label: boolean;
+            /** Templates */
+            templates: number;
+        };
+        /** ChangePassword */
+        ChangePassword: {
+            /** New Password */
+            new_password: string;
+            /** Old Password */
+            old_password: string;
+        };
+        /** CourierOut */
+        CourierOut: {
+            /** Courier Code */
+            courier_code: string;
+            /** Name */
+            name: string | null;
+        };
+        /** Credentials */
+        Credentials: {
+            /** Password */
+            password: string;
+            /** Username */
+            username: string;
+        };
+        /** EgressRequest */
+        EgressRequest: {
+            /** Expires At */
+            expires_at?: string | null;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "direct" | "proxy";
+            /**
+             * Paste
+             * @description 代理商格式 IP|端口|账号|密码|到期日
+             */
+            paste?: string | null;
+            /**
+             * Proxy Url
+             * @description http(s)://账号:密码@主机:端口
+             */
+            proxy_url?: string | null;
+        };
+        /** EgressStatusOut */
+        EgressStatusOut: {
+            /** Egress Ip */
+            egress_ip: string | null;
+            /** Egress Ip Pending */
+            egress_ip_pending: string | null;
+            /**
+             * Egress Status
+             * @enum {string}
+             */
+            egress_status: "unchecked" | "ok" | "unreachable" | "changed" | "duplicate";
+        };
+        /** ErrorBody */
+        ErrorBody: {
+            /** Detail */
+            detail?: unknown;
+            /** Message */
+            message: string;
+            /** Shop Id */
+            shop_id?: number | null;
+            /** Type */
+            type: string;
+        };
+        /** ErrorEnvelope */
         ErrorEnvelope: {
             error: components["schemas"]["ErrorBody"];
         };
+        /** Health */
         Health: {
+            /** Status */
             status: string;
         };
-        AuthStatus: {
-            setup_required: boolean;
-            logged_in: boolean;
-            username: string | null;
-        };
-        Credentials: {
-            username: string;
-            password: string;
-        };
-        ChangePassword: {
-            old_password: string;
-            new_password: string;
-        };
-        ShopRow: {
-            id: number;
-            name: string;
-            /** @enum {unknown} */
-            status: "active" | "needs_login" | "disabled";
-            health: ("healthy" | "expiring" | "expired") | null;
-            expires_at: string | null;
-            paused_reason: string | null;
-            egress_mode: ("direct" | "proxy") | null;
-            proxy_display: string | null;
-            egress_ip: string | null;
-            egress_ip_pending: string | null;
-            /** @enum {unknown} */
-            egress_status: "unchecked" | "ok" | "unreachable" | "changed" | "duplicate";
-            proxy_expires_at: string | null;
-            ready_for_label: boolean;
-            not_ready_reasons: string[];
-        };
-        OrderItem: {
-            sku_order_id: string | null;
-            product_id: string | null;
-            product_name: string | null;
-            sku_spec: string | null;
-            quantity: number;
-            price_cents: number | null;
-        };
-        OrderRow: {
-            id: number;
-            shop_id: number;
-            shop_name: string;
-            order_no: string;
-            platform_status: number | null;
-            /** @enum {unknown} */
-            status: "synced" | "pending_label" | "label_obtained" | "printed" | "shipped" | "exception" | "cancelled" | "closed";
-            exception_reason: string | null;
-            amount_cents: number | null;
-            pay_time: string | null;
-            exp_ship_time: string | null;
-            items: components["schemas"]["OrderItem"][];
-        };
-        OrderPage: {
-            items: components["schemas"]["OrderRow"][];
-            total: number;
-            page: number;
-            page_size: number;
-        };
+        /** OrderCounts */
         OrderCounts: {
-            stock_up: number;
+            /** Exp Ship */
             exp_ship: number;
-            ship_delay: number;
+            /** In Aftersale */
             in_aftersale: number;
+            /** Ship Delay */
+            ship_delay: number;
+            /** Stock Up */
+            stock_up: number;
         };
-        ShopOrderCounts: {
-            shop_id: number;
-            counts?: components["schemas"]["OrderCounts"] | null;
-            /** @enum {unknown} */
-            source: "upstream" | "error";
-            error?: string | null;
-        };
+        /** OrderCountsResponse */
         OrderCountsResponse: {
+            /** Shops */
             shops: components["schemas"]["ShopOrderCounts"][];
+        };
+        /** OrderItem */
+        OrderItem: {
+            /** Price Cents */
+            price_cents: number | null;
+            /** Product Id */
+            product_id: string | null;
+            /** Product Name */
+            product_name: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Sku Order Id */
+            sku_order_id: string | null;
+            /** Sku Spec */
+            sku_spec: string | null;
+        };
+        /** OrderPage */
+        OrderPage: {
+            /** Items */
+            items: components["schemas"]["OrderRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** OrderRow */
+        OrderRow: {
+            /** Amount Cents */
+            amount_cents: number | null;
+            /** Exception Reason */
+            exception_reason: string | null;
+            /** Exp Ship Time */
+            exp_ship_time: string | null;
+            /** Id */
+            id: number;
+            /** Items */
+            items: components["schemas"]["OrderItem"][];
+            /** Order No */
+            order_no: string;
+            /** Pay Time */
+            pay_time: string | null;
+            /** Platform Status */
+            platform_status: number | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "synced" | "pending_label" | "label_obtained" | "printed" | "shipped" | "exception" | "cancelled" | "closed";
+        };
+        /** ShopCreate */
+        ShopCreate: {
+            /** Entity */
+            entity?: string | null;
+            /** Name */
+            name: string;
+            /** Shop No */
+            shop_no?: string | null;
+        };
+        /** ShopOrderCounts */
+        ShopOrderCounts: {
+            counts?: components["schemas"]["OrderCounts"] | null;
+            /** Error */
+            error?: string | null;
+            /** Fetched At */
+            fetched_at?: string | null;
+            /** Shop Id */
+            shop_id: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "upstream" | "error";
+        };
+        /** ShopPatch */
+        ShopPatch: {
+            /** Channel */
+            channel?: ("protocol" | "browser") | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Entity */
+            entity?: string | null;
+            /** Name */
+            name?: string | null;
+        };
+        /** ShopRow */
+        ShopRow: {
+            /** Egress Ip */
+            egress_ip: string | null;
+            /** Egress Ip Pending */
+            egress_ip_pending: string | null;
+            /** Egress Mode */
+            egress_mode: ("direct" | "proxy") | null;
+            /**
+             * Egress Status
+             * @enum {string}
+             */
+            egress_status: "unchecked" | "ok" | "unreachable" | "changed" | "duplicate";
+            /** Expires At */
+            expires_at: string | null;
+            /** Health */
+            health: ("healthy" | "expiring" | "expired") | null;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Not Ready Reasons */
+            not_ready_reasons: string[];
+            /** Paused Reason */
+            paused_reason: string | null;
+            /** Proxy Display */
+            proxy_display: string | null;
+            /** Proxy Expires At */
+            proxy_expires_at: string | null;
+            /** Ready For Label */
+            ready_for_label: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "needs_login" | "disabled";
+        };
+        /** Started */
+        Started: {
+            /**
+             * Status
+             * @default started
+             * @constant
+             */
+            status: "started";
+        };
+        /** SyncStarted */
+        SyncStarted: {
+            /** Already Running */
+            already_running: number[];
+            /** Started */
+            started: number[];
+        };
+        /** TemplateOut */
+        TemplateOut: {
+            /** Courier Code */
+            courier_code: string | null;
+            /** Is Custom */
+            is_custom: boolean;
+            /** Name */
+            name: string | null;
+            /** Template Code */
+            template_code: string;
         };
     };
     responses: never;
@@ -523,4 +651,640 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    login_api_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Credentials"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthStatus"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    logout_api_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    change_password_api_auth_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePassword"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    setup_api_auth_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Credentials"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthStatus"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    status_api_auth_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthStatus"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    events_api_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    health_api_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Health"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_orders_api_orders_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                status?: ("synced" | "pending_label" | "label_obtained" | "printed" | "shipped" | "exception" | "cancelled" | "closed") | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderPage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    order_counts_api_orders_counts_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderCountsResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sync_orders_api_orders_sync_post: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncStarted"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_shops_api_shops_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopRow"][];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_shop_api_shops_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShopCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopRow"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    patch_shop_api_shops__shop_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShopPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopRow"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_base_api_shops__shop_id__base_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseData"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    set_egress_api_shops__shop_id__egress_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EgressRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopRow"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    check_egress_api_shops__shop_id__egress_check_post: {
+        parameters: {
+            query?: {
+                accept_change?: boolean;
+            };
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EgressStatusOut"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    login_shop_api_shops__shop_id__login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Started"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    probe_shop_api_shops__shop_id__probe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopRow"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    resume_shop_api_shops__shop_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopRow"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sync_base_api_shops__shop_id__sync_base_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseSummary"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+}

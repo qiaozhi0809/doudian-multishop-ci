@@ -10,7 +10,7 @@ class OrderItemDTO:
     product_name: str | None
     sku_spec: str | None
     quantity: int
-    price_cents: int | None
+    price_cents: int | None  # 取商品行 pay_amount；数量大于 1 时是单价还是行合计待样本确认
     sku_id: str | None
 
 
@@ -58,7 +58,7 @@ class EbillAccountDTO:
     net_code: str
     net_name: str | None
     account_type: int | None
-    balance: int | None
+    balance: int | None  # 面单张数；-1 表示月结账户（见 base_data_rules.MONTHLY_ACCOUNT_BALANCE）
     is_default: bool
     raw: dict
 

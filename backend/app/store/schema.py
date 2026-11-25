@@ -197,3 +197,28 @@ audit_log = sa.Table(
 )
 sa.Index("idx_audit_time", audit_log.c.created_at)
 sa.Index("idx_audit_shop", audit_log.c.shop_id, audit_log.c.created_at)
+
+admin_user = sa.Table(
+    "admin_user",
+    metadata,
+    _id(),
+    sa.Column("username", sa.Text, nullable=False, unique=True),
+    sa.Column("password_hash", sa.Text, nullable=False),
+    sa.Column("failed_attempts", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("locked_until", _NOW),
+    sa.Column("password_changed_at", _NOW, nullable=False),
+    sa.Column("created_at", _NOW, nullable=False),
+)
+
+admin_session = sa.Table(
+    "admin_session",
+    metadata,
+    sa.Column("token_hash", sa.Text, primary_key=True),
+    sa.Column(
+        "user_id", sa.Integer, sa.ForeignKey("admin_user.id", ondelete="CASCADE"), nullable=False
+    ),
+    sa.Column("created_at", _NOW, nullable=False),
+    sa.Column("last_seen_at", _NOW, nullable=False),
+    sa.Column("expires_at", _NOW, nullable=False),
+)
+sa.Index("idx_admin_session_user", admin_session.c.user_id)

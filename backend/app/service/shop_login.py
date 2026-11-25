@@ -1,0 +1,74 @@
+"""扫码登录编排：出口代理 → 扫码 → 保存会话 → 探测 → 同步基础数据。失败发 shop_login_failed。"""
+
+from collections.abc import Awaitable, Callable
+from pathlib import Path
+
+import structlog
+
+from app.adapter.browser.login import LoginCancelled, LoginResult, scan_login
+from app.adapter.doudian import endpoints as ep
+from app.adapter.doudian.client import FxgClient
+from app.adapter.doudian.errors import DoudianError
+from app.domain.errors import NotFound
+from app.service.base_data import BaseDataService
+from app.service.egress import EgressConflict, EgressNotReady
+from app.service.events import SHOP_LOGIN_FAILED, EventBus
+from app.service.session_manager import SessionManager
+from app.service.shop_runner import ShopPaused, ShopRunner
+
+log = structlog.get_logger()
+
+ScanFn = Callable[[Path, str, str | None, int], Awaitable[LoginResult]]
+SCAN_TIMEOUT_S = 300
+_USER_FACING = (DoudianError, EgressNotReady, EgressConflict, ShopPaused, NotFound,
+                LoginCancelled)
+
+
+class ShopLoginFlow:
+    def __init__(
+        self, runner: ShopRunner, sessions: SessionManager, base_data: BaseDataService,
+        events: EventBus, profiles_dir: Path, channel: str,
+        scan: ScanFn = scan_login, timeout_s: int = SCAN_TIMEOUT_S,
+    ) -> None:
+        self._runner = runner
+        self._sessions = sessions
+        self._base_data = base_data
+        self._events = events
+        self._profiles_dir = profiles_dir
+        self._channel = channel
+        self._scan = scan
+        self._timeout_s = timeout_s
+
+    async def login(self, shop_id: int, actor: str) -> None:
+        try:
+            await self._runner.run(shop_id, self._scan_job(shop_id), actor=actor,
+                                   needs_session=False)
+            # 扫码任务已释放该店队列，探测与基础数据同步各自重新入队
+            await self._runner.run(shop_id, _probe, actor=actor)
+            await self._base_data.sync(shop_id, actor)
+        except Exception as e:
+            self._events.publish(SHOP_LOGIN_FAILED, {"shop_id": shop_id, "reason": _reason(e)})
+            raise
+
+    def _scan_job(self, shop_id: int) -> Callable[[FxgClient], Awaitable[None]]:
+        async def job(_client: FxgClient) -> None:
+            profile = self._profiles_dir / str(shop_id)
+            profile.mkdir(parents=True, exist_ok=True)
+            proxy = self._runner.proxy_for(shop_id)  # 扫码浏览器必须走该店出口
+            result = await self._scan(profile, self._channel, proxy, self._timeout_s)
+            self._sessions.save_login(shop_id, result)
+
+        return job
+
+
+async def _probe(client: FxgClient) -> None:
+    await client.call(ep.TABCNT)
+
+
+def _reason(e: Exception) -> str:
+    if isinstance(e, TimeoutError):
+        return "扫码超时，请重新发起登录"
+    if isinstance(e, _USER_FACING):
+        return str(e) or type(e).__name__
+    log.error("shop_login.unexpected", error=type(e).__name__)
+    return "登录失败，请查看日志"

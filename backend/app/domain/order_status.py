@@ -17,12 +17,18 @@ class OrderTab(StrEnum):
 class PlatformOrderStatus(IntEnum):
     """数据字段 order_status（数字）。仅列已确认的值，其余值调用方保留原始整数。"""
 
+    STOCK_UP = 2  # 待发货
     SHIPPED = 3
     CLOSED = 4
     COMPLETED = 5
 
 
-PLATFORM_FINAL_STATUSES: frozenset[int] = frozenset(int(s) for s in PlatformOrderStatus)
+# 显式列举：新增非终态（如待支付）时不会被误算成终态
+PLATFORM_FINAL_STATUSES: frozenset[int] = frozenset({
+    int(PlatformOrderStatus.SHIPPED),
+    int(PlatformOrderStatus.CLOSED),
+    int(PlatformOrderStatus.COMPLETED),
+})
 
 
 class LocalOrderStatus(StrEnum):
@@ -38,7 +44,11 @@ class LocalOrderStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
-# 本地履约已到终点：不再需要向平台补查
+# 本地履约已到终点
 LOCAL_FINAL_STATUSES: frozenset[LocalOrderStatus] = frozenset(
     {LocalOrderStatus.SHIPPED, LocalOrderStatus.CLOSED, LocalOrderStatus.CANCELLED}
 )
+# 不再向平台补查：终点状态，以及已标记异常（需人工处理，不能被反复请求）的订单
+RECHECK_EXCLUDED_STATUSES: frozenset[LocalOrderStatus] = LOCAL_FINAL_STATUSES | {
+    LocalOrderStatus.EXCEPTION
+}
