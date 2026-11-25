@@ -103,6 +103,7 @@ def test_apply_env_forces_auto_update_off_even_if_preset(monkeypatch, tmp_path):
     """禁用自动更新是硬约束：外部把它设成 true，调用后也必须变 false。"""
     import os
 
+    monkeypatch.delenv("CLOAKBROWSER_CACHE_DIR", raising=False)
     monkeypatch.setenv("CLOAKBROWSER_AUTO_UPDATE", "true")
 
     apply_env(tmp_path)
@@ -115,6 +116,7 @@ def test_apply_env_keeps_explicit_cache_dir(monkeypatch, tmp_path):
     import os
 
     custom = str(tmp_path / "custom")
+    monkeypatch.delenv("CLOAKBROWSER_AUTO_UPDATE", raising=False)
     monkeypatch.setenv("CLOAKBROWSER_CACHE_DIR", custom)
 
     apply_env(tmp_path)
