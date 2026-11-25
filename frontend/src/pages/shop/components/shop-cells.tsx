@@ -8,6 +8,7 @@ import {
   egressBadge,
   egressModeLabel,
   pausedBadge,
+  primaryAction,
   readyBadge,
   scanDisabledReason,
   shopStatusBadge,
@@ -99,33 +100,50 @@ interface ActionsCellProps {
   waiting: boolean;
 }
 
-/** 操作列：扫码登录与设置出口直接可点，其余收进「更多」。不可用的按钮保持可见并悬停说明原因。 */
+/** 操作列：按引导顺序在行内直接显示一个主操作（设置出口 → 检查出口 → 扫码登录），其余收进「更多」。 */
 export function ActionsCell({ row, actions, pending, waiting }: ActionsCellProps) {
-  const reason = scanDisabledReason(row);
   const busy = (action: string) => pending.includes(`${action}:${row.id}`);
+  const primary = primaryAction(row);
+  const reason = scanDisabledReason(row);
   const scan = (
     <Button variant="secondary" size="sm" disabled={reason !== null || waiting} loading={busy("login")} onClick={actions.onLogin}>
       扫码登录
     </Button>
   );
+
   return (
     <div className={styles.actions}>
-      {reason ? (
-        <Tooltip content={reason}>
-          <span className={styles.tip} tabIndex={0}>
-            {scan}
-          </span>
-        </Tooltip>
-      ) : (
-        scan
+      {primary === "set-egress" && (
+        <Button variant="secondary" size="sm" onClick={actions.onEgress}>
+          设置出口
+        </Button>
       )}
-      <Button variant="ghost" size="sm" onClick={actions.onEgress}>
-        设置出口
-      </Button>
+      {primary === "check-egress" && (
+        <Button variant="secondary" size="sm" loading={busy("egress-check")} onClick={actions.onCheckEgress}>
+          检查出口
+        </Button>
+      )}
+      {primary === "login" &&
+        (reason ? (
+          <Tooltip content={reason}>
+            <span className={styles.tip} tabIndex={0}>
+              {scan}
+            </span>
+          </Tooltip>
+        ) : (
+          scan
+        ))}
+      {primary !== "set-egress" && (
+        <Button variant="ghost" size="sm" onClick={actions.onEgress}>
+          设置出口
+        </Button>
+      )}
       <DropdownMenu
         label="更多"
         items={[
-          { label: "检查出口", onSelect: actions.onCheckEgress, disabled: row.egress_mode === null || busy("egress-check") },
+          ...(primary === "check-egress" || row.egress_mode === null
+            ? []
+            : [{ label: "检查出口", onSelect: actions.onCheckEgress, disabled: busy("egress-check") }]),
           { label: "探测会话", onSelect: actions.onProbe, disabled: busy("probe") },
           { label: "同步基础数据", onSelect: actions.onSyncBase, disabled: busy("sync-base") },
           { label: "查看基础数据", onSelect: actions.onViewBase, separatorBefore: true },

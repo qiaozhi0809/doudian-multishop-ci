@@ -86,3 +86,15 @@ export function readyBadge(row: ShopRow): Badge & { detail: string | null } {
 export function egressModeLabel(row: ShopRow): string {
   return row.egress_mode === "direct" ? "直连" : row.egress_mode === "proxy" ? "代理" : "未设置";
 }
+
+export type PrimaryAction = "set-egress" | "check-egress" | "login";
+
+/**
+ * 行内直接显示的主操作（引导的顺序：设置出口 → 检查出口 → 扫码登录）。
+ * 扫码前必须先检查出口，所以出口没设置 / 没通过时不显示扫码登录。
+ */
+export function primaryAction(row: ShopRow): PrimaryAction {
+  if (row.egress_mode === null) return "set-egress";
+  if (row.egress_status !== "ok") return "check-egress";
+  return "login";
+}

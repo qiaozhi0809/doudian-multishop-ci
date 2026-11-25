@@ -80,8 +80,35 @@ describe("店铺与设置页", () => {
     expect(screen.queryByRole("row", { name: /店铺甲/ })).not.toBeInTheDocument();
   });
 
-  it("出口未检查通过时扫码按钮保持可见但禁用", async () => {
-    mockFetch({ "GET /api/shops": jsonResponse([makeShop({ egress_status: "unchecked" })]) });
+  it("出口未检查：直接显示「检查出口」按钮，不显示扫码登录；检查通过后换成扫码登录", async () => {
+    let checked = false;
+    mockFetch({
+      "GET /api/shops": () => jsonResponse([makeShop({ egress_status: checked ? "ok" : "unchecked" })]),
+      "POST /api/shops/1/egress/check": () => {
+        checked = true;
+        return jsonResponse({ egress_ip: "1.2.3.4", egress_ip_pending: null, egress_status: "ok" });
+      },
+    });
+    renderPage();
+    const user = userEvent.setup();
+    const row = within(await screen.findByRole("row", { name: /店铺甲/ }));
+    expect(row.getByRole("button", { name: "检查出口" })).toBeEnabled();
+    expect(row.queryByRole("button", { name: "扫码登录" })).not.toBeInTheDocument();
+    await user.click(row.getByRole("button", { name: "检查出口" }));
+    expect(await within(screen.getByRole("row", { name: /店铺甲/ })).findByRole("button", { name: "扫码登录" })).toBeEnabled();
+    expect(within(screen.getByRole("row", { name: /店铺甲/ })).queryByRole("button", { name: "检查出口" })).not.toBeInTheDocument();
+  });
+
+  it("还没有设置出口：直接显示「设置出口」，不显示扫码登录", async () => {
+    mockFetch({ "GET /api/shops": jsonResponse([makeShop({ egress_mode: null, egress_status: "unchecked" })]) });
+    renderPage();
+    const row = within(await screen.findByRole("row", { name: /店铺甲/ }));
+    expect(row.getByRole("button", { name: "设置出口" })).toBeInTheDocument();
+    expect(row.queryByRole("button", { name: "扫码登录" })).not.toBeInTheDocument();
+  });
+
+  it("风控暂停的店铺出口正常时，扫码登录保持可见但禁用", async () => {
+    mockFetch({ "GET /api/shops": jsonResponse([makeShop({ paused_reason: "risk_blocked:1" })]) });
     renderPage();
     const row = within(await screen.findByRole("row", { name: /店铺甲/ }));
     expect(row.getByRole("button", { name: "扫码登录" })).toBeDisabled();

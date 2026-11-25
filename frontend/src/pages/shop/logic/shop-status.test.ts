@@ -4,6 +4,7 @@ import {
   egressBadge,
   egressModeLabel,
   pausedBadge,
+  primaryAction,
   readyBadge,
   scanBlockedReason,
   scanDisabledReason,
@@ -150,5 +151,23 @@ describe("scanDisabledReason（按钮禁用说明）", () => {
   });
   it("其余沿用出口原因", () => {
     expect(scanDisabledReason(makeShop({ egress_status: "unchecked" }))).toBe("出口未检查通过，不能扫码");
+  });
+});
+
+describe("primaryAction（行内直接显示的主操作）", () => {
+  it("还没有设置出口：先设置出口", () => {
+    expect(primaryAction(makeShop({ egress_mode: null, egress_status: "unchecked" }))).toBe("set-egress");
+  });
+  it("出口未检查（以及不通、重复、已变化）：先检查出口，不显示扫码", () => {
+    for (const s of ["unchecked", "unreachable", "duplicate", "changed"] as const) {
+      expect(primaryAction(makeShop({ egress_status: s }))).toBe("check-egress");
+    }
+  });
+  it("出口检查通过：扫码登录", () => {
+    expect(primaryAction(makeShop({ egress_status: "ok" }))).toBe("login");
+  });
+  it("已停用或风控暂停但出口正常：仍显示扫码登录（禁用并说明原因）", () => {
+    expect(primaryAction(makeShop({ status: "disabled" }))).toBe("login");
+    expect(primaryAction(makeShop({ paused_reason: "risk_blocked:1" }))).toBe("login");
   });
 });
