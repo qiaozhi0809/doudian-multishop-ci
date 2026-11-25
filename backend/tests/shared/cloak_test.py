@@ -99,11 +99,24 @@ def test_apply_env_pins_cache_dir_and_disables_auto_update(monkeypatch, tmp_path
     assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "false"
 
 
-def test_apply_env_does_not_override_explicit_values(monkeypatch, tmp_path):
+def test_apply_env_forces_auto_update_off_even_if_preset(monkeypatch, tmp_path):
+    """禁用自动更新是硬约束：外部把它设成 true，调用后也必须变 false。"""
     import os
 
     monkeypatch.setenv("CLOAKBROWSER_AUTO_UPDATE", "true")
 
     apply_env(tmp_path)
 
-    assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "true"
+    assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "false"
+
+
+def test_apply_env_keeps_explicit_cache_dir(monkeypatch, tmp_path):
+    """缓存目录是用户可配置项，显式设置必须被尊重。"""
+    import os
+
+    custom = str(tmp_path / "custom")
+    monkeypatch.setenv("CLOAKBROWSER_CACHE_DIR", custom)
+
+    apply_env(tmp_path)
+
+    assert os.environ["CLOAKBROWSER_CACHE_DIR"] == custom

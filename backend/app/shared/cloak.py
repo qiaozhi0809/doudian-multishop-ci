@@ -89,11 +89,13 @@ def cloak_launch_args(seed: int) -> list[str]:
 
 
 def apply_env(cache_dir: Path) -> None:
-    """把 CloakBrowser 的缓存目录锁到项目内，并关闭全部自动更新。
+    """把 CloakBrowser 的缓存目录锁到项目内，并**强制**关闭全部自动更新。
 
-    CLOAKBROWSER_AUTO_UPDATE 必须是小写字面量 "false"：库只在值为 false 时
-    才跳过「二进制更新」和「PyPI 包更新」两个后台检查。必须在 import
-    cloakbrowser 之前调用，否则 import 触发的后台线程已经发出去了。
+    CLOAKBROWSER_AUTO_UPDATE 无条件写小写字面量 "false"：禁用自动更新是硬约束，
+    外部环境变量不得覆盖——库只在值为 false 时才跳过「二进制更新」和「PyPI 包
+    更新」两个后台检查。必须在 import cloakbrowser 之前调用。
+
+    缓存目录用 setdefault：那是用户可配置项，显式设置应当被尊重。
     """
     os.environ.setdefault("CLOAKBROWSER_CACHE_DIR", str(cache_dir))
-    os.environ.setdefault("CLOAKBROWSER_AUTO_UPDATE", "false")
+    os.environ["CLOAKBROWSER_AUTO_UPDATE"] = "false"
