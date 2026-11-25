@@ -18,3 +18,13 @@
 2. 只推分支，不推 PR 引用：`git push https://github.com/qiaozhi0809/doudian-multishop-ci.git origin/<分支>:refs/heads/<短名>`
 3. `gh run list -R qiaozhi0809/doudian-multishop-ci` 查看结果；某个工作流没被触发时，用同一提交推到临时分支名重新触发，跑完删除临时分支。
 4. 镜像里只放代码与文档，**永远不放**脱敏样本以外的抖店真实数据。
+
+## 项目完成后的收尾（所有者决定，2026-11-25）
+
+**全部里程碑完成后：删除 CI 镜像仓库 `qiaozhi0809/doudian-multishop-ci`，只保留私有的主仓库。**
+
+届时一并处理：
+
+- 移除各工作流里的 `if: github.repository == 'qiaozhi0809/doudian-multishop-ci'` 条件（或直接删除 `.github/workflows/`）
+- 本地不再需要「推两次仓库」的步骤，只推主仓库
+- 删除前确认：主仓库 `main` 已包含镜像上所有分支的最新提交
