@@ -5,11 +5,11 @@ export type LocalStatus = OrderRow["status"];
 
 type Tone = "neutral" | "info" | "success" | "danger";
 
-/** 本地状态（ui-guidelines 第 5 节）。订单页与打单台共用一套文案。 */
+/** 本地状态（ui-guidelines 第 5 节）。订单页与打单发货共用一套文案。 */
 const LOCAL: Record<LocalStatus, { label: string; tone: Tone }> = {
   synced: { label: "待处理", tone: "neutral" },
-  pending_label: { label: "待取号", tone: "neutral" },
-  label_obtained: { label: "已取号", tone: "info" },
+  pending_label: { label: "待打单", tone: "neutral" },
+  label_obtained: { label: "已打单", tone: "info" },
   printed: { label: "已打印", tone: "info" },
   shipped: { label: "已发货", tone: "success" },
   exception: { label: "异常", tone: "danger" },

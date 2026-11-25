@@ -64,6 +64,7 @@ export function ProductCounts({ loading, error, data, shopName, onRetry }: Count
                 key={item.key}
                 label={item.label}
                 value={aggregated.totals[item.key]}
+                tone={item.tone}
               />
             ))}
           </div>

@@ -4,12 +4,16 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { formatCents } from "@/lib/money-format";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import { settledMarginTotal, type FundSummary } from "../logic/fund-page";
+import { KpiDot, type KpiTone } from "@/lib/kpi-tone";
 import styles from "../fund-page.module.css";
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, tone }: { label: string; value: string; tone?: KpiTone }) {
   return (
     <article className={styles.statCard}>
-      <span className={styles.statLabel}>{label}</span>
+      <span className={styles.statLabel}>
+        {tone ? <KpiDot tone={tone} /> : null}
+        {label}
+      </span>
       <strong className={styles.statValue}>{value}</strong>
     </article>
   );
@@ -52,13 +56,16 @@ export function FundSummaryCards({
         <StatCard
           label="待结算总额"
           value={formatCents(data.total_unsettled_amount_cents)}
+          tone="info"
         />
         <StatCard
           label="待结算订单"
           value={String(data.total_unsettled_count)}
+          tone="info"
         />
         <StatCard
           label={`保证金余额 · ${synced} 家店`}
+          tone="neutral"
           value={formatCents(settledMarginTotal(data))}
         />
       </div>

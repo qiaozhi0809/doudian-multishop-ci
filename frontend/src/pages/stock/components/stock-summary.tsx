@@ -33,9 +33,9 @@ export function StockSummaryCards({
   }
   return (
     <div className={styles.countGrid}>
-      <MetricCard label="商品数" value={data.total} />
-      <MetricCard label="库存预警" value={data.alarm_count} />
-      <MetricCard label="售罄" value={data.sold_out_count} />
+      <MetricCard label="商品数" value={data.total} tone="neutral" />
+      <MetricCard label="库存预警" value={data.alarm_count} tone="warning" />
+      <MetricCard label="售罄" value={data.sold_out_count} tone="danger" />
     </div>
   );
 }

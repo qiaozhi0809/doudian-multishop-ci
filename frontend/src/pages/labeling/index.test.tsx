@@ -128,7 +128,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("打单台", () => {
+describe("打单发货", () => {
   it("还没有店铺时引导去店铺页", async () => {
     mockFetch({ ...printRoutes(), "GET /api/shops": jsonResponse([]) });
     renderPage();
@@ -162,11 +162,11 @@ describe("打单台", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(await screen.findByLabelText("选择订单 69000001"));
-    await user.click(screen.getByRole("button", { name: "打面单" }));
+    await user.click(screen.getByRole("button", { name: "打单" }));
 
-    expect(await screen.findByText("预览：打面单")).toBeInTheDocument();
+    expect(await screen.findByText("预览：打单")).toBeInTheDocument();
     expect(screen.getByText(/中通快递/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /按住确认打面单/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /按住确认打单/ })).toBeInTheDocument();
     const call = fetchMock.mock.calls.find(([u]) => String(u) === "/api/labels/preview");
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({ order_ids: [1] });
   });
@@ -188,7 +188,7 @@ describe("打单台", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(await screen.findByLabelText("选择订单 69000001"));
-    await user.click(screen.getByRole("button", { name: "打面单" }));
+    await user.click(screen.getByRole("button", { name: "打单" }));
     expect(await screen.findByText(/1 单会被跳过/)).toBeInTheDocument();
     expect(screen.getByText(/69000002：缺少合单 ID/)).toBeInTheDocument();
     expect(screen.getByText(/没有默认发货地址/)).toBeInTheDocument();
@@ -204,9 +204,9 @@ describe("打单台", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(await screen.findByLabelText("选择订单 69000001"));
-    await user.click(screen.getByRole("button", { name: "打面单" }));
+    await user.click(screen.getByRole("button", { name: "打单" }));
     expect(await screen.findByText(/演练模式：本次只记录请求/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /按住确认打面单（演练）/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /按住确认打单（演练）/ })).toBeEnabled();
   });
 
   it("阶段切换写入 URL 并请求对应阶段", async () => {
@@ -217,7 +217,7 @@ describe("打单台", () => {
     });
     renderPage();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "已取号" }));
+    await user.click(await screen.findByRole("button", { name: "待发货" }));
     await waitFor(() =>
       expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain(
         "/api/labels/pool?stage=labeled&page=1&page_size=50",
@@ -225,7 +225,7 @@ describe("打单台", () => {
     );
   });
 
-  it("已取号阶段：勾选后按面单提交打印任务", async () => {
+  it("待发货阶段：勾选后按面单提交打印任务", async () => {
     const fetchMock = mockFetch({
       ...printRoutes(),
       "GET /api/shops": jsonResponse(shops),
@@ -271,5 +271,106 @@ describe("打单台", () => {
     renderPage("/labeling?stage=labeled");
     expect(await screen.findByText("打印中")).toBeInTheDocument();
     expect(await screen.findByText("打印中：剩余 1 张面单")).toBeInTheDocument();
+  });
+
+  describe("待发货阶段：发货（原发货台）", () => {
+    const shipCheck = (over: Record<string, unknown> = {}) => ({
+      shops: [
+        {
+          shop_id: 1,
+          shop_name: "店铺甲",
+          order_nos: ["69000001"],
+          total: 1,
+          double_check_num: 0,
+          double_check_detail: [],
+          without_aftersale: [],
+          place_holder: null,
+        },
+      ],
+      blocked: [],
+      shop_errors: [],
+      total_orders: 1,
+      double_check_total: 0,
+      dry_run: false,
+      ...over,
+    });
+    const shipRoutes = (check: unknown) => ({
+      ...printRoutes(),
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/labels/pool": page([labeledRow(1)]),
+      "GET /api/print/waybills": jsonResponse({ items: [printRow(10, null)] }),
+      "POST /api/shipping/check": jsonResponse(check),
+    });
+    const openCheck = async () => {
+      renderPage("/labeling?stage=labeled");
+      const user = userEvent.setup();
+      await user.click(await screen.findByLabelText("选择订单 69000001"));
+      await user.click(screen.getByRole("button", { name: "发货" }));
+    };
+
+    it("待打单阶段不显示发货，待发货阶段不显示打单", async () => {
+      mockFetch(shipRoutes(shipCheck()));
+      renderPage("/labeling?stage=labeled");
+      expect(await screen.findByRole("button", { name: "发货" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "打单" })).not.toBeInTheDocument();
+    });
+
+    it("勾选后发货：先做发货前检查，展示结果与按住确认按钮", async () => {
+      const fetchMock = mockFetch(shipRoutes(shipCheck()));
+      await openCheck();
+      expect(await screen.findByRole("button", { name: /按住确认发货/ })).toBeEnabled();
+      expect(screen.getByText(/通过检查 1 单/)).toBeInTheDocument();
+      const call = fetchMock.mock.calls.find(([u]) => String(u) === "/api/shipping/check");
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({ order_ids: [1] });
+    });
+
+    it("二次确认项在确认前展示，按钮文案标明已核对", async () => {
+      mockFetch(
+        shipRoutes(
+          shipCheck({
+            double_check_total: 1,
+            shops: [
+              {
+                shop_id: 1,
+                shop_name: "店铺甲",
+                order_nos: ["69000001"],
+                total: 1,
+                double_check_num: 1,
+                double_check_detail: [{ title: "请确认发货信息", message: "买家收货地址异常" }],
+                without_aftersale: [],
+                place_holder: null,
+              },
+            ],
+          }),
+        ),
+      );
+      await openCheck();
+      expect(await screen.findByText(/请确认发货信息：买家收货地址异常/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /按住确认发货（已核对二次确认项）/ })).toBeInTheDocument();
+    });
+
+    it("不可发货订单与整店错误都列在检查结果里，不能确认", async () => {
+      mockFetch(
+        shipRoutes(
+          shipCheck({
+            total_orders: 0,
+            shops: [],
+            blocked: [{ order_id: 2, order_no: "69000002", shop_name: "店铺甲", reason: "没有有效面单" }],
+            shop_errors: [{ shop_id: 1, shop_name: "店铺甲", reason: "没有默认发货地址" }],
+          }),
+        ),
+      );
+      await openCheck();
+      expect(await screen.findByText(/没有有效面单/)).toBeInTheDocument();
+      expect(screen.getByText(/没有默认发货地址/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /按住确认发货/ })).toBeDisabled();
+    });
+
+    it("演练模式：确认按钮标注（演练）且仍可提交", async () => {
+      mockFetch(shipRoutes(shipCheck({ dry_run: true })));
+      await openCheck();
+      expect(await screen.findByText(/演练模式：本次只记录请求/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /按住确认发货（演练）/ })).toBeEnabled();
+    });
   });
 });

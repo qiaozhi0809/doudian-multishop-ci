@@ -3,6 +3,7 @@
 .card > :nth-child(2) { flex: none; font-size: 20px; }
 .top { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .top span { color: var(--text-secondary); font-size: var(--text-sm); }
+.top .name { display: inline-flex; min-width: 0; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top small { display: inline-flex; flex: 0 0 auto; border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 3px 8px; color: var(--text-secondary); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 .card p { display: none; }
 /* Text swaps: the outgoing copy is popped out of flow so the wrapper never holds both widths. */

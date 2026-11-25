@@ -18,6 +18,8 @@
   --field-label-gap: 8px;
   --shadow-resting: 0 0 0 1px oklch(0% 0 0 / 0.035), 0 1px 2px oklch(0% 0 0 / 0.03), 0 8px 24px oklch(0% 0 0 / 0.04);
   --shadow-raised: 0 0 0 1px oklch(0% 0 0 / 0.04), 0 2px 6px oklch(0% 0 0 / 0.04), 0 16px 40px oklch(0% 0 0 / 0.06);
+  /* 动效调快（桌面工具档）：Arc 默认的弹簧过渡 580ms，下拉箭头、展开收起都显得拖 */
+  --duration-spring: 240ms;
   --scrollbar-thumb: oklch(80% 0 0 / 0.55);
   --scrollbar-thumb-hover: oklch(70% 0 0 / 0.8);
 }
@@ -66,3 +68,17 @@ h3 {
 .field-optional { margin-left: 6px; color: var(--text-muted); font-size: var(--text-xs); font-weight: 400; }
 /* 并排字段的一行：顶边对齐 */
 .field-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+
+/* 指标卡名称前的小圆点：颜色按含义（蓝 = 要处理的量、黄 = 快到期、红 = 已超时 / 异常、紫 = 售后、绿 = 正常），
+   黄和红的数为 0 时变灰（data-quiet），只有真出问题才亮，免得天天亮着没人看 */
+.kpi-dot { position: relative; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.kpi-dot[data-tone="info"] { background: var(--info); }
+.kpi-dot[data-tone="warning"] { background: var(--warning); }
+.kpi-dot[data-tone="danger"] { background: var(--danger); }
+.kpi-dot[data-tone="success"] { background: var(--success); }
+.kpi-dot[data-tone="violet"] { background: var(--tone-violet); }
+.kpi-dot[data-quiet] { background: var(--border-strong); }
+/* 红点有数时向外扩散一圈（已经出问题的才动；黄点、灰点、其他颜色都不动） */
+.kpi-dot[data-tone="danger"]:not([data-quiet])::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: kpi-ring 1.4s ease-out infinite; }
+@keyframes kpi-ring { from { transform: scale(1); opacity: .55; } to { transform: scale(2.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .kpi-dot::after { animation: none; } }

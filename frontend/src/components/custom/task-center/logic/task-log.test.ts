@@ -20,7 +20,7 @@ describe("任务状态机", () => {
     expect(state.tasks).toHaveLength(1);
     expect(state.tasks[0]).toMatchObject({
       id: "label:p1",
-      title: "取号（打面单）",
+      title: "打单",
       status: "running",
       counts: { ok: 1, failed: 1, waiting: 1, skipped: 0 },
     });
@@ -58,12 +58,12 @@ describe("任务状态机", () => {
     });
   });
 
-  it("三种取号模式各有标题，未知模式回落到「打单」", () => {
+  it("三种打单模式各有标题，未知模式回落到「打单」", () => {
     const titles = ["obtain", "fetch_and_ship", "void", "other"].map((mode, index) => {
       const state = run([{ type: "label_progress", previewId: `p${index}`, mode, orderId: 1, result: "success" }]);
       return state.tasks[0].title;
     });
-    expect(titles).toEqual(["取号（打面单）", "取号并发货", "作废面单", "打单"]);
+    expect(titles).toEqual(["打单", "打单并发货", "作废面单", "打单"]);
   });
 
   it("没有订单号的事件不建任务", () => {

@@ -14,19 +14,41 @@
   font-size: var(--text-xs);
 }
 
-/* 10 张指标卡：宽屏 5 列 × 2 行，窄屏 2 列 × 5 行，不留单独一张落在最后一行 */
-.kpiGrid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+/* 指标卡按工作流分三组：发货 / 售后与库存 / 店铺与资金，每组一行、卡片平分整行 */
+.kpiGroups {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
 }
 
+.kpiGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.kpiGroupTitle {
+  padding-left: 4px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.kpiGrid[data-count="4"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* 窄屏：4 张的那组排成 2 × 2，不让最后一张单独掉到下一行 */
 @media (max-width: 1279px) {
-  .kpiGrid {
+  .kpiGrid[data-count="4"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
 .sectionTitle {
   margin: 0;
   color: var(--foreground);
@@ -133,6 +155,12 @@
 }
 
 .statLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }

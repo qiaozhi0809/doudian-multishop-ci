@@ -32,9 +32,9 @@ const row = (over: Partial<WaybillPrintLike> = {}): WaybillPrintLike => ({
 });
 
 describe("printGate", () => {
-  it("只允许对已取号的面单打印", () => {
+  it("只允许对已打单（待发货）的面单打印", () => {
     expect(printGate({ stage: "pending", selectedCount: 1, componentAvailable: true, busy: false }))
-      .toEqual({ disabled: true, reason: "打印只针对已取号的面单" });
+      .toEqual({ disabled: true, reason: "先打单，再到「待发货」里打印" });
   });
 
   it("组件未启动时禁用并提示原因", () => {

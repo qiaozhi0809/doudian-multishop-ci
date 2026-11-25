@@ -47,6 +47,12 @@
 }
 
 .statLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }

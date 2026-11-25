@@ -6,7 +6,7 @@ import type { TaskItem } from "../logic/task-log";
 const makeTask = (over: Partial<TaskItem> = {}): TaskItem => ({
   id: "label:1",
   kind: "label",
-  title: "取号（打面单）",
+  title: "打单",
   status: "running",
   counts: { ok: 2, failed: 1, waiting: 0, skipped: 0 },
   seen: [],
@@ -20,7 +20,7 @@ describe("任务中心", () => {
     render(<TaskCenter tasks={[makeTask()]} runningCount={1} onDismiss={noop} onClearFinished={noop} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "任务中心，1 个进行中" }));
-    expect(await screen.findByText("取号（打面单）")).toBeInTheDocument();
+    expect(await screen.findByText("打单")).toBeInTheDocument();
     expect(screen.getByText("进行中")).toBeInTheDocument();
     expect(screen.getByText("成功 2，失败 1")).toBeInTheDocument();
   });
@@ -33,7 +33,7 @@ describe("任务中心", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "任务中心" }));
     expect(await screen.findByText("完成")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "清除取号（打面单）任务" }));
+    await user.click(screen.getByRole("button", { name: "清除打单任务" }));
     expect(onDismiss).toHaveBeenCalledWith("label:2");
     await user.click(screen.getByRole("button", { name: "清除已完成" }));
     expect(onClearFinished).toHaveBeenCalled();

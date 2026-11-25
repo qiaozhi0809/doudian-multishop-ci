@@ -52,7 +52,7 @@ export function CountTabs({ state, data, shopName, onRetry }: CountTabsProps) {
         <>
           <div className={styles.countGrid}>
             {COUNT_ITEMS.map((item) => (
-              <MetricCard key={item.key} label={item.label} value={data.totals[item.key]} />
+              <MetricCard key={item.key} label={item.label} value={data.totals[item.key]} tone={item.tone} />
             ))}
           </div>
           <div className={styles.countMeta}>

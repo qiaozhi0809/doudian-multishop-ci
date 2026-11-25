@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/arc/button/button";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 
-/** 还没有任何店铺：引导去店铺页添加，而不是显示空表格（订单 / 打单台 / 聚合页共用）。 */
+/** 还没有任何店铺：引导去店铺页添加，而不是显示空表格（订单 / 打单发货 / 聚合页共用）。 */
 export function EmptyNoShops() {
   const navigate = useNavigate();
   return (

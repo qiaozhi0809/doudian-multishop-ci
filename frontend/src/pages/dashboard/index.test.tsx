@@ -132,4 +132,14 @@ describe("仪表盘", () => {
     expect(linkOf("库存预警")).toHaveAttribute("href", "/stock?view=alarm&shops=1");
     expect(linkOf("在售商品")).toHaveAttribute("href", "/catalog?shops=1");
   });
+
+  it("指标卡按发货 / 售后与库存 / 店铺与资金分组，组内从左到右越来越急", async () => {
+    mockFetch(routes());
+    renderPage();
+    const group = async (name: string) =>
+      (await within(await screen.findByRole("group", { name })).findAllByRole("link")).map((a) => a.textContent ?? "");
+    expect((await group("发货")).map((t) => t.replace(/[\d,.\s/¥]+$/, ""))).toEqual(["待发货", "24 小时内须发", "超时未发"]);
+    expect((await group("售后与库存")).map((t) => t.replace(/[\d,.\s/¥]+$/, ""))).toEqual(["售后待办", "库存预警", "售罄"]);
+    expect(await group("店铺与资金")).toHaveLength(4);
+  });
 });

@@ -1,6 +1,6 @@
 import { Alert } from "@/components/arc/alert/alert";
 import { failedRows, progressTitle, type ProgressState } from "../logic/ship-progress";
-import styles from "../shipping-page.module.css";
+import styles from "../labeling-page.module.css";
 
 /** 发货进度：按 SSE 逐单汇总；失败项就地列出原因。 */
 export function ShipProgress({ progress }: { progress: ProgressState }) {

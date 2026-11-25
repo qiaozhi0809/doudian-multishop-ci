@@ -70,9 +70,6 @@ export const queryKeys = {
   printWaybillsRoot: () => ["printWaybills"] as const,
   printWaybills: (waybillIds: number[]) => ["printWaybills", waybillIds] as const,
   // ---- M4 发货 / 对账 ----
-  shippingPoolRoot: () => ["shippingPool"] as const,
-  shippingPool: (shopIds: number[], page: number) =>
-    ["shippingPool", shopIds, { page }] as const,
   reconcileRoot: () => ["reconcile"] as const,
   reconcileFindings: (shopIds: number[], filters: ReconcileFilters) =>
     ["reconcile", "findings", shopIds, filters] as const,

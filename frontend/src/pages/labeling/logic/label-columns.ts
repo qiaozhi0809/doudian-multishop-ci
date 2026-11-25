@@ -15,8 +15,8 @@ export function rowStatusBadge(status: string) {
 export const PAGE_SIZE = 50;
 
 export const STAGE_OPTIONS: { value: Stage; label: string }[] = [
-  { value: "pending", label: "待取号" },
-  { value: "labeled", label: "已取号" },
+  { value: "pending", label: "待打单" },
+  { value: "labeled", label: "待发货" },
 ];
 
 export const isStage = (value: string | null): value is Stage =>
