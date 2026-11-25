@@ -5,7 +5,7 @@
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -306,7 +306,10 @@ class LabelPreviewService:
         )
         if not templates_for:
             return None, f"快递 {courier} 没有面单模板"
-        couriers = {c["courier_code"]: c["name"] for c in base_data_store.list_couriers(conn, shop["id"])}
+        couriers = {
+            c["courier_code"]: c["name"]
+            for c in base_data_store.list_couriers(conn, shop["id"])
+        }
         return {
             "courier_code": courier, "courier_name": couriers.get(courier),
             "template_code": templates_for[0]["template_code"],

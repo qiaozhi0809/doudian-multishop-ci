@@ -30,7 +30,10 @@ def test_select_account_none_when_unusable():
 
 
 def test_select_account_prefers_default():
-    accounts = [_account("zt", ebill="a", balance=100), _account("zt", ebill="b", balance=1, is_default=True)]
+    accounts = [
+        _account("zt", ebill="a", balance=100),
+        _account("zt", ebill="b", balance=1, is_default=True),
+    ]
     assert select_account(accounts, "zt")["ebill_id"] == "b"
 
 
@@ -40,7 +43,10 @@ def test_select_account_max_balance_without_default():
 
 
 def test_select_account_monthly_ranked_highest():
-    accounts = [_account("zt", ebill="prepaid", balance=100), _account("zt", ebill="monthly", balance=-1)]
+    accounts = [
+        _account("zt", ebill="prepaid", balance=100),
+        _account("zt", ebill="monthly", balance=-1),
+    ]
     assert select_account(accounts, "zt")["ebill_id"] == "monthly"
 
 
@@ -67,12 +73,14 @@ def test_pick_courier_prefers_valid_preference():
 # ---- 订单可否取号 ----
 
 def test_order_ready_no_blockers():
-    assert order_blockers(STOCK_UP, "c1", [_item()], False, LocalOrderStatus.PENDING_LABEL.value) == []
+    pending = LocalOrderStatus.PENDING_LABEL.value
+    assert order_blockers(STOCK_UP, "c1", [_item()], False, pending) == []
 
 
 def test_blockers_platform_not_stock_up():
+    pending = LocalOrderStatus.PENDING_LABEL.value
     assert any("待发货" in r for r in
-               order_blockers(SHIPPED, "c1", [_item()], False, LocalOrderStatus.PENDING_LABEL.value))
+               order_blockers(SHIPPED, "c1", [_item()], False, pending))
 
 
 def test_blockers_local_status_not_labelable():
@@ -94,8 +102,9 @@ def test_blockers_missing_item_fields():
 
 
 def test_blockers_active_waybill():
+    pending = LocalOrderStatus.PENDING_LABEL.value
     assert any("面单" in r for r in
-               order_blockers(STOCK_UP, "c1", [_item()], True, LocalOrderStatus.PENDING_LABEL.value))
+               order_blockers(STOCK_UP, "c1", [_item()], True, pending))
 
 
 # ---- 解密范围（flows 7.3 约束 1） ----

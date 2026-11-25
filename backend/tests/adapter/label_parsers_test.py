@@ -138,7 +138,8 @@ def test_parse_logistics_tracking_from_logistics():
 
 
 def test_parse_logistics_tracking_none_when_absent():
-    assert parse_logistics_tracking({"code": 0, "data": {"logistics": [], "logistics_list": []}}) is None
+    empty = {"code": 0, "data": {"logistics": [], "logistics_list": []}}
+    assert parse_logistics_tracking(empty) is None
 
 
 # ---- 请求体构造（A.2 字段） ----
@@ -149,9 +150,11 @@ ADDRESS = {
     "town_id": 150522, "town_name": "科尔沁左翼后旗", "street_id": 150522100,
     "street_name": "甘旗卡镇", "detail": "<详细地址>", "region": "内蒙古自治区通辽市",
 }
-ORDER_LIST = [{"combine_id": "c1", "is_cancel_combine": False, "shop_order_id": "6900000000000000001",
-               "sku_orders": [{"sku_order_id": "so1", "sku_id": "s1", "product_id": "p1",
-                               "product_cnt": 1}], "is_sub_bundle_item": True}]
+ORDER_LIST = [{
+    "combine_id": "c1", "is_cancel_combine": False, "shop_order_id": "6900000000000000001",
+    "sku_orders": [{"sku_order_id": "so1", "sku_id": "s1", "product_id": "p1",
+                    "product_cnt": 1}], "is_sub_bundle_item": True,
+}]
 
 
 def test_obtain_body_shape():

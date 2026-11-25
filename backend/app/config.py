@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     dev_mode: bool = False
     dry_run: bool = False
     max_concurrent_shops: int = 3
+    printer_name: str = ""  # 取号请求的 printer 字段；M3 接打印组件前默认不传
     frontend_dist: Path = REPO_ROOT / "frontend" / "dist"
 
     @property

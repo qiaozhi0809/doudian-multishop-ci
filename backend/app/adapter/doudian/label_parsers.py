@@ -1,4 +1,4 @@
-"""取号 / 一体 / 作废 / 解密 / 物流查询的响应解析（字段依据 docs/api/write.md A.2 与 read.md A.1）。"""
+"""取号 / 一体 / 作废 / 解密 / 物流查询的响应解析（依据 write.md A.2 与 read.md A.1）。"""
 
 from typing import Any
 
