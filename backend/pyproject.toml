@@ -40,3 +40,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# 夹具从 proxy_pool_support 导入后作为测试参数使用，pyflakes 会误报重定义
+"tests/service/proxy_pool*_test.py" = ["F811"]
