@@ -31,142 +31,24 @@
 
 ---
 
-### Task 1: 指纹种子管理
+### Task 1: 指纹种子管理 ✅ 已完成
 
-**Files:**
-- Create: `backend/app/shared/cloak.py`
-- Test: `backend/tests/shared/cloak_test.py`
+**提交**：`9494e7f` → `0f5db3b` → `10a41c2`（含 2 轮修复：跨店唯一性、复制 profile 后重建）
 
-**Interfaces:**
-- Produces:
-  - `SEED_MIN: int = 10_000`
-  - `SEED_MAX: int = 99_999`
-  - `get_or_create_seed(profile_dir: Path) -> int`
-  - `cloak_launch_args(seed: int) -> list[str]`
-
-- [ ] **Step 1: 写失败测试**
-
-创建 `backend/tests/shared/cloak_test.py`：
+**产出接口**（`backend/app/shared/cloak.py`，后续任务直接使用）：
 
 ```python
-"""CloakBrowser 指纹种子：每店固定、越界重建、不可写时抛错。"""
-
-import pytest
-
-from app.shared.cloak import SEED_MAX, SEED_MIN, cloak_launch_args, get_or_create_seed
-
-
-def test_creates_seed_once_and_reuses_it(tmp_path):
-    first = get_or_create_seed(tmp_path)
-    second = get_or_create_seed(tmp_path)
-
-    assert first == second
-    assert SEED_MIN <= first <= SEED_MAX
-
-
-def test_rebuilds_out_of_range_seed(tmp_path):
-    (tmp_path / ".cloak-seed").write_text("5", encoding="ascii")
-
-    seed = get_or_create_seed(tmp_path)
-
-    assert SEED_MIN <= seed <= SEED_MAX
-    assert (tmp_path / ".cloak-seed").read_text(encoding="ascii").strip() == str(seed)
-
-
-def test_rebuilds_garbage_seed(tmp_path):
-    (tmp_path / ".cloak-seed").write_text("not-a-number", encoding="ascii")
-
-    seed = get_or_create_seed(tmp_path)
-
-    assert SEED_MIN <= seed <= SEED_MAX
-
-
-def test_two_profiles_get_different_seeds(tmp_path):
-    a = get_or_create_seed(tmp_path / "1")
-    b = get_or_create_seed(tmp_path / "2")
-
-    assert a != b
-
-
-def test_launch_args_contains_fixed_fingerprint():
-    assert cloak_launch_args(12345) == [
-        "--fingerprint=12345",
-        "--fingerprint-platform=windows",
-    ]
-
-
-def test_raises_when_profile_not_writable(tmp_path):
-    ro = tmp_path / "ro"
-    ro.mkdir()
-    ro.chmod(0o500)
-
-    try:
-        with pytest.raises(OSError):
-            get_or_create_seed(ro)
-    finally:
-        ro.chmod(0o700)
-```
-
-- [ ] **Step 2: 跑测试确认失败**
-
-Run: `cd backend && .venv/Scripts/python.exe -m pytest tests/shared/cloak_test.py -q`
-Expected: `ModuleNotFoundError: No module named 'app.shared.cloak'`
-
-- [ ] **Step 3: 写最小实现**
-
-创建 `backend/app/shared/cloak.py`：
-
-```python
-"""CloakBrowser 指纹种子：每店一个固定值，首次生成后永久复用。
-
-种子决定 CloakBrowser 生成的整套指纹（硬件并发、内存、屏幕、窗口、GPU 等）。
-固定种子 = 该店铺永远呈现同一台设备，与「每店固定出口 IP」是同一个思路。
-"""
-
-import random
-from pathlib import Path
-
 SEED_FILE = ".cloak-seed"
-SEED_MIN = 10_000
-SEED_MAX = 99_999
+SEED_MIN, SEED_MAX = 10_000, 99_999
 
+def get_or_create_seed(profile_dir: Path) -> int: ...
+# 幂等复用；越界/损坏/与同级重复时重建；profile 目录不可写抛 OSError
 
-def get_or_create_seed(profile_dir: Path) -> int:
-    """读取该 profile 的固定指纹种子；缺失或非法时生成并落盘。
-
-    profile 目录不可写时抛 OSError——调用方应据此报错，而不是静默换随机值，
-    否则同一店铺的身份会在每次启动时变化。
-    """
-    profile_dir.mkdir(parents=True, exist_ok=True)
-    path = profile_dir / SEED_FILE
-    if path.is_file():
-        text = path.read_text(encoding="ascii", errors="ignore").strip()
-        if text.isdigit() and SEED_MIN <= int(text) <= SEED_MAX:
-            return int(text)
-
-    seed = random.randint(SEED_MIN, SEED_MAX)
-    path.write_text(str(seed), encoding="ascii")
-    return seed
-
-
-def cloak_launch_args(seed: int) -> list[str]:
-    """CloakBrowser 启动参数：固定指纹 + 声称 Windows 平台。"""
-    return [f"--fingerprint={seed}", "--fingerprint-platform=windows"]
+def cloak_launch_args(seed: int) -> list[str]: ...
+# 返回 ["--fingerprint=N", "--fingerprint-platform=windows"]
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
-
-Run: `cd backend && .venv/Scripts/python.exe -m pytest tests/shared/cloak_test.py -q`
-Expected: 6 passed
-
-若 `test_raises_when_profile_not_writable` 在 Windows 上因权限模型不同而未抛错，改为对该用例加 `@pytest.mark.skipif(sys.platform == "win32", reason="Windows 目录只读语义不同于 POSIX")`，并在实现里保留 `OSError` 传播。
-
-- [ ] **Step 5: 提交**
-
-```bash
-cd backend && git add app/shared/cloak.py tests/shared/cloak_test.py
-git commit -m "feat(cloak): 每店固定指纹种子管理"
-```
+**测试**：`backend/tests/shared/cloak_test.py`（7 passed, 1 skipped — Windows 只读目录用例按 POSIX 语义跳过）
 
 ---
 
