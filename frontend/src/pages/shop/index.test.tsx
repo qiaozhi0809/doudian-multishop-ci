@@ -71,13 +71,13 @@ describe("店铺与设置页", () => {
     expect(b.getByText("未就绪")).toBeInTheDocument();
   });
 
-  it("只有店铺名与到期时间可排序，操作、状态等列没有排序按钮", async () => {
+  it("只有店铺名与到期可排序，操作、状态等列没有排序按钮", async () => {
     mockPageFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
     renderPage();
     await screen.findByRole("table");
     const sortable = (name: string) => within(screen.getByRole("columnheader", { name })).queryByRole("button");
     expect(sortable("店铺")).not.toBeNull();
-    expect(sortable("到期时间")).not.toBeNull();
+    expect(sortable("到期")).not.toBeNull();
     for (const name of ["状态", "出口", "取号就绪", "操作"]) expect(sortable(name)).toBeNull();
   });
 
@@ -171,7 +171,8 @@ describe("店铺与设置页", () => {
       });
       renderPage();
       const user = userEvent.setup();
-      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "设置出口" }));
+      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
+      await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
       const dialog = await screen.findByRole("dialog");
       await user.type(within(dialog).getByLabelText("代理商格式"), "1.2.3.4|8000|user|pass|2026-12-31");
       await user.click(within(dialog).getByRole("button", { name: "保存出口" }));
@@ -184,7 +185,8 @@ describe("店铺与设置页", () => {
       const fetchMock = mockPageFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
       renderPage();
       const user = userEvent.setup();
-      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "设置出口" }));
+      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
+      await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
       const dialog = await screen.findByRole("dialog");
       await user.type(within(dialog).getByLabelText("代理商格式"), "1.2.3.4|8000");
       await user.click(within(dialog).getByRole("button", { name: "保存出口" }));
@@ -199,7 +201,8 @@ describe("店铺与设置页", () => {
       });
       renderPage();
       const user = userEvent.setup();
-      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "设置出口" }));
+      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
+      await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
       const dialog = await screen.findByRole("dialog");
       expect(within(dialog).getByText("该店已登录，修改出口后需要重新扫码")).toBeInTheDocument();
       await user.click(within(dialog).getByRole("button", { name: "直连" }));
@@ -214,7 +217,8 @@ describe("店铺与设置页", () => {
       });
       renderPage();
       const user = userEvent.setup();
-      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "设置出口" }));
+      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
+      await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
       await user.click(await screen.findByRole("button", { name: "确认新 IP" }));
       await waitFor(() =>
         expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain("/api/shops/1/egress/check?accept_change=true"),

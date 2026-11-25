@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
+import { NoticeProvider } from "@/components/custom/notice/notice";
 import { TaskCenter } from "@/components/custom/task-center";
 import { useEvents } from "@/lib/use-events";
 import { useShops } from "@/lib/use-shops";
@@ -32,6 +33,7 @@ export function AppShell() {
 
   const healthState = shopsQuery.isError ? "error" : shopsQuery.isLoading ? "loading" : "ready";
   return (
+    <NoticeProvider>
     <div className={styles.shell}>
       <SideNav
         shopIds={shopIds}
@@ -66,5 +68,6 @@ export function AppShell() {
         succeeded={password.succeeded}
       />
     </div>
+    </NoticeProvider>
   );
 }
