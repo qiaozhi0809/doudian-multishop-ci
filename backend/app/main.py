@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 
+import structlog
 from argon2 import PasswordHasher
 from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
@@ -48,9 +49,10 @@ from app.service.shop_runner import ClientFactory
 from app.shared.version import APP_VERSION
 from app.store import task_store
 from app.store.db import DB_FILE_NAME, make_engine
-from app.store.migrate import upgrade_to_head
+from app.store.migrate import backup_before_upgrade, upgrade_to_head
 from app.wiring import Overrides, build_services
 
+log = structlog.get_logger()
 ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -71,6 +73,10 @@ def create_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.data_dir.mkdir(parents=True, exist_ok=True)
         db_path = settings.data_dir / DB_FILE_NAME
+        backup = backup_before_upgrade(
+            db_path, settings.backups_dir, (overrides.clock or _utc_now)())
+        if backup is not None:
+            log.info("db.pre_upgrade_backup", file=backup.name)
         upgrade_to_head(db_path)
         engine = make_engine(db_path)
         now_iso = (overrides.clock or _utc_now)().strftime(ISO_FMT)
