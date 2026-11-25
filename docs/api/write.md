@@ -29,6 +29,7 @@
 | 售后延长收货 | POST | 未抓（按钮 code `exchange_logistics_extend`） | ⏳ 待定 |
 | 商品创建提交 | POST | 未抓（表单提交，需建测试商品） | ⏳ 待定 |
 | 面单作废 | POST | `/api/order/batchCancelTrackingNos` | ✅ **已验证**（见 A.2.6） |
+| 补打面单数据 | POST | `/shopuser/olSend/batchGetPrintInfos` | 🔶 请求体已确认，响应结构未实测（见 A.2.10） |
 | 库存修改 | POST | 未抓 | ⏳ 待定 |
 
 ### A.2.1 批量备注（已验证）
@@ -477,3 +478,24 @@ Content-Type: application/json
    作废成功后 `waybills.status=void`、订单回 `pending_label`，`seq` 递增使重新取号的幂等键不撞旧键。
 6. **没有真实的自发单样本**（API-04）：M2 的测试用按本节字段结构构造的脱敏样本
    （`backend/tests/fixtures/doudian/write/`），接口层在 ReplayTransport 上验证；真实店铺验证待验证线。
+
+### A.2.10 补打面单打印数据（请求体已确认，响应结构未实测）
+
+用途：取号超时后经 `getOrderLogistics` 恢复的面单**只有运单号**，没有 `print_data` / `sign`，
+无法交给打印组件渲染；用本接口按运单号补取打印数据（[flows.md](../design/flows.md) 第 10 节）。
+
+```
+POST /shopuser/olSend/batchGetPrintInfos
+Content-Type: application/json
+
+{"trackInfos": ["<运单号>"], "templateCode": "", "appid": 1, ...公共参数}
+```
+
+- `templateCode` 空串 = 不限模板
+- 与取号响应不同，补打响应含 `OAuth`（组件 `documents.standard.params` 的来源）
+- ⏳ **响应结构未实测**：M3 的解析（`adapter/doudian/print_parsers.py`）按常见包裹形态容错，
+  兼容 snake_case / camelCase（`print_data` / `printData`、`tracking_no` / `trackInfo` 等）；
+  解析为空时上层标记「无打印数据 → 手动补打」，**不猜测成功**
+- M3 实现：打印前按运单号批量取一次，补齐 `templateURL` / `OAuth`；取回 `print_data` 时回写
+  `waybills.print_data` / `sign`（`service/printing.py`），使恢复面单之后可本地打印
+- 接口语义是查询型 POST（只读），`endpoints.py` 中 `write=False`，允许退避重试

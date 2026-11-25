@@ -413,6 +413,21 @@ M3 打印实现必须区分两类面单：
 **多店打印调度**：打印机是本机资源，所有店铺共享同一列表。
 建议做「店铺 × 默认打印机」配置，避免多店同时打单时抢占同一台打印机。
 
+**M3 实现（2026-11-25，P1 直连组件）**：
+
+- `adapter/print/`：`wss://localhost:13999`（跳过自签校验，`Origin: https://fxg.jinritemai.com`）；
+  `getPrinters` 2 秒探测；`print` 后等 `notifyPrintResult`（20 秒超时），回执无法判断成败时**不当作成功**。
+- `service/printing.py`：每次提交每张面单一条 `print_job`；组件失败重试一次，仍失败 → `failed`
+  并提示「到抖店后台手动补打」；成功才把 `waybills.status=printed`、订单 `label_obtained → printed`。
+- **模板 URL 的来源**：`waybills` 只存 `logistics_template_code`（6.2 ⑤），取号响应的 `template_url`
+  未入库。因此打印前按运单号调 `batchGetPrintInfos` 取 `templateURL` / `OAuth`（A.2.10）；
+  接口失败时用本地 `print_data` / `sign` 兜底，`templateURL` 为空，交给组件回执定成败。
+- **恢复面单**（`print_data` 为空）：打印时先经 `batchGetPrintInfos` 补取，取到即回写
+  `waybills.print_data` / `sign`；仍无数据 → `print_job.result_code=no_print_data`，
+  界面标「需手动补打」，**不自动降级到自渲染 PDF**（方案 B 仍需按需解密，7.4）。
+- 组件未启动：`GET /api/print/status` 返回 `available=false`，打单台打印按钮置灰 + 启动引导。
+- 多店并发：同一时刻只允许一个打印批次（后台任务同名），批次内逐张串行，避免抢占打印机。
+
 ### B. 自渲染面单 + 系统打印（仅手动触发）
 
 - 将面单数据渲染为 100×150mm PDF，交 Windows 打印子系统。
