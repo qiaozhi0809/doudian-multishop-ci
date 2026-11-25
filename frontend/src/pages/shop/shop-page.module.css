@@ -17,7 +17,7 @@
   gap: var(--space-2);
 }
 
-/* 宽表格只在自身卡片内横向滚动，首列（店铺名）固定。 */
+/* 宽表格只在自身卡片内横向滚动：首列（店铺名）固定在左，操作列固定在右，窄屏下也总能看到操作按钮。 */
 .tableWrap table {
   min-width: 56rem;
 }
@@ -27,6 +27,14 @@
   left: 0;
   z-index: 2;
   background: var(--surface);
+}
+
+.tableWrap :is(td, th):last-child {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-left: 1px solid var(--border-subtle);
 }
 
 .cellStack {
