@@ -132,6 +132,19 @@ wheels = [
 ]
 
 [[package]]
+name = "cloakbrowser"
+version = "0.3.30"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "playwright" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/35/62/12c3b32e4992c850636a6a0be8e0a990592f230791800168eb4978b00c87/cloakbrowser-0.3.30.tar.gz", hash = "sha256:a8d0ea2d8f12d8667290dfcdbbc68bb140f3ccb36c2c9d2cc3c594d02e29c3d0", size = 5362623, upload-time = "2026-05-21T03:17:49.132Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/91/89/daa636a6c5c6750fb6834a0eaa78081ebe6e07f30303263c52f0a56ba011/cloakbrowser-0.3.30-py3-none-any.whl", hash = "sha256:9c666e2594943538c543b1bbfbc78f090e3771c7331643664004a7e56594af34", size = 74867, upload-time = "2026-05-21T03:17:47.02Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -228,6 +241,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
     { name = "argon2-cffi" },
+    { name = "cloakbrowser" },
     { name = "cryptography" },
     { name = "curl-cffi" },
     { name = "fastapi" },
@@ -253,6 +267,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.13" },
     { name = "argon2-cffi", specifier = ">=23.1" },
+    { name = "cloakbrowser", specifier = "==0.3.30" },
     { name = "cryptography", specifier = ">=43" },
     { name = "curl-cffi", specifier = ">=0.7" },
     { name = "fastapi", specifier = ">=0.115" },
