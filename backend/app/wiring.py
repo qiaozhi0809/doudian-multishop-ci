@@ -15,8 +15,12 @@ from app.service.base_data import BaseDataService
 from app.service.egress import EgressService
 from app.service.egress_probe import FetchIp, make_fetch_ip
 from app.service.events import EventBus
+from app.service.label_pool import LabelPoolService
+from app.service.label_preview import LabelPreviewService
+from app.service.labeling import LabelingService
 from app.service.order_query import OrderQueryService
 from app.service.order_sync import OrderSyncService
+from app.service.receiver import ReceiverService
 from app.service.scheduler import ShopScheduler
 from app.service.session_manager import SessionManager
 from app.service.shop_admin import ShopAdminService
@@ -51,12 +55,23 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
     base_data = BaseDataService(engine, runner, events)
     order_query = OrderQueryService(engine, runner, **clock_kw)
     login_kw = {"scan": ov.scan} if ov.scan else {}
+    tasks = TaskRegistry()
+    label_preview = LabelPreviewService(
+        engine, dry_run=settings.dry_run, **clock_kw)
     return {
         "engine": engine, "events": events, "sessions": sessions, "egress": egress,
-        "runner": runner, "base_data": base_data, "tasks": TaskRegistry(),
+        "runner": runner, "base_data": base_data, "tasks": tasks,
         "order_sync": OrderSyncService(
             engine, runner, sessions, events, on_synced=order_query.invalidate),
         "order_query": order_query,
+        "label_preview": label_preview,
+        "labeling": LabelingService(
+            engine, runner, label_preview, events,
+            printer_name=settings.printer_name, dry_run=settings.dry_run,
+            tasks=tasks, **clock_kw,
+        ),
+        "label_pool": LabelPoolService(engine),
+        "receiver": ReceiverService(engine, runner, **clock_kw),
         "shop_admin": ShopAdminService(engine, events, **clock_kw),
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,

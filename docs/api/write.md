@@ -455,3 +455,24 @@ Content-Type: application/json
 > ⏳ **本地状态待设计（gaps DM-10，阶段二）**：已发货订单改物流后，旧面单如何处理（标 `void` 或新增
 > `replaced` 状态）、新运单如何入 `waybills`、订单状态是否保持 `shipped`，[data-model.md](../design/data-model.md) 6.1 / 6.2 均未覆盖。
 > 不处理的话，每日对账会把它报成 `waybill_mismatch`。
+
+### A.2.9 M2 实现备注（2026-11-25）
+
+实现位置：`adapter/doudian/label_request.py`（请求体）、`label_parsers.py`（响应解析）、
+`service/label_obtain.py` / `label_void.py`（执行）、`service/label_recovery.py`（查回）。
+`endpoints.py` 中 4 个写接口 `write=True`（不自动重试），`query_added_services_and_product_types` 视为查询型 POST（可退避重试）。
+
+1. **取号前不调用 `sendcheck`**：`sendcheck` 在取号前是否必经仍未验证（gaps API-21）。
+   M2 的预检只用本地缓存的基础数据（默认地址 / 模板 / 可用面单账户）与订单字段（`combine_id`、商品行 sku 字段、平台状态），
+   不发额外请求。API-21 有结论后决定是否补这一步。
+2. **`printer` 字段**：取自设置 `DD_PRINTER_NAME`；未配置时不传该字段。字段是否必填未验证——M3 接入打印组件后统一。
+3. **`transport.expType`**：取 `query_added_services_and_product_types` 返回的
+   `logistics_product[0].selectedValue`；缺失时回退 `defaultProductType`（A.2.7 默认值）。
+4. **失败项结构**：`fail_orders_list` 可能不带订单引用（A.2.2 第 8 条样本只有一个 `fail_msg`）。
+   解析按「带 `shop_order_list` 则按单处理，不带则把该消息应用到本批未成功的全部订单」容错；
+   若消息含「不存在可取号商品」则**不转异常**，走 `getOrderLogistics` 查回（API-19），
+   查不到保持 `pending_label` 且任务 `verifying`。
+5. **作废超时**：不重试（重复作废的平台行为未验证），任务置失败并提示到平台核对；
+   作废成功后 `waybills.status=void`、订单回 `pending_label`，`seq` 递增使重新取号的幂等键不撞旧键。
+6. **没有真实的自发单样本**（API-04）：M2 的测试用按本节字段结构构造的脱敏样本
+   （`backend/tests/fixtures/doudian/write/`），接口层在 ReplayTransport 上验证；真实店铺验证待验证线。

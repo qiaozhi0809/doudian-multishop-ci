@@ -9,6 +9,7 @@ from app.api.order_schemas import (
     OrderCountsResponse,
     OrderPage,
     OrderRow,
+    ReceiverOut,
     ShopOrderCounts,
     SyncStarted,
 )
@@ -74,3 +75,12 @@ async def sync_orders(
         except TaskAlreadyRunning:
             running.append(shop_id)
     return SyncStarted(started=started, already_running=running)
+
+
+@router.post("/{order_id}/receiver", response_model=ReceiverOut)
+async def decrypt_receiver(
+    request: Request, order_id: int, admin: str = Depends(require_admin)
+) -> ReceiverOut:
+    """按需解密单个订单收件人；受额度、限速与冷却约束（flows 7.3、DEC-06）。"""
+    view = await request.app.state.receiver.decrypt(order_id, admin)
+    return ReceiverOut(**vars(view))

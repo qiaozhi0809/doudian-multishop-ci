@@ -33,10 +33,11 @@
 | | `GET /api/orders/counts` | 跨店 tab 计数 |
 | | `GET /api/orders/{id}` | 详情（含商品行、面单历史） |
 | | `POST /api/orders/sync` | 立即拉单 |
-| | `POST /api/orders/{id}/receiver` | 按需解密单个订单的收件人，结果只返回给前端、不入库（用户查看时；不在取号链路，DEC-06；受额度与限速约束，见 [flows.md](flows.md) 7.3） |
-| 取号 | `POST /api/labels/preview` · `POST /api/labels/execute` | 两步提交取号（打面单） |
+| | `POST /api/orders/{id}/receiver` | 按需解密单个订单的收件人，结果只返回给前端、不入库（用户查看时；不在取号链路，DEC-06；受额度与限速约束，见 [flows.md](flows.md) 7.3）。冷却中返回 429 `DecryptCooldown` |
+| 取号 | `GET /api/labels/pool?shop_ids=&stage=pending\|labeled&page=&page_size=` | 打单台订单池（本地库）：每单附 `blocked_reason` 与当前有效面单；`pending` = `synced` / `pending_label`，`labeled` = `label_obtained` / `printed` |
+| | `POST /api/labels/preview` · `POST /api/labels/execute` | 两步提交取号（打面单）；预览响应按店列出 `courier_code` / `template_code` / `ebill_id` / `net_code` / `ready_order_ids`，以及逐单 `blocked` 与整店 `shop_errors` |
 | | `POST /api/labels/fetch-and-ship/preview` · `POST /api/labels/fetch-and-ship/execute` | 两步提交「打单并发货」（一体接口） |
-| | `POST /api/labels/void/preview` · `POST /api/labels/void/execute` | 两步提交作废 |
+| | `POST /api/labels/void/preview` · `POST /api/labels/void/execute` | 两步提交作废；预览列出待作废面单 |
 | 打印 | `GET /api/print/status` | 打印组件是否在线 + 打印机列表 |
 | | `POST /api/print/jobs` | 提交打印批次 |
 | | `GET /api/print/jobs/{id}` | 打印回执 |
@@ -62,3 +63,13 @@
 | | `GET /api/health` | 后端、数据库、打印组件、各店会话的总体健康 |
 
 详细 schema 待补（[gaps.md](../gaps.md) ENG-01）。
+
+**M2 已落地的取号接口细节**（2026-11-25）：
+
+- 预览 10 分钟有效、一次性、按管理员归属（`{ error: { type: "InvalidRequest" } }` 422）；
+  预览时 `synced` 且预检通过的订单转 `pending_label`。
+- `execute` 返回 202 并在后台逐店串行执行；演练模式返回 409 `DryRunBlocked`；预览类型与执行路径不一致返回 422。
+- 进度经 SSE 推送：`label_progress {preview_id, mode, shop_id, order_id, order_no, result: success|failed|verifying|skipped, tracking_no?, reason?}`、
+  `label_done {preview_id, mode, ok, failed, verifying, skipped}`。
+- 取号结果不明（超时 / 「不存在可取号商品」）时进入待核实并通过 `getOrderLogistics` 查回；
+  任务状态与进度为 `verifying`，订单保持 `pending_label`。

@@ -62,3 +62,14 @@ class OrderCountsResponse(BaseModel):
 class SyncStarted(BaseModel):
     started: list[int]
     already_running: list[int]
+
+
+class ReceiverOut(BaseModel):
+    """按需解密的收件人：只返回给前端，不入库（flows 7.3）。"""
+
+    name: str | None
+    phone: str | None
+    region: str | None
+    detail: str | None
+    expire_at: str | None
+    cached: bool

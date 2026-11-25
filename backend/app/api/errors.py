@@ -16,7 +16,7 @@ from app.adapter.doudian.errors import (
     SessionExpired,
     TransientError,
 )
-from app.domain.errors import InvalidRequest, NotFound
+from app.domain.errors import DecryptCooldown, DryRunBlocked, InvalidRequest, NotFound
 from app.service.auth import (
     AccountLocked,
     AlreadyInitialized,
@@ -48,6 +48,8 @@ STATUS_BY_ERROR: list[tuple[type[Exception], int]] = [
     (ParseError, 502),
     (NotFound, 404),
     (InvalidRequest, 422),
+    (DryRunBlocked, 409),
+    (DecryptCooldown, 429),
     (TaskAlreadyRunning, 409),
 ]
 

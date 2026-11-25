@@ -135,3 +135,24 @@ def get_by_ids(conn: sa.Connection, order_ids: Sequence[int]) -> list[dict[str, 
         sa.select(orders).where(orders.c.id.in_(order_ids)).order_by(orders.c.id)
     ).mappings()
     return [dict(r) for r in rows]
+
+
+def pool_orders(
+    conn: sa.Connection, shop_ids: Sequence[int] | None, statuses: Sequence[str],
+    page: int, page_size: int,
+) -> tuple[list[dict[str, Any]], int]:
+    """打单台订单池：按本地状态集合过滤，按支付时间从早到晚（先处理老单）。"""
+    if shop_ids is not None and len(shop_ids) == 0:
+        return [], 0
+    cond = [orders.c.status.in_(list(statuses))]
+    if shop_ids is not None:
+        cond.append(orders.c.shop_id.in_(shop_ids))
+    total = conn.execute(
+        sa.select(sa.func.count()).select_from(orders).where(*cond)
+    ).scalar_one()
+    rows = conn.execute(
+        sa.select(orders).where(*cond)
+        .order_by(orders.c.pay_time.asc(), orders.c.id.asc())
+        .limit(page_size).offset((page - 1) * page_size)
+    ).mappings()
+    return [dict(r) for r in rows], int(total)

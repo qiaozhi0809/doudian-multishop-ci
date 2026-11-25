@@ -419,6 +419,45 @@
         "title": "ErrorEnvelope",
         "type": "object"
       },
+      "ExecuteRequest": {
+        "properties": {
+          "preview_id": {
+            "title": "Preview Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preview_id"
+        ],
+        "title": "ExecuteRequest",
+        "type": "object"
+      },
+      "ExecuteStarted": {
+        "properties": {
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "preview_id": {
+            "title": "Preview Id",
+            "type": "string"
+          },
+          "shop_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Shop Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "preview_id",
+          "mode",
+          "shop_ids"
+        ],
+        "title": "ExecuteStarted",
+        "type": "object"
+      },
       "Health": {
         "properties": {
           "status": {
@@ -430,6 +469,234 @@
           "status"
         ],
         "title": "Health",
+        "type": "object"
+      },
+      "LabelOrderRow": {
+        "properties": {
+          "amount_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Cents"
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "combine_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Combine Id"
+          },
+          "exception_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exception Reason"
+          },
+          "exp_ship_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exp Ship Time"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "order_no": {
+            "title": "Order No",
+            "type": "string"
+          },
+          "pay_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pay Time"
+          },
+          "platform_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Status"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "waybill": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WaybillRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "shop_id",
+          "shop_name",
+          "order_no",
+          "status",
+          "platform_status",
+          "combine_id",
+          "exception_reason",
+          "amount_cents",
+          "pay_time",
+          "exp_ship_time",
+          "items",
+          "blocked_reason",
+          "waybill"
+        ],
+        "title": "LabelOrderRow",
+        "type": "object"
+      },
+      "LabelPoolPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LabelOrderRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "LabelPoolPage",
+        "type": "object"
+      },
+      "LabelPreviewResponse": {
+        "properties": {
+          "blocked": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewBlocked"
+            },
+            "title": "Blocked",
+            "type": "array"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "mode": {
+            "enum": [
+              "obtain",
+              "fetch_and_ship"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "preview_id": {
+            "title": "Preview Id",
+            "type": "string"
+          },
+          "shop_errors": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewShopError"
+            },
+            "title": "Shop Errors",
+            "type": "array"
+          },
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewShop"
+            },
+            "title": "Shops",
+            "type": "array"
+          },
+          "total_blocked": {
+            "title": "Total Blocked",
+            "type": "integer"
+          },
+          "total_ready": {
+            "title": "Total Ready",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "preview_id",
+          "mode",
+          "shops",
+          "blocked",
+          "shop_errors",
+          "total_ready",
+          "total_blocked",
+          "dry_run"
+        ],
+        "title": "LabelPreviewResponse",
         "type": "object"
       },
       "OrderCounts": {
@@ -689,6 +956,238 @@
           "items"
         ],
         "title": "OrderRow",
+        "type": "object"
+      },
+      "PreviewBlocked": {
+        "properties": {
+          "order_id": {
+            "title": "Order Id",
+            "type": "integer"
+          },
+          "order_no": {
+            "title": "Order No",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "order_id",
+          "order_no",
+          "reason"
+        ],
+        "title": "PreviewBlocked",
+        "type": "object"
+      },
+      "PreviewRequest": {
+        "properties": {
+          "courier_by_shop": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Courier By Shop"
+          },
+          "order_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Order Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "order_ids"
+        ],
+        "title": "PreviewRequest",
+        "type": "object"
+      },
+      "PreviewShop": {
+        "properties": {
+          "account_balance": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Balance"
+          },
+          "courier_code": {
+            "title": "Courier Code",
+            "type": "string"
+          },
+          "courier_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Courier Name"
+          },
+          "ebill_id": {
+            "title": "Ebill Id",
+            "type": "string"
+          },
+          "net_code": {
+            "title": "Net Code",
+            "type": "string"
+          },
+          "ready_order_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Ready Order Ids",
+            "type": "array"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "template_code": {
+            "title": "Template Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "courier_code",
+          "courier_name",
+          "template_code",
+          "ebill_id",
+          "net_code",
+          "account_balance",
+          "ready_order_ids"
+        ],
+        "title": "PreviewShop",
+        "type": "object"
+      },
+      "PreviewShopError": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "reason"
+        ],
+        "title": "PreviewShopError",
+        "type": "object"
+      },
+      "ReceiverOut": {
+        "description": "按需解密的收件人：只返回给前端，不入库（flows 7.3）。",
+        "properties": {
+          "cached": {
+            "title": "Cached",
+            "type": "boolean"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "expire_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expire At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          }
+        },
+        "required": [
+          "name",
+          "phone",
+          "region",
+          "detail",
+          "expire_at",
+          "cached"
+        ],
+        "title": "ReceiverOut",
         "type": "object"
       },
       "ShopCreate": {
@@ -1069,6 +1568,212 @@
         ],
         "title": "TemplateOut",
         "type": "object"
+      },
+      "VoidPreviewRequest": {
+        "properties": {
+          "order_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Order Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "order_ids"
+        ],
+        "title": "VoidPreviewRequest",
+        "type": "object"
+      },
+      "VoidPreviewResponse": {
+        "properties": {
+          "blocked": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewBlocked"
+            },
+            "title": "Blocked",
+            "type": "array"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "mode": {
+            "const": "void",
+            "title": "Mode",
+            "type": "string"
+          },
+          "preview_id": {
+            "title": "Preview Id",
+            "type": "string"
+          },
+          "shop_errors": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewShopError"
+            },
+            "title": "Shop Errors",
+            "type": "array"
+          },
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/VoidShop"
+            },
+            "title": "Shops",
+            "type": "array"
+          },
+          "total_blocked": {
+            "title": "Total Blocked",
+            "type": "integer"
+          },
+          "total_ready": {
+            "title": "Total Ready",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "preview_id",
+          "mode",
+          "shops",
+          "blocked",
+          "shop_errors",
+          "total_ready",
+          "total_blocked",
+          "dry_run"
+        ],
+        "title": "VoidPreviewResponse",
+        "type": "object"
+      },
+      "VoidShop": {
+        "properties": {
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "waybills": {
+            "items": {
+              "$ref": "#/components/schemas/VoidWaybill"
+            },
+            "title": "Waybills",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "waybills"
+        ],
+        "title": "VoidShop",
+        "type": "object"
+      },
+      "VoidWaybill": {
+        "properties": {
+          "courier_code": {
+            "title": "Courier Code",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "integer"
+          },
+          "order_no": {
+            "title": "Order No",
+            "type": "string"
+          },
+          "waybill_id": {
+            "title": "Waybill Id",
+            "type": "integer"
+          },
+          "waybill_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waybill No"
+          }
+        },
+        "required": [
+          "waybill_id",
+          "order_id",
+          "order_no",
+          "courier_code",
+          "waybill_no"
+        ],
+        "title": "VoidWaybill",
+        "type": "object"
+      },
+      "WaybillRow": {
+        "properties": {
+          "courier_code": {
+            "title": "Courier Code",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "obtained_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Obtained At"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "template_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Code"
+          },
+          "waybill_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waybill No"
+          }
+        },
+        "required": [
+          "id",
+          "courier_code",
+          "waybill_no",
+          "status",
+          "seq",
+          "obtained_at",
+          "template_code"
+        ],
+        "title": "WaybillRow",
+        "type": "object"
       }
     }
   },
@@ -1329,6 +2034,338 @@
         "summary": "Health"
       }
     },
+    "/api/labels/execute": {
+      "post": {
+        "operationId": "execute_obtain_api_labels_execute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Execute Obtain",
+        "tags": [
+          "labels"
+        ]
+      }
+    },
+    "/api/labels/fetch-and-ship/execute": {
+      "post": {
+        "operationId": "execute_fetch_and_ship_api_labels_fetch_and_ship_execute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Execute Fetch And Ship",
+        "tags": [
+          "labels"
+        ]
+      }
+    },
+    "/api/labels/fetch-and-ship/preview": {
+      "post": {
+        "operationId": "preview_fetch_and_ship_api_labels_fetch_and_ship_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Preview Fetch And Ship",
+        "tags": [
+          "labels"
+        ]
+      }
+    },
+    "/api/labels/pool": {
+      "get": {
+        "operationId": "pool_api_labels_pool_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "enum": [
+                "pending",
+                "labeled"
+              ],
+              "title": "Stage",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelPoolPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Pool",
+        "tags": [
+          "labels"
+        ]
+      }
+    },
+    "/api/labels/preview": {
+      "post": {
+        "operationId": "preview_obtain_api_labels_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Preview Obtain",
+        "tags": [
+          "labels"
+        ]
+      }
+    },
+    "/api/labels/void/execute": {
+      "post": {
+        "operationId": "execute_void_api_labels_void_execute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Execute Void",
+        "tags": [
+          "labels"
+        ]
+      }
+    },
+    "/api/labels/void/preview": {
+      "post": {
+        "operationId": "preview_void_api_labels_void_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoidPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Preview Void",
+        "tags": [
+          "labels"
+        ]
+      }
+    },
     "/api/orders": {
       "get": {
         "operationId": "list_orders_api_orders_get",
@@ -1521,6 +2558,49 @@
           }
         },
         "summary": "Sync Orders",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/orders/{order_id}/receiver": {
+      "post": {
+        "description": "按需解密单个订单收件人；受额度、限速与冷却约束（flows 7.3、DEC-06）。",
+        "operationId": "decrypt_receiver_api_orders__order_id__receiver_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiverOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Decrypt Receiver",
         "tags": [
           "orders"
         ]

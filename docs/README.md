@@ -36,6 +36,8 @@
 | [2026-11-25-roadmap.md](superpowers/plans/2026-11-25-roadmap.md) | 总路线图：M1 ~ M7 范围、阻塞缺口、完成标准、分工 |
 | [2026-11-25-m1-backend.md](superpowers/plans/2026-11-25-m1-backend.md) | M1 后端任务级计划（14 个任务，TDD，含管理员登录与每店固定出口） |
 | [2026-11-25-m1-frontend.md](superpowers/plans/2026-11-25-m1-frontend.md) | M1 前端任务级计划（6 个任务，含登录页与路由守卫） |
+| [2026-11-25-m2-backend.md](superpowers/plans/2026-11-25-m2-backend.md) | M2 后端任务级计划（7 个任务：两步提交、取号 / 一体 / 作废、查回恢复、按需解密） |
+| [2026-11-25-m2-frontend.md](superpowers/plans/2026-11-25-m2-frontend.md) | M2 前端任务级计划（3 个任务：打单台） |
 
 ## 其他
 
