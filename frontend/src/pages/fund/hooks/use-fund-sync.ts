@@ -22,12 +22,14 @@ export function useFundSync() {
       const resp = await api.post<SyncResponse>("/api/fund/sync", undefined, {
         shop_ids: shopIds,
       });
+      const notes = resp.shops
+        .map((shop) => shop.note)
+        .filter((note): note is string => Boolean(note));
       const skipped = resp.shops.filter((shop) => !shop.margin_synced && !shop.error).length;
       const base = summarizeSync(resp.shops, (n) => `${n} 家店资金已同步`);
+      const suffix = notes[0] ?? (skipped > 0 ? `${skipped} 家店未同步保证金` : null);
       setMessage(
-        skipped > 0 && base.tone === "success"
-          ? { tone: "warning", text: `${base.text}；${skipped} 家店未同步保证金` }
-          : base,
+        suffix && base.tone === "success" ? { tone: "warning", text: `${base.text}；${suffix}` } : base,
       );
       await client.invalidateQueries({ queryKey: queryKeys.fundRoot() });
     } catch (e) {
