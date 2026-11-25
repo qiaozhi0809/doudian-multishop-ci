@@ -270,7 +270,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 |---|---|---|
 | **M0 技术验证** | 拉单、取号、发货、作废、取号发货一体、改物流均已用测试单验证；打印协议已识别。剩余：打印数据转换（API-07）、取号恢复（API-19）等，见 [gaps.md](../gaps.md) | **部分完成** |
 | **M1 登录 + 基础数据 + 拉单** | 扫码登录、Cookie 导出、地址/模板/快递同步、订单入库 | **已完成**（后端 `app/service/{session_manager,shop_login,base_data,order_sync,scheduler}.py` + `adapter/browser/login.py`；前端 `pages/{auth,shop,order}`；44 个测试） |
-| **M2 订单池 + 取号** | 聚合界面、筛选勾选、批量取号；按需查看收件人（解密） | 待开始 |
+| **M2 订单池 + 取号** | 聚合界面、筛选勾选、批量取号；按需查看收件人（解密） | **已完成（框架 + 回放测试）**：后端 `service/{label_preview,label_obtain,label_void,label_run,receiver,label_pool}.py` + `api/label.py`；前端 `pages/labeling` 打单台。真实店铺验证待验证线（API-04 / 19 / 21 / 06） |
 | **M3 打印** | 官方组件 `wss://localhost:13999` 接通；PDF 兜底 | 待开始 |
 | **M4 发货前检查 + 发货 + 对账** | `sendcheck`、`batchDeliverGoodsByEES`、每日对账 | 待开始 |
 | **M5 多店聚合（只读）** | 售后 / 商品 / 库存 / 资金四类聚合服务与数据表 | 待开始 |
