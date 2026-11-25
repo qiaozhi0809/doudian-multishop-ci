@@ -67,6 +67,18 @@ export function useAftersalePage() {
     placeholderData: keepPreviousData,
   });
 
+  // 切换按钮上的数量：两个视图各取一条，只用 total（本地已同步的单数，不随状态筛选变）
+  const totals = useQuery({
+    queryKey: queryKeys.aftersaleTotals(shopIds),
+    queryFn: async () => {
+      const [todo, all] = await Promise.all([
+        api.get<PageData>("/api/aftersale/todo", { shop_ids: shopIds, page: 1, page_size: 1 }),
+        api.get<PageData>("/api/aftersale", { shop_ids: shopIds, page: 1, page_size: 1 }),
+      ]);
+      return { todo: todo.total, all: all.total } satisfies Record<View, number>;
+    },
+  });
+
   const statuses = useQuery({
     queryKey: queryKeys.aftersaleStatuses(shopIds),
     queryFn: () => api.get<StatusesResponse>("/api/aftersale/statuses", { shop_ids: shopIds }),
@@ -100,6 +112,7 @@ export function useAftersalePage() {
     page,
     setPage: (value: number) => update({ page: value }),
     list,
+    viewTotals: totals.data,
     statusOptions: statuses.data?.items ?? [],
     counts,
     sync,

@@ -22,7 +22,7 @@ interface EgressDialogProps {
 export function EgressDialog({ shop, onOpenChange, pending, onSave, onAcceptChange }: EgressDialogProps) {
   return (
     <Dialog open={shop !== null} onOpenChange={onOpenChange}>
-      <DialogContent title="设置出口" description={shop ? `${shop.name}：每家店使用固定的出口 IP，不能与其他店重复` : undefined}>
+      <DialogContent title="设置出口" description={shop?.name}>
         {shop && (
           <EgressDialogBody
             key={shop.id}

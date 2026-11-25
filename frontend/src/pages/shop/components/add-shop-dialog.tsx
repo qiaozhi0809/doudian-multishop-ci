@@ -15,7 +15,7 @@ interface AddShopDialogProps {
 export function AddShopDialog({ open, onOpenChange, pending, onSubmit }: AddShopDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="添加店铺" description="添加后先设置出口并检查通过，再扫码登录">
+      <DialogContent title="添加店铺">
         <AddShopForm pending={pending} onSubmit={onSubmit} onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

@@ -1,0 +1,21 @@
+/* 账号块：左缘与上面导航项的图标左缘对齐（侧栏内边距 12 + 10），圆角胶囊同导航项悬停底 */
+.trigger { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border: 0; border-radius: 9999px; background: transparent; color: var(--foreground); text-align: left; cursor: pointer; font: inherit; }
+.trigger:hover, .trigger[data-state="open"] { background: var(--surface-muted); }
+.avatar { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 9999px; background: var(--surface-muted); color: var(--text-secondary); font-size: 13px; font-weight: 500; }
+/* 两行纯文字，左缘同一条线；整体在头像高度内垂直居中（trigger 是 align-items:center） */
+.who { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1px; }
+.name, .summary { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.name { font-size: 13px; font-weight: 500; line-height: 18px; }
+.summary { color: var(--text-muted); font-size: 12px; font-weight: 400; line-height: 16px; }
+.chev { flex: none; color: var(--text-muted); }
+/* 菜单宽度 = 账号块宽度（J4）；左缘对齐由 align="start" 保证 */
+.panel { width: var(--radix-dropdown-menu-trigger-width); min-width: 0; max-width: none; }
+.head { display: flex; flex-direction: column; gap: 1px; padding: 6px 10px; }
+.headName { font-size: var(--text-sm); font-weight: 500; line-height: 20px; }
+.headMeta { color: var(--text-muted); font-size: var(--text-xs); line-height: 16px; }
+/* 顶部一行：左边账号信息，右边主题图标按钮（和行尾图标按钮同尺寸 28，圆形） */
+.headRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.headRow .head { flex: 1; min-width: 0; }
+.themeButton { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin: 6px 6px 0 0; border: 1px solid var(--border); border-radius: 9999px; background: var(--surface); color: var(--text-secondary); cursor: pointer; outline: none; }
+.themeButton[data-highlighted] { background: var(--surface-muted); color: var(--foreground); }
+.themeButton:focus-visible { box-shadow: 0 0 0 2px var(--accent); }

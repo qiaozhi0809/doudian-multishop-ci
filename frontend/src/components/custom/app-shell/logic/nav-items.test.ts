@@ -1,4 +1,4 @@
-import { FOOTER_NAV, NAV_ITEMS, NAV_SECTIONS, activeSectionId, pageTitle } from "./nav-items";
+import { FOOTER_NAV, NAV_ITEMS, NAV_SECTIONS, pageTitle } from "./nav-items";
 
 describe("导航分组（frontend.md 1.1）", () => {
   it("一级结构为仪表盘、订单处理、售后、商品与库存、财务，底部是店铺与设置", () => {
@@ -37,13 +37,4 @@ describe("导航分组（frontend.md 1.1）", () => {
     expect(pageTitle("/unknown")).toBe("");
   });
 
-  it("activeSectionId 返回当前页所在分组", () => {
-    expect(activeSectionId("/dashboard")).toBe("/dashboard");
-    expect(activeSectionId("/orders")).toBe("orders");
-    expect(activeSectionId("/shipping")).toBe("orders");
-    expect(activeSectionId("/stock")).toBe("catalog");
-    expect(activeSectionId("/reconcile")).toBe("finance");
-    expect(activeSectionId("/shops")).toBe("footer");
-    expect(activeSectionId("/unknown")).toBeNull();
-  });
 });

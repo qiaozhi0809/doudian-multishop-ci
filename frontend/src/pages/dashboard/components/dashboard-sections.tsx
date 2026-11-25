@@ -32,9 +32,6 @@ export function PendingMetrics({ items }: { items: PendingMetric[] }) {
   return (
     <section className={styles.pendingCard} aria-label="待补指标">
       <h2 className={styles.sectionTitle}>经营指标（待补）</h2>
-      <p className={styles.sectionNote}>
-        这些指标需要订单事实表或售后时间字段，接口补齐后在这里展示；当前不显示估算值
-      </p>
       <ul className={styles.pendingList}>
         {items.map((item) => (
           <li key={item.label} className={styles.pendingItem}>
@@ -42,7 +39,6 @@ export function PendingMetrics({ items }: { items: PendingMetric[] }) {
               <span>{item.label}</span>
               <Badge tone="neutral">待补</Badge>
             </div>
-            <p className={styles.pendingReason}>{item.reason}</p>
           </li>
         ))}
       </ul>

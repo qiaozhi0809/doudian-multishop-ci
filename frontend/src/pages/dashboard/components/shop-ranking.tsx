@@ -35,7 +35,6 @@ export function ShopRanking({ rows }: { rows: RankingRow[] }) {
   return (
     <section className={styles.tableCard}>
       <h2 className={styles.sectionTitle}>店铺排行</h2>
-      <p className={styles.sectionNote}>数字为平台计数或本地快照；未取到的店铺显示「暂无」</p>
       <div className={styles.tableWrap}>
         <SortableDataTable<RankingRow>
           rows={rows}

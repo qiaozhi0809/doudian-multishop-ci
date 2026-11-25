@@ -6,12 +6,11 @@ import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import { settledMarginTotal, type FundSummary } from "../logic/fund-page";
 import styles from "../fund-page.module.css";
 
-function StatCard({ label, value, context }: { label: string; value: string; context: string }) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <article className={styles.statCard}>
       <span className={styles.statLabel}>{label}</span>
       <strong className={styles.statValue}>{value}</strong>
-      <span className={styles.statContext}>{context}</span>
     </article>
   );
 }
@@ -53,17 +52,14 @@ export function FundSummaryCards({
         <StatCard
           label="待结算总额"
           value={formatCents(data.total_unsettled_amount_cents)}
-          context="全部店铺待结算合计（平台口径，单位分）"
         />
         <StatCard
           label="待结算订单"
           value={String(data.total_unsettled_count)}
-          context="待结算明细条数"
         />
         <StatCard
-          label="保证金余额"
+          label={`保证金余额 · ${synced} 家店`}
           value={formatCents(settledMarginTotal(data))}
-          context={`已同步 ${synced} 家店的保证金账户`}
         />
       </div>
       {latest && (

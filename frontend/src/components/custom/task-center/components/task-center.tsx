@@ -12,7 +12,7 @@ export interface TaskCenterProps {
   onClearFinished: () => void;
 }
 
-/** 顶栏任务中心：进行中的取号 / 打印 / 发货批次的进度与结果。 */
+/** 侧栏任务中心：进行中的取号 / 打印 / 发货批次的进度与结果。 */
 export function TaskCenter({ tasks, runningCount, onDismiss, onClearFinished }: TaskCenterProps) {
   const finished = tasks.length - runningCount;
   return (
@@ -21,7 +21,7 @@ export function TaskCenter({ tasks, runningCount, onDismiss, onClearFinished }: 
         className={styles.trigger}
         aria-label={runningCount > 0 ? `任务中心，${runningCount} 个进行中` : "任务中心"}
       >
-        <ListChecks size={20} strokeWidth={1.75} aria-hidden="true" />
+        <ListChecks size={16} strokeWidth={1.75} aria-hidden="true" />
         <span className={styles.triggerText}>任务</span>
         {runningCount > 0 && (
           <Badge tone="info" size="sm">
@@ -29,7 +29,7 @@ export function TaskCenter({ tasks, runningCount, onDismiss, onClearFinished }: 
           </Badge>
         )}
       </PopoverTrigger>
-      <PopoverContent align="end" className={styles.panel}>
+      <PopoverContent side="right" align="end" sideOffset={12} className={styles.panel}>
         <div className={styles.header}>
           <span className={styles.heading}>任务中心</span>
           {finished > 0 && (
@@ -39,7 +39,7 @@ export function TaskCenter({ tasks, runningCount, onDismiss, onClearFinished }: 
           )}
         </div>
         {tasks.length === 0 ? (
-          <p className={styles.empty}>没有进行中的任务；取号、打印、发货开始后，进度会显示在这里</p>
+          <p className={styles.empty}>没有进行中的任务</p>
         ) : (
           <ul className={styles.list}>
             {tasks.map((task) => (

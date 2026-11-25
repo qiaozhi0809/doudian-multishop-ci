@@ -1,4 +1,8 @@
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { MetricCard } from "@/components/arc/metric-card/metric-card";
+import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
+import { SHOP_FILTER_PARAM, serializeShopFilter } from "@/components/custom/app-shell/logic/shop-filter";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Button } from "@/components/arc/button/button";
 import { formatCents } from "@/lib/money-format";
@@ -6,12 +10,11 @@ import type { SectionState } from "../hooks/use-dashboard";
 import type { DashboardKpis } from "../logic/dashboard";
 import styles from "../dashboard-page.module.css";
 
-function StatCard({ label, value, context }: { label: string; value: string; context: string }) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <article className={styles.statCard}>
       <span className={styles.statLabel}>{label}</span>
       <strong className={styles.statValue}>{value}</strong>
-      <span className={styles.statContext}>{context}</span>
     </article>
   );
 }
@@ -19,18 +22,40 @@ function StatCard({ label, value, context }: { label: string; value: string; con
 interface KpiCardProps {
   label: string;
   value: number;
-  context: string;
+  context?: string;
   money?: boolean;
   section: SectionState;
+  /** 点击跳转的地址（已带店铺范围）。 */
+  to: string;
+}
+
+/** 指标卡的跳转地址：页面路径 + 页面自己的参数 + 当前店铺范围。 */
+export function kpiHref(path: string, shopIds: number[], extra: Record<string, string> = {}): string {
+  const params = new URLSearchParams(extra);
+  const shops = serializeShopFilter(shopIds);
+  if (shops) params.set(SHOP_FILTER_PARAM, shops);
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+/** 整张卡可点：悬停底色变浅、名称后出现箭头；链接名就是卡片内容（名称 + 数值）。 */
+function KpiLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link to={to} className={styles.kpiLink}>
+      {children}
+    </Link>
+  );
 }
 
 /** 一个指标卡：按数据源各自的加载 / 出错 / 就绪状态显示，出错不影响其他卡片。 */
-function KpiCard({ label, value, context, money = false, section }: KpiCardProps) {
+function KpiCard({ label, value, context, money = false, section, to }: KpiCardProps) {
   if (section.state === "loading") {
     return (
       <div className={styles.placeholderCard}>
         <span className={styles.placeholderLabel}>{label}</span>
-        <Skeleton label={`正在读取${label}`} lines={2} />
+        <span className={styles.placeholderSkeleton}>
+          <Skeleton label={`正在读取${label}`} lines={1} />
+        </span>
       </div>
     );
   }
@@ -45,8 +70,11 @@ function KpiCard({ label, value, context, money = false, section }: KpiCardProps
       </div>
     );
   }
-  if (money) return <StatCard label={label} value={formatCents(value)} context={context} />;
-  return <MetricCard label={label} value={value} context={context} />;
+  return (
+    <KpiLink to={to}>
+      {money ? <StatCard label={label} value={formatCents(value)} /> : <MetricCard label={label} value={value} context={context} />}
+    </KpiLink>
+  );
 }
 
 export function KpiGrid({
@@ -62,23 +90,23 @@ export function KpiGrid({
     products: SectionState;
   };
 }) {
+  const { shopIds } = useShopFilter();
+  const href = (path: string, extra?: Record<string, string>) => kpiHref(path, shopIds, extra);
   return (
     <section aria-label="关键指标">
       <div className={styles.kpiGrid}>
-        <StatCard
-          label="在营店铺"
-          value={`${kpis.activeShops} / ${kpis.totalShops}`}
-          context="会话有效且未停用"
-        />
-        <KpiCard label="待发货" value={kpis.stockUp} context="平台口径计数" section={sections.orderCounts} />
-        <KpiCard label="24 小时内须发" value={kpis.expShip} context="平台口径计数" section={sections.orderCounts} />
-        <KpiCard label="超时未发" value={kpis.shipDelay} context="需要优先处理" section={sections.orderCounts} />
-        <KpiCard label="售后待办" value={kpis.aftersalePending} context="待办队列合计" section={sections.aftersale} />
-        <KpiCard label="待结算金额" value={kpis.unsettledCents} context="全部店铺待结算合计" money section={sections.fund} />
-        <KpiCard label="保证金余额" value={kpis.marginCents} context="已同步的保证金账户" money section={sections.fund} />
-        <KpiCard label="库存预警" value={kpis.alarmCount} context="平台标记需补货" section={sections.stock} />
-        <KpiCard label="售罄" value={kpis.soldOutCount} context="总库存为 0" section={sections.stock} />
-        <KpiCard label="在售商品" value={kpis.onsaleCount} context="平台在售状态" section={sections.products} />
+        <KpiLink to={href("/shops")}>
+          <StatCard label="在营店铺" value={`${kpis.activeShops} / ${kpis.totalShops}`} />
+        </KpiLink>
+        <KpiCard label="待发货" value={kpis.stockUp} section={sections.orderCounts} to={href("/labeling")} />
+        <KpiCard label="24 小时内须发" value={kpis.expShip} section={sections.orderCounts} to={href("/orders")} />
+        <KpiCard label="超时未发" value={kpis.shipDelay} section={sections.orderCounts} to={href("/orders")} />
+        <KpiCard label="售后待办" value={kpis.aftersalePending} section={sections.aftersale} to={href("/aftersale")} />
+        <KpiCard label="待结算金额" value={kpis.unsettledCents} money section={sections.fund} to={href("/fund")} />
+        <KpiCard label="保证金余额" value={kpis.marginCents} money section={sections.fund} to={href("/fund", { tab: "margin" })} />
+        <KpiCard label="库存预警" value={kpis.alarmCount} section={sections.stock} to={href("/stock", { view: "alarm" })} />
+        <KpiCard label="售罄" value={kpis.soldOutCount} section={sections.stock} to={href("/stock")} />
+        <KpiCard label="在售商品" value={kpis.onsaleCount} section={sections.products} to={href("/catalog")} />
       </div>
     </section>
   );

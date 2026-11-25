@@ -64,7 +64,6 @@ export function ProductCounts({ loading, error, data, shopName, onRetry }: Count
                 key={item.key}
                 label={item.label}
                 value={aggregated.totals[item.key]}
-                context="平台口径状态计数"
               />
             ))}
           </div>

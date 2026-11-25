@@ -27,7 +27,7 @@ export function DashboardPageView({ page }: { page: DashboardPage }) {
     );
   }
   if (page.shopsState === "empty") {
-    return <EmptyNoShops description="先在「店铺与设置」添加店铺并扫码登录，仪表盘才有数据" />;
+    return <EmptyNoShops />;
   }
 
   const { model, sections } = page;
@@ -35,7 +35,6 @@ export function DashboardPageView({ page }: { page: DashboardPage }) {
   return (
     <div className={styles.page}>
       <div className={styles.metaRow}>
-        <span>本系统口径：平台计数与本地快照分开标注</span>
         {model.updatedAt && (
           <span title={formatBjTime(model.updatedAt)}>数据时间 {formatBjTimeSmart(model.updatedAt)}</span>
         )}

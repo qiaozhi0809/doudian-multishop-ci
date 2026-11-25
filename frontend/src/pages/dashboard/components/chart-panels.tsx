@@ -8,19 +8,10 @@ import type { SectionState } from "../hooks/use-dashboard";
 import type { ChartBar } from "../logic/dashboard";
 import styles from "../dashboard-page.module.css";
 
-function ChartFrame({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
+function ChartFrame({ title, children }: { title: string; description?: string; children: ReactNode }) {
   return (
     <section className={styles.chartCard}>
       <h2 className={styles.sectionTitle}>{title}</h2>
-      <p className={styles.sectionNote}>{description}</p>
       {children}
     </section>
   );

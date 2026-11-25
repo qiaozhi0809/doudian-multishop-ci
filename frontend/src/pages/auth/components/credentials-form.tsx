@@ -8,7 +8,7 @@ import { validatePassword } from "../logic/auth-messages";
 
 export interface CredentialsFormProps {
   title: string;
-  description: string;
+  description?: string;
   submitLabel: string;
   passwordAutoComplete: "current-password" | "new-password";
   pending: boolean;

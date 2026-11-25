@@ -255,7 +255,7 @@ describe("店铺与设置页", () => {
     });
     renderPage();
     const user = userEvent.setup();
-    await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多" }));
+    await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
     await user.click(await screen.findByRole("menuitem", { name: "查看基础数据" }));
     const drawer = await screen.findByRole("dialog");
     expect(await within(drawer).findByText("仓库")).toBeInTheDocument();

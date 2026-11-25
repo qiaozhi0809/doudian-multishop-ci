@@ -78,3 +78,10 @@
 .muted {
   color: var(--text-secondary);
 }
+
+/* 视图切换按钮里的数量：文字后面隔一点，弱一级的颜色，选中时跟着按钮反白 */
+.viewCount {
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}

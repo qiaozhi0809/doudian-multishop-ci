@@ -7,13 +7,6 @@ import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import { COUNT_ITEMS, type AggregatedCounts } from "../logic/aggregate-counts";
 import styles from "../order-page.module.css";
 
-const CONTEXT: Record<string, string> = {
-  stock_up: "已付款、等待发货",
-  exp_ship: "承诺发货时间在 24 小时内",
-  ship_delay: "已超过承诺发货时间",
-  in_aftersale: "有未结束的售后申请",
-};
-
 interface CountTabsProps {
   state: "loading" | "error" | "ready";
   data?: AggregatedCounts;
@@ -59,7 +52,7 @@ export function CountTabs({ state, data, shopName, onRetry }: CountTabsProps) {
         <>
           <div className={styles.countGrid}>
             {COUNT_ITEMS.map((item) => (
-              <MetricCard key={item.key} label={item.label} value={data.totals[item.key]} context={CONTEXT[item.key]} />
+              <MetricCard key={item.key} label={item.label} value={data.totals[item.key]} />
             ))}
           </div>
           <div className={styles.countMeta}>

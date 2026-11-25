@@ -70,14 +70,16 @@ describe("售后聚合页", () => {
   it("切换到全部售后：URL 带 view=all，出现状态筛选", async () => {
     mockFetch({
       "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
-      "GET /api/aftersale/todo": page([row()]),
-      "GET /api/aftersale": page([row()]),
+      "GET /api/aftersale/todo": page([row()], 3),
+      "GET /api/aftersale": page([row()], 120),
       "GET /api/aftersale/counts": counts,
       "GET /api/aftersale/statuses": jsonResponse({ items: [{ status: 13, label: "待商家处理" }] }),
     });
     renderPage();
     await screen.findByRole("row", { name: /140000000000000001/ });
-    await userEvent.setup().click(screen.getByRole("button", { name: "全部售后" }));
+    // 切换按钮上带各视图的单数，空的时候也能看出两页不同
+    expect(await screen.findByRole("button", { name: "待办队列 3" })).toBeInTheDocument();
+    await userEvent.setup().click(await screen.findByRole("button", { name: "全部售后 120" }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("view=all"));
     expect(await screen.findByLabelText("售后状态")).toBeInTheDocument();
   });

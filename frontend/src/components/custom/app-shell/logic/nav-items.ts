@@ -88,15 +88,3 @@ export function pageTitle(pathname: string): string {
   }
   return best?.label ?? "";
 }
-
-/** 当前路径所在的导航分组 id（独立入口返回其 path，底部入口返回 "footer"）。 */
-export function activeSectionId(pathname: string): string | null {
-  for (const section of NAV_SECTIONS) {
-    if (section.kind === "link") {
-      if (matches(pathname, section.item.path)) return section.item.path;
-    } else if (section.items.some((item) => matches(pathname, item.path))) {
-      return section.id;
-    }
-  }
-  return FOOTER_NAV.some((item) => matches(pathname, item.path)) ? "footer" : null;
-}

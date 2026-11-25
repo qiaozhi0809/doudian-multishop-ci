@@ -52,11 +52,11 @@ const routes = () => ({
   }),
 });
 
-function renderPage() {
+function renderPage(entry = "/dashboard") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/dashboard"]}>
+      <MemoryRouter initialEntries={[entry]}>
         <DashboardPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -117,5 +117,19 @@ describe("仪表盘", () => {
     mockFetch({ ...routes(), "GET /api/shops": jsonResponse([]) });
     renderPage();
     expect(await screen.findByText("还没有店铺")).toBeInTheDocument();
+  });
+
+  it("指标卡可点，跳到对应页面并带上店铺范围", async () => {
+    mockFetch(routes());
+    renderPage("/dashboard?shops=1");
+    const kpi = await screen.findByRole("region", { name: "关键指标" });
+    const linkOf = (label: string) => within(kpi).getByText(label).closest("a");
+    await waitFor(() => expect(linkOf("保证金余额")).toHaveAttribute("href", "/fund?tab=margin&shops=1"));
+    expect(linkOf("在营店铺")).toHaveAttribute("href", "/shops?shops=1");
+    expect(linkOf("待发货")).toHaveAttribute("href", "/labeling?shops=1");
+    expect(linkOf("24 小时内须发")).toHaveAttribute("href", "/orders?shops=1");
+    expect(linkOf("售后待办")).toHaveAttribute("href", "/aftersale?shops=1");
+    expect(linkOf("库存预警")).toHaveAttribute("href", "/stock?view=alarm&shops=1");
+    expect(linkOf("在售商品")).toHaveAttribute("href", "/catalog?shops=1");
   });
 });

@@ -29,7 +29,7 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
     );
   }
   if (page.shopsState === "empty") {
-    return <EmptyNoShops description="先在「店铺与设置」添加店铺并扫码登录，订单才会同步到打单台" />;
+    return <EmptyNoShops />;
   }
 
   const data = pool.query.data;

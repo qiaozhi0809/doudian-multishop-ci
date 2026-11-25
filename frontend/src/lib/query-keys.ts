@@ -46,6 +46,7 @@ export const queryKeys = {
   aftersaleRoot: () => ["aftersale"] as const,
   aftersaleList: (shopIds: number[], filters: AftersaleFilters) =>
     ["aftersale", "list", shopIds, filters] as const,
+  aftersaleTotals: (shopIds: number[]) => ["aftersale", "totals", shopIds] as const,
   aftersaleStatuses: (shopIds: number[]) => ["aftersale", "statuses", shopIds] as const,
   aftersaleCounts: (shopIds: number[]) => ["aftersale", "counts", shopIds] as const,
   productsRoot: () => ["products"] as const,

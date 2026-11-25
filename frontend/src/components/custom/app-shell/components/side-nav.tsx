@@ -1,22 +1,18 @@
+import type { ReactNode } from "react";
 import {
   Boxes,
-  ChevronDown,
   ClipboardList,
   LayoutDashboard,
   LifeBuoy,
   Package,
   PackageCheck,
-  PanelLeftClose,
-  PanelLeftOpen,
   Scale,
   Store,
   Truck,
   Wallet,
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
-import { Button } from "@/components/arc/button/button";
-import { Tooltip } from "@/components/arc/tooltip/tooltip";
-import { activeSectionId, FOOTER_NAV, NAV_SECTIONS, type NavItem, type NavSection } from "../logic/nav-items";
+import { NavLink } from "react-router-dom";
+import { FOOTER_NAV, NAV_SECTIONS, type NavItem } from "../logic/nav-items";
 import { withShopFilter } from "../logic/shop-filter";
 import styles from "../app-shell.module.css";
 
@@ -33,105 +29,57 @@ const ICONS = {
   shops: Store,
 } as const;
 
-interface SideNavProps {
-  collapsed: boolean;
-  onToggle: () => void;
-  shopIds: number[];
-  collapsedGroups: ReadonlySet<string>;
-  onToggleGroup: (id: string) => void;
-}
-
-function NavEntry({ item, collapsed, shopIds }: { item: NavItem; collapsed: boolean; shopIds: number[] }) {
+function NavEntry({ item, shopIds }: { item: NavItem; shopIds: number[] }) {
   const Icon = ICONS[item.icon];
-  const link = (
+  return (
     <NavLink to={withShopFilter(item.path, shopIds)} className={styles.navLink}>
-      <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
+      <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
       <span className={styles.navLinkLabel}>{item.label}</span>
     </NavLink>
   );
-  return collapsed ? <Tooltip content={item.label} side="right">{link}</Tooltip> : link;
 }
 
-function GroupHeader({
-  section,
-  open,
-  active,
-  onToggle,
-}: {
-  section: Extract<NavSection, { kind: "group" }>;
-  open: boolean;
-  active: boolean;
-  onToggle: () => void;
-}) {
-  const Icon = ICONS[section.icon];
-  return (
-    <button
-      type="button"
-      className={styles.groupHeader}
-      data-active={active || undefined}
-      aria-expanded={open}
-      aria-controls={`nav-group-${section.id}`}
-      onClick={onToggle}
-    >
-      <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
-      <span className={styles.groupLabel}>{section.label}</span>
-      <ChevronDown size={16} strokeWidth={1.75} aria-hidden="true" className={styles.chevron} data-open={open || undefined} />
-    </button>
-  );
+interface SideNavProps {
+  shopIds: number[];
+  /** 品牌下方的全局店铺范围。 */
+  scope: ReactNode;
+  /** 个人中心上方的任务中心入口。 */
+  tasks: ReactNode;
+  account: ReactNode;
 }
 
-export function SideNav({ collapsed, onToggle, shopIds, collapsedGroups, onToggleGroup }: SideNavProps) {
-  const { pathname } = useLocation();
-  const current = activeSectionId(pathname);
+/** 浮动侧栏：品牌 → 店铺范围 → 分组导航（灰色组名，组内常显）→ 任务中心 → 左下角账号菜单。 */
+export function SideNav({ shopIds, scope, tasks, account }: SideNavProps) {
   return (
-    <aside className={styles.sideNav} data-collapsed={collapsed}>
-      <div className={styles.brand}>
-        <span className={styles.brandText}>抖店管理</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={styles.brandToggle}
-          onClick={onToggle}
-          aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
-          aria-expanded={!collapsed}
-        >
-          {collapsed ? (
-            <PanelLeftOpen size={20} strokeWidth={1.75} aria-hidden="true" />
+    <aside className={styles.sideNav}>
+      <div className={styles.brand}>抖店管理</div>
+      <div className={styles.scopeSlot}>{scope}</div>
+      <nav aria-label="主导航" className={styles.nav}>
+        {NAV_SECTIONS.map((section) =>
+          section.kind === "link" ? (
+            <NavEntry key={section.item.path} item={section.item} shopIds={shopIds} />
           ) : (
-            <PanelLeftClose size={20} strokeWidth={1.75} aria-hidden="true" />
-          )}
-        </Button>
-      </div>
-      <nav aria-label="主导航" className={styles.navList}>
-        <div className={styles.navSections}>
-          {NAV_SECTIONS.map((section) => {
-            if (section.kind === "link") {
-              return <NavEntry key={section.item.path} item={section.item} collapsed={collapsed} shopIds={shopIds} />;
-            }
-            const open = !collapsedGroups.has(section.id);
-            return (
-              <div key={section.id} className={styles.navGroup}>
-                <GroupHeader
-                  section={section}
-                  open={open}
-                  active={current === section.id}
-                  onToggle={() => onToggleGroup(section.id)}
-                />
-                <div id={`nav-group-${section.id}`} className={styles.groupItems} hidden={!open}>
-                  {section.items.map((item) => (
-                    <NavEntry key={item.path} item={item} collapsed={collapsed} shopIds={shopIds} />
-                  ))}
-                </div>
+            <div key={section.id} className={styles.navSection} role="group" aria-labelledby={`nav-group-${section.id}`}>
+              <div id={`nav-group-${section.id}`} className={styles.navGroupTitle}>
+                {section.label}
               </div>
-            );
-          })}
-        </div>
-        <div className={styles.navFooter}>
+              {section.items.map((item) => (
+                <NavEntry key={item.path} item={item} shopIds={shopIds} />
+              ))}
+            </div>
+          ),
+        )}
+        <div className={styles.navSection}>
+          <div className={styles.navGroupTitle}>设置</div>
           {FOOTER_NAV.map((item) => (
-            <NavEntry key={item.path} item={item} collapsed={collapsed} shopIds={shopIds} />
+            <NavEntry key={item.path} item={item} shopIds={shopIds} />
           ))}
         </div>
       </nav>
+      <div className={styles.sideFoot}>
+        {tasks}
+        {account}
+      </div>
     </aside>
   );
 }

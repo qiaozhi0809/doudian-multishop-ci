@@ -1,239 +1,71 @@
+/* 外壳：浅灰底上浮一块白色侧栏，内容区自己滚动（参考壹帆智播「桌面工具档」）。 */
 .shell {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  min-height: 100vh;
-  background: var(--background);
+  display: flex;
+  gap: var(--space-4);
+  height: 100dvh;
+  padding: var(--space-4);
+  background: var(--surface-muted);
 }
 
+/* ---------- 浮动侧栏 ---------- */
 .sideNav {
-  position: sticky;
-  top: 0;
-  align-self: start;
   display: flex;
+  flex: none;
   flex-direction: column;
-  gap: var(--space-1);
-  width: 14rem;
-  height: 100vh;
-  padding: var(--space-3);
+  width: 15rem;
+  padding: var(--space-4) var(--space-3) var(--space-3);
+  border-radius: var(--radius-surface);
   background: var(--surface);
-  border-right: 1px solid var(--border);
-  box-sizing: border-box;
+  box-shadow: var(--shadow-resting);
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-height: var(--control-height-md);
-  padding-left: var(--space-2);
-  margin-bottom: var(--space-2);
+  padding: 2px 10px var(--space-4);
   color: var(--foreground);
-  font-size: var(--text-base);
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 500;
   white-space: nowrap;
 }
 
-.brandText {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.navList {
+.nav {
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: var(--space-1);
   min-height: 0;
-}
-
-.navSections {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding-bottom: var(--space-2);
   overflow-y: auto;
 }
 
-.navGroup {
+/* 窗口矮时导航可以滚：滚动条平时透明，鼠标移到导航上才出现，既不多一根竖线，也让人知道下面还有 */
+.nav::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.nav:hover::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}
+
+.navSection {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
-/* 分组标题：可折叠；当前页所在分组高亮（frontend.md 1.1）。 */
-.groupHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  height: var(--control-height-sm);
-  padding: 0 var(--space-3);
-  border: 0;
-  border-radius: var(--radius-control);
-  background: none;
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
-}
-
-.groupHeader:hover {
-  background: var(--surface-muted);
-  color: var(--foreground);
-}
-
-.groupHeader[data-active] {
-  color: var(--accent-strong);
-  font-weight: 500;
-}
-
-.groupLabel {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chevron {
-  flex: none;
-  transform: rotate(-90deg);
-  transition: transform var(--duration-fast) var(--ease-standard);
-}
-
-.chevron[data-open] {
-  transform: rotate(0deg);
-}
-
-.groupItems {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-left: var(--space-5);
-  padding-left: var(--space-2);
-  border-left: 1px solid var(--border-subtle);
-}
-
-/* display 会覆盖 hidden 的 UA 样式，显式收起。 */
-.groupItems[hidden] {
-  display: none;
-}
-
-.navFooter {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
-}
-
-/* 手动收起（宽屏）：只显示图标；文字用读屏可见的裁剪方式隐藏，仍可被辅助技术读到。 */
-@media (min-width: 1280px) {
-  .sideNav[data-collapsed="true"] {
-    width: 4.5rem;
-  }
-  .sideNav[data-collapsed="true"] .brand {
-    justify-content: center;
-    padding-left: 0;
-  }
-  .sideNav[data-collapsed="true"] .brandText {
-    display: none;
-  }
-  .sideNav[data-collapsed="true"] .navLink,
-  .sideNav[data-collapsed="true"] .groupHeader {
-    justify-content: center;
-    padding: 0;
-  }
-  .sideNav[data-collapsed="true"] .navLinkLabel,
-  .sideNav[data-collapsed="true"] .groupLabel,
-  .sideNav[data-collapsed="true"] .chevron {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
-  }
-  .sideNav[data-collapsed="true"] .groupItems {
-    margin-left: 0;
-    padding-left: 0;
-    border-left: 0;
-  }
-}
-
-/* 窄屏（<1280px）：自动收成图标 rail，悬浮 / 键盘聚焦时以浮层展开，不挤动内容。 */
-@media (max-width: 1279px) {
-  .shell {
-    grid-template-columns: 4.5rem minmax(0, 1fr);
-  }
-  .sideNav {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 30;
-    width: 4.5rem;
-    height: 100vh;
-    transition: width var(--duration-standard) var(--ease-standard);
-  }
-  .sideNav:hover,
-  .sideNav:focus-within {
-    width: 14rem;
-    box-shadow: var(--shadow-floating);
-  }
-  .sideNav:not(:hover):not(:focus-within) .brand {
-    justify-content: center;
-    padding-left: 0;
-  }
-  .sideNav:not(:hover):not(:focus-within) .brandText,
-  .sideNav:not(:hover):not(:focus-within) .brandToggle {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
-  }
-  .sideNav:not(:hover):not(:focus-within) .navLink,
-  .sideNav:not(:hover):not(:focus-within) .groupHeader {
-    justify-content: center;
-    padding: 0;
-  }
-  .sideNav:not(:hover):not(:focus-within) .navLinkLabel,
-  .sideNav:not(:hover):not(:focus-within) .groupLabel,
-  .sideNav:not(:hover):not(:focus-within) .chevron {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
-  }
-  .sideNav:not(:hover):not(:focus-within) .groupItems {
-    margin-left: 0;
-    padding-left: 0;
-    border-left: 0;
-  }
+.navGroupTitle {
+  padding: var(--space-2) 10px 2px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
 }
 
 .navLink {
   display: flex;
+  flex: none;
   align-items: center;
-  gap: var(--space-3);
-  height: var(--control-height-sm);
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-control);
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
   color: var(--text-secondary);
   font-size: var(--text-sm);
   text-decoration: none;
@@ -247,74 +79,151 @@
 }
 
 .navLink[aria-current="page"] {
-  background: var(--accent-subtle);
-  color: var(--accent-strong);
+  background: var(--surface-muted);
+  color: var(--foreground);
   font-weight: 500;
 }
 
-.main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+.navLinkLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.topBar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+/* 左下角个人中心 */
+.sideFoot {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ---------- 内容区 ---------- */
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+.page {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-6) var(--space-10);
+}
+
+.pageHead {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
-  height: 3.5rem;
-  padding: 0 var(--space-6);
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  /* 上边距 12：标题中线和侧栏「抖店管理」对齐 */
+  margin: var(--space-3) 0 var(--space-5);
 }
 
 .title {
-  flex: none;
-  font-size: var(--text-xl);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
-.filter {
-  width: 16rem;
-  min-width: 0;
-}
-
-/* 顶栏空间紧凑：Arc 多选的可见标签改为仅供读屏（仍作为触发按钮的名称）。 */
-.filter > span:first-child {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.topBarEnd {
+.pageHeadEnd {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  margin-left: auto;
+  gap: var(--space-3);
 }
 
-.content {
-  min-width: 0;
-  padding: var(--space-6);
+/* ---------- 侧栏顶部：全局店铺范围 ---------- */
+.scopeSlot {
+  padding-bottom: var(--space-2);
 }
 
-/* 演练模式横幅（M7）：全局可见，避免把模拟结果当成真实操作。 */
-.dryRunBanner {
-  padding: var(--space-2) var(--space-6);
-  border-bottom: 1px solid var(--border);
+.scope {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 40px;
+  /* 边框占 1px，内边距少 1，图标和下面导航图标左缘对齐 */
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
   background: var(--surface);
-  color: var(--warning);
+  color: var(--foreground);
+  font: inherit;
   font-size: var(--text-sm);
-  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.scope:hover:not(:disabled),
+.scope[data-state="open"] {
+  background: var(--surface-muted);
+}
+
+.scope:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.scopeText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scopeChevron {
+  flex: none;
+  color: var(--text-muted);
+}
+
+/* 菜单和触发按钮一样宽，店多时自己滚动 */
+.scopeMenu {
+  width: var(--radix-dropdown-menu-trigger-width);
+  min-width: 0;
+  max-width: none;
+  max-height: min(420px, var(--radix-dropdown-menu-content-available-height));
+  overflow-y: auto;
+}
+
+.scopeItem {
+  gap: var(--space-2);
+}
+
+.scopeCheck {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+}
+
+/* 演练模式提示（M7）：全局可见，避免把模拟结果当成真实操作。 */
+.dryRunBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--space-2);
+  padding: 10px 14px;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-resting);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+}
+
+.dryRunDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
 }
 
 .popoverTrigger {
@@ -388,9 +297,4 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.navLinkLabel {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }

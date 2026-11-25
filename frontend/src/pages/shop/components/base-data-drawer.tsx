@@ -17,7 +17,7 @@ interface BaseDataDrawerProps {
 export function BaseDataDrawer({ shop, onOpenChange, state, onRetry }: BaseDataDrawerProps) {
   return (
     <Drawer open={shop !== null} onOpenChange={onOpenChange}>
-      <DrawerContent title="基础数据" description={shop ? `${shop.name} 的发货地址、快递、面单模板与面单账户` : undefined} side="right">
+      <DrawerContent title="基础数据" description={shop?.name} side="right">
         {state.isLoading && <Skeleton label="正在读取基础数据" lines={6} />}
         {state.isError && (
           <div>

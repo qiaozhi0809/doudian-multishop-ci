@@ -1,6 +1,6 @@
 import { Badge } from "@/components/arc/badge/badge";
 import { Button } from "@/components/arc/button/button";
-import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
+import { RowMenu } from "@/components/custom/row-menu/row-menu";
 import { Tooltip } from "@/components/arc/tooltip/tooltip";
 import { formatBjTime, formatRemaining } from "@/lib/time-format";
 import type { ShopRow } from "@/lib/use-shops";
@@ -138,8 +138,7 @@ export function ActionsCell({ row, actions, pending, waiting }: ActionsCellProps
           设置出口
         </Button>
       )}
-      <DropdownMenu
-        label="更多"
+      <RowMenu
         items={[
           ...(primary === "check-egress" || row.egress_mode === null
             ? []
