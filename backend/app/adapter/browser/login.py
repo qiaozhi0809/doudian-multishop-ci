@@ -86,8 +86,10 @@ async def await_login(
     tasks: set[asyncio.Task] = set()  # 持有引用，防止任务被回收
 
     async def capture(req: Any, token: str) -> None:
+        headers = device_headers_from(await req.all_headers())
+        # 等请求头期间，别的请求可能已经先完成：这里再判断一次，只取第一个
         if not found.done():
-            found.set_result((token, device_headers_from(await req.all_headers())))
+            found.set_result((token, headers))
 
     def on_request(req: Any) -> None:
         token = extract_token(req.url)

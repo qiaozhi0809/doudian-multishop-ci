@@ -124,3 +124,39 @@ async def test_timeout_raises_timeout_error():
     ctx = FakeCtx([])
     with pytest.raises(TimeoutError):
         await await_login(ctx, FakePage(ctx), 0.05)
+
+
+class GatedRequest(FakeRequest):
+    """all_headers 要等 gate 放行，用来模拟两个请求几乎同时到达。"""
+
+    def __init__(self, token: str, gate: asyncio.Event, ua: str) -> None:
+        super().__init__(f"https://fxg.jinritemai.com/api/order/tabcnt?__token={token}")
+        self.gate, self.ua = gate, ua
+
+    async def all_headers(self) -> dict:
+        await self.gate.wait()
+        return {"user-agent": self.ua}
+
+
+async def test_concurrent_token_requests_take_first_without_error():
+    import gc
+
+    loop = asyncio.get_running_loop()
+    problems: list = []
+    loop.set_exception_handler(lambda _loop, context: problems.append(context))
+    ctx = FakeCtx([])
+    first_gate, second_gate = asyncio.Event(), asyncio.Event()
+    tok1, tok2 = "tok_" + "1" * 8, "tok_" + "2" * 8
+
+    def emit_both(c: FakeCtx) -> None:
+        c.emit("request", GatedRequest(tok1, first_gate, "UA/first"))
+        c.emit("request", GatedRequest(tok2, second_gate, "UA/second"))
+        # 两个都在等请求头；先放行第一个，紧接着放行第二个
+        asyncio.get_running_loop().call_soon(first_gate.set)
+        asyncio.get_running_loop().call_soon(second_gate.set)
+
+    token, headers, _ = await await_login(ctx, FakePage(ctx, on_goto=emit_both), 5)
+    await asyncio.sleep(0.05)  # 让第二个请求的任务跑完
+    gc.collect()
+    assert (token, headers) == (tok1, {"User-Agent": "UA/first"})
+    assert problems == []  # 没有 InvalidStateError，也没有「exception was never retrieved」
