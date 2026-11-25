@@ -42,6 +42,7 @@ class ShopPatch(BaseModel):
 
 class EgressRequest(BaseModel):
     mode: EgressMode
+    pool_id: int | None = Field(default=None, description="从代理池选择的池项 id")
     proxy_url: str | None = Field(default=None, description="http(s)://账号:密码@主机:端口")
     paste: str | None = Field(default=None, description="代理商格式 IP|端口|账号|密码|到期日")
     expires_at: str | None = None

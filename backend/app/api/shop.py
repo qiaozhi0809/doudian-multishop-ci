@@ -62,7 +62,7 @@ def set_egress(
     egress: EgressService = _state(request).egress
     try:
         egress.set_egress(
-            shop_id, body.mode, proxy_url=body.proxy_url, paste=body.paste,
+            shop_id, body.mode, pool_id=body.pool_id, proxy_url=body.proxy_url, paste=body.paste,
             expires_at=body.expires_at, actor=admin,
         )
     except ValueError as e:  # 校验信息不含账号密码

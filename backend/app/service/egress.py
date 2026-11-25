@@ -3,7 +3,7 @@
 代理 URL（含账号密码）只以 SecretBox 密文落库；日志与异常信息只出现 主机:端口。
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -45,11 +45,29 @@ class EgressConflict(Exception):
     """已有另一家启用店铺使用直连。"""
 
 
+class ProxyPoolInUse(EgressConflict):
+    """池项已被另一家启用店铺绑定。"""
+
+    def __init__(self, shop_name: str) -> None:
+        super().__init__(f"代理已被店铺「{shop_name}」使用")
+
+
 @dataclass(frozen=True)
 class EgressStatus:
     egress_ip: str | None
     egress_ip_pending: str | None
     egress_status: str
+
+
+def reset_shop_egress(conn: sa.Connection, shop: Mapping[str, Any], now: str) -> str:
+    """换出口后的复位：清已确认 IP、状态 unchecked；已登录店铺转 needs_login。返回新状态。"""
+    shop_store.set_egress(
+        conn, shop["id"], now, egress_ip=None, egress_ip_pending=None,
+        egress_status="unchecked", egress_checked_at=None)
+    if shop["status"] == ACTIVE:
+        shop_store.set_status(conn, shop["id"], NEEDS_LOGIN, now)
+        return NEEDS_LOGIN
+    return shop["status"]
 
 
 def _utc_now() -> datetime:
@@ -75,61 +93,98 @@ class EgressService:
     # ---- 设置 ----
 
     def set_egress(
-        self, shop_id: int, mode: str, proxy_url: str | None = None,
-        paste: str | None = None, expires_at: str | None = None, actor: str = "system",
+        self, shop_id: int, mode: str, pool_id: int | None = None,
+        proxy_url: str | None = None, paste: str | None = None,
+        expires_at: str | None = None, actor: str = "system",
     ) -> None:
-        """改出口：清空已确认的 IP、状态复位；已登录的店铺转 needs_login，必须重新扫码。"""
-        if mode not in MODES:
-            raise ValueError(f"出口方式只能是 {' / '.join(MODES)}")
-        url, expiry = None, expires_at
-        if mode == "proxy":
-            if paste:
-                url, paste_expiry = parse_provider_line(paste)
-                expiry = expires_at or paste_expiry
-            elif proxy_url:
-                url = proxy_url.strip()
-            else:
-                raise ValueError("代理模式需要提供代理地址")
-            errors = validate_proxy_url(url)
-            if errors:
-                raise ValueError("；".join(errors))
-        elif proxy_url or paste:
-            raise ValueError("直连不需要代理地址")
-
+        """改出口（开事务调 bind_in，提交后发事件）。"""
         now = self._clock().strftime(_ISO_FMT)
         try:
             with self._engine.begin() as conn:
                 shop = shop_store.get(conn, shop_id)
                 if shop is None:
                     raise NotFound(f"店铺不存在: {shop_id}", shop_id)
-                if mode == "direct":
-                    self._ensure_no_other_direct(conn, shop)
-                pool_id = None
-                if url:  # 先按 identity 进池（已存在则复用），再绑定到店铺
-                    pool_id = proxy_pool_store.upsert(
-                        conn, identity=proxy_identity(url),
-                        proxy_url=self._box.encrypt(url.encode()),
-                        proxy_display=display_proxy(url), expires_at=expiry, now=now,
-                    )
-                shop_store.set_egress(
-                    conn, shop_id, now, egress_mode=mode, proxy_pool_id=pool_id,
-                    egress_ip=None, egress_status="unchecked", egress_checked_at=None,
-                    egress_ip_pending=None,
-                )
-                new_status = shop["status"]
-                if shop["status"] == ACTIVE:
-                    new_status = NEEDS_LOGIN
-                    shop_store.set_status(conn, shop_id, NEEDS_LOGIN, now)
-                # 审计只记方式与 主机:端口，绝不记代理 URL
-                audit_store.insert(conn, CallRecord(
-                    shop_id, "shop.set_egress", actor,
-                    {"mode": mode, "proxy_display": display_proxy(url) if url else None},
-                    {"status": new_status}, "ok", 0), now)
+                new_status = self.bind_in(
+                    conn, shop, mode=mode, pool_id=pool_id, proxy_url=proxy_url,
+                    paste=paste, expires_at=expires_at, now=now, actor=actor)
         except sa.exc.IntegrityError:
+            if mode == "proxy":  # 预检之后被抢先：uq_shop_pool 兜底
+                raise ProxyPoolInUse("另一家店铺") from None
             raise EgressConflict("已有另一家启用店铺使用直连") from None
         self._events.publish(SHOP_STATUS_CHANGED, {
             "shop_id": shop_id, "status": new_status, "egress_status": "unchecked",
         })
+
+    def bind_in(
+        self, conn: sa.Connection, shop: Mapping[str, Any], *, mode: str,
+        pool_id: int | None, proxy_url: str | None, paste: str | None,
+        expires_at: str | None, now: str, actor: str,
+    ) -> str:
+        """在调用方的事务内：校验入口 → 解析/入池 → 绑定 → 复位出口 → 审计。返回新店铺状态。
+
+        不发事件（由调用方在提交后发）；唯一索引冲突以 IntegrityError 向上抛。
+        """
+        if mode not in MODES:
+            raise ValueError(f"出口方式只能是 {' / '.join(MODES)}")
+        if sum(x is not None and x != "" for x in (pool_id, proxy_url, paste)) > 1:
+            raise ValueError("pool_id、proxy_url、paste 最多给一个")
+        display: str | None = None
+        bound_pool_id: int | None = None
+        if mode == "direct":
+            if pool_id is not None or proxy_url or paste:
+                raise ValueError("直连不需要代理地址")
+            self._ensure_no_other_direct(conn, shop)
+        elif pool_id is not None:
+            item = proxy_pool_store.get(conn, pool_id)
+            if item is None:
+                raise NotFound(f"代理池项不存在: {pool_id}")
+            if expiry_state(item["expires_at"], self._parse_now(now)) == "expired":
+                raise ValueError("代理已到期，请续费或更换")
+            bound_pool_id, display = pool_id, item["proxy_display"]
+            self._ensure_pool_free(conn, pool_id, shop["id"])
+        else:
+            url, expiry = self._resolve_url(proxy_url, paste, expires_at)
+            display = display_proxy(url)
+            bound_pool_id = proxy_pool_store.upsert(
+                conn, identity=proxy_identity(url), proxy_url=self._box.encrypt(url.encode()),
+                proxy_display=display, expires_at=expiry, now=now,
+            )
+            self._ensure_pool_free(conn, bound_pool_id, shop["id"])
+        shop_store.set_egress(conn, shop["id"], now, egress_mode=mode, proxy_pool_id=bound_pool_id)
+        new_status = reset_shop_egress(conn, shop, now)
+        # 审计只记方式与 主机:端口，绝不记代理 URL
+        audit_store.insert(conn, CallRecord(
+            shop["id"], "shop.set_egress", actor,
+            {"mode": mode, "proxy_display": display},
+            {"status": new_status}, "ok", 0), now)
+        return new_status
+
+    @staticmethod
+    def _parse_now(now: str) -> datetime:
+        return datetime.strptime(now, _ISO_FMT).replace(tzinfo=UTC)
+
+    @staticmethod
+    def _resolve_url(
+        proxy_url: str | None, paste: str | None, expires_at: str | None
+    ) -> tuple[str, str | None]:
+        expiry = expires_at
+        if paste:
+            url, paste_expiry = parse_provider_line(paste)
+            expiry = expires_at or paste_expiry
+        elif proxy_url:
+            url = proxy_url.strip()
+        else:
+            raise ValueError("代理模式需要提供代理池项或代理地址")
+        errors = validate_proxy_url(url)
+        if errors:
+            raise ValueError("；".join(errors))
+        return url, expiry
+
+    @staticmethod
+    def _ensure_pool_free(conn: sa.Connection, pool_id: int, shop_id: int) -> None:
+        for other in proxy_pool_store.referrers(conn, pool_id):
+            if other["id"] != shop_id and other["status"] != DISABLED:
+                raise ProxyPoolInUse(other["name"])
 
     @staticmethod
     def _ensure_no_other_direct(conn: sa.Connection, shop: Any) -> None:

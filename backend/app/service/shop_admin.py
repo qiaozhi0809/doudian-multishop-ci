@@ -19,6 +19,7 @@ from app.store import audit_store, base_data_store, session_store, shop_store
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 CHANNELS = ("protocol", "browser")
 MAX_NAME_LENGTH = 100
+REENABLE_CONFLICT = "该店铺的出口与其他启用店铺冲突（直连或代理已被占用），请先更换出口"
 
 
 def _utc_now() -> datetime:
@@ -129,7 +130,7 @@ class ShopAdminService:
                     new_status = NEEDS_LOGIN
                     self._audit(conn, shop_id, "shop.enable", actor, now)
         except sa.exc.IntegrityError:
-            raise EgressConflict("该店铺的直连与其他启用店铺冲突，请先更换出口") from None
+            raise EgressConflict(REENABLE_CONFLICT) from None
         if new_status is not None:
             self._events.publish(SHOP_STATUS_CHANGED, {
                 "shop_id": shop_id, "status": new_status, "egress_status": "unchecked"
