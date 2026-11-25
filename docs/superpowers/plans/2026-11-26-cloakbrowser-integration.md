@@ -427,6 +427,39 @@ def test_cloak_unavailable_is_user_facing():
     from app.service.shop_login import _USER_FACING
 
     assert CloakUnavailable in _USER_FACING
+
+
+def test_scan_job_passes_use_cloak_and_proxy_to_scanner(tmp_path):
+    """接线行为测试：use_cloak 与店铺代理必须真的到达扫码函数，不能只靠签名检查。"""
+    import asyncio
+
+    from app.adapter.browser.login import LoginResult
+
+    calls: list[dict] = []
+
+    async def fake_scan(profile, channel, proxy, timeout_s, use_cloak=False):
+        calls.append({"proxy": proxy, "use_cloak": use_cloak})
+        return LoginResult(
+            cookies=[], token="tok", expires_at="2030-01-01T00:00:00Z", device_headers={},
+        )
+
+    class FakeRunner:
+        def proxy_for(self, shop_id):
+            return "http://user:pass@1.2.3.4:8080"
+
+    class FakeSessions:
+        def save_login(self, shop_id, result):
+            pass
+
+    flow = ShopLoginFlow(
+        FakeRunner(), FakeSessions(), None, None, tmp_path, "chrome",
+        scan=fake_scan, use_cloak=True,
+    )
+    asyncio.run(flow._scan_job(1)(None))
+
+    assert len(calls) == 1
+    assert calls[0]["use_cloak"] is True
+    assert calls[0]["proxy"] == "http://user:pass@1.2.3.4:8080"
 ```
 
 在 `backend/tests/shared/cloak_test.py` 末尾追加（并把 `apply_env` 加入该文件顶部的 import）：
@@ -444,14 +477,27 @@ def test_apply_env_pins_cache_dir_and_disables_auto_update(monkeypatch, tmp_path
     assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "false"
 
 
-def test_apply_env_does_not_override_explicit_values(monkeypatch, tmp_path):
+def test_apply_env_forces_auto_update_off_even_if_preset(monkeypatch, tmp_path):
+    """禁用自动更新是硬约束：外部把它设成 true，调用后也必须变 false。"""
     import os
 
     monkeypatch.setenv("CLOAKBROWSER_AUTO_UPDATE", "true")
 
     apply_env(tmp_path)
 
-    assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "true"
+    assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "false"
+
+
+def test_apply_env_keeps_explicit_cache_dir(monkeypatch, tmp_path):
+    """缓存目录是用户可配置项，显式设置必须被尊重。"""
+    import os
+
+    custom = str(tmp_path / "custom")
+    monkeypatch.setenv("CLOAKBROWSER_CACHE_DIR", custom)
+
+    apply_env(tmp_path)
+
+    assert os.environ["CLOAKBROWSER_CACHE_DIR"] == custom
 ```
 
 - [ ] **Step 2: 跑测试确认失败**
@@ -492,14 +538,16 @@ _USER_FACING = (DoudianError, EgressNotReady, EgressConflict, ShopPaused, NotFou
 
 ```python
 def apply_env(cache_dir: Path) -> None:
-    """把 CloakBrowser 的缓存目录锁到项目内，并关闭全部自动更新。
+    """把 CloakBrowser 的缓存目录锁到项目内，并**强制**关闭全部自动更新。
 
-    CLOAKBROWSER_AUTO_UPDATE 必须是小写字面量 "false"：库只在值为 false 时
-    才跳过「二进制更新」和「PyPI 包更新」两个后台检查。必须在 import
-    cloakbrowser 之前调用，否则 import 触发的后台线程已经发出去了。
+    CLOAKBROWSER_AUTO_UPDATE 无条件写小写字面量 "false"：禁用自动更新是硬约束，
+    外部环境变量不得覆盖——库只在值为 false 时才跳过「二进制更新」和「PyPI 包
+    更新」两个后台检查。必须在 import cloakbrowser 之前调用。
+
+    缓存目录用 setdefault：那是用户可配置项，显式设置应当被尊重。
     """
     os.environ.setdefault("CLOAKBROWSER_CACHE_DIR", str(cache_dir))
-    os.environ.setdefault("CLOAKBROWSER_AUTO_UPDATE", "false")
+    os.environ["CLOAKBROWSER_AUTO_UPDATE"] = "false"
 ```
 
 `backend/app/main.py` 的 `lifespan` 开头（`settings.data_dir.mkdir` 之后）加：
