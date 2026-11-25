@@ -34,7 +34,7 @@ D:\doudian-multishop\            ← 安装目录（可任意）
 | Python | 3.12.x（64 位） | `python --version`；安装时勾选 Add to PATH |
 | 磁盘 | ≥ 5 GB 可用（数据库 + 浏览器 profile + 备份） | 资源管理器 |
 | 网络 | 能访问 `fxg.jinritemai.com`；代理出口按店准备 | 浏览器打开抖店后台 |
-| Microsoft Edge | 已安装（扫码登录用系统 Edge，`channel=msedge`） | `edge://version` |
+| CloakBrowser 二进制 | 首次扫码登录时自动下载（约 200MB，缓存在 `<data_dir>\browser\`） | 该目录下出现 `chromium-146.*\chrome.exe` |
 | 抖店官方打印组件 | 已安装并**保持运行**（`wss://localhost:13999`） | `netstat -ano \| findstr 13999` 有 LISTENING |
 | 打印机 | 系统打印机已添加、能打测试页 | 打印机设置 |
 | 时间 | 与网络时间同步（对账 / 超时告警依赖系统时间） | `w32tm /query /status` |
@@ -81,7 +81,9 @@ D:\doudian-multishop\            ← 安装目录（可任意）
 | `DD_DATA_DIR` | `%LOCALAPPDATA%\doudian-multishop` | 数据目录（库、备份、浏览器 profile） |
 | `DD_HOST` / `DD_PORT` | `127.0.0.1` / `8787` | 监听地址与端口（不要改成 0.0.0.0） |
 | `DD_DRY_RUN` | `false` | 演练模式，见 §5 |
-| `DD_BROWSER_CHANNEL` | `msedge`（Windows） | 扫码登录用的浏览器通道 |
+| `DD_USE_CLOAK` | `true` | 是否使用 CloakBrowser 定制 Chromium；设为 `false` 时回退系统浏览器 |
+| `DD_CLOAK_CACHE_DIR` | `<data_dir>\browser` | CloakBrowser 二进制缓存目录 |
+| `DD_BROWSER_CHANNEL` | `msedge`（Windows） | 仅在 `DD_USE_CLOAK=false` 时生效的兜底浏览器通道 |
 | `DD_PRINTER_NAME` | 空 | 取号请求的 printer 字段 / 默认打印机名 |
 | `DD_MAX_CONCURRENT_SHOPS` | `3` | 同时执行的店铺数上限 |
 | `DD_RECONCILE_DAILY` | `true` | 每日定时全店对账开关 |
@@ -176,7 +178,7 @@ D:\doudian-multishop\            ← 安装目录（可任意）
 |---|---|
 | 双击 start.bat 没反应 | 看 `logs\app.err.log`；多半是没建 venv（§3）或端口被占 |
 | 打印按钮置灰 | 打印组件未启动或没有默认打印机；`netstat -ano \| findstr 13999` |
-| 扫码登录打不开浏览器 | 未安装 Edge；或该店 profile 目录被占用（先停止其他实例） |
+| 扫码登录打不开浏览器 | CloakBrowser 二进制未下载成功（检查 `<data_dir>\browser\`）；或该店 profile 目录被占用（先停止其他实例）；若 `DD_USE_CLOAK=false` 则检查系统 Edge 是否安装 |
 | 所有店都提示出口不通 | 代理失效（`DD_EGRESS_ECHO_URL` 不可达）；恢复后重新「出口检查」 |
 | 某店提示需要重新登录 | 会话过期（约 60 天）或平台踢出；顶栏「重登」重新扫码即可，其他店不受影响 |
 | 任务中心一直「进行中」 | 看日志；进程重启后未完成的写任务会转「待核实」，到单据里核对后重试 |

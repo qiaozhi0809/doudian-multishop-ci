@@ -131,7 +131,7 @@
 │                         │                                       │
 │        ┌────────────────┼──────────────────┬─────────────────┐  │
 │        ▼                ▼                  ▼                 ▼  │
-│   SQLite (WAL)    curl_cffi 协议直连   Playwright + Edge   打印组件  │
+│   SQLite (WAL)    curl_cffi 协议直连   CloakBrowser         打印组件  │
 │   data/app.db     ──► fxg.jinritemai   每店独立用户目录      wss://localhost:13999
 │                                       （扫码 / 兜底 / 借页打印）  │
 └───────────────────────────────────────────────────────────────┘
@@ -170,7 +170,7 @@
 | 语言 | Python 3.12 |
 | Web 框架 | FastAPI + uvicorn + Pydantic v2（接口 + 托管前端静态文件） |
 | 抖店协议 | curl_cffi（`impersonate="chrome"`），经可替换的 Transport 调用（测试用录制回放） |
-| 浏览器 | Playwright（Python）+ 系统 Edge（`channel="msedge"`），每店持久化用户目录 |
+| 浏览器 | CloakBrowser 定制 Chromium（`cloakbrowser==0.3.30`，Chromium 146），每店持久化用户目录 + 固定指纹种子；系统浏览器仅作兜底 |
 | 签名 | py_mini_racer（V8）——**备用**，已验证的写接口免签名，不进 MVP 主路径 |
 | 打印组件 | `websockets`，`wss://localhost:13999` |
 | 数据库 | SQLite WAL + SQLAlchemy 2 Core + Alembic |

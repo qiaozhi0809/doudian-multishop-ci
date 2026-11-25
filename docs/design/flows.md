@@ -9,7 +9,7 @@
 
 ```
 添加店铺 → 配置该店固定出口（direct / 独享静态代理）→ 出口检查通过（IP 可达且不与其他店重复，backend 5.17）
-        → 经该出口打开该店的持久化浏览器用户目录（Playwright + 系统 Edge）→ 人工扫码
+        → 经该出口打开该店的持久化浏览器用户目录（CloakBrowser 定制 Chromium）→ 人工扫码
         → 检测到登录成功
         → 导出 cookies（用 context.cookies() 取全量；document.cookie 只含 20/37，
           缺 HttpOnly 的 sessionid / sid_tt / uid_tt / sid_guard / ttwid）

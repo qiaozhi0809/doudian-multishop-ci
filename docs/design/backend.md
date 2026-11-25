@@ -29,7 +29,7 @@
 
 | 通道 | 存放位置 | 内容 |
 |---|---|---|
-| 浏览器通道（扫码 / 需签名接口 / 借页面打印） | 每店持久化用户目录 `data/profiles/<shop_id>/`（`launch_persistent_context` + 系统 Edge） | 浏览器自身的完整登录态与指纹；登录态和指纹天然隔离，重登只需重开该目录 |
+| 浏览器通道（扫码 / 需签名接口 / 借页面打印） | 每店持久化用户目录 `data/profiles/<shop_id>/`（`launch_persistent_context` + CloakBrowser 定制 Chromium） | 浏览器自身的完整登录态与指纹；登录态和指纹天然隔离，重登只需重开该目录 |
 | 协议通道（curl_cffi 直连） | `session` 表（[data-model.md](data-model.md) 6.2 ②），DPAPI 加密 | `context.cookies()` 导出的**全量** cookie（含 HttpOnly）、`__token`、设备参数 |
 
 两个通道都经该店的固定出口发出（5.17）。
@@ -409,7 +409,7 @@ class Signer(Protocol):
 | 浏览器 profile | 每店一个持久化用户目录 `data/profiles/<shop_id>/`（5.1），cookie 与登录态互不串号 |
 | 出口方式 | `direct`（商家自有宽带直连）或 `proxy`（独享静态 IP）；**不使用轮换代理池** |
 | 浏览器 | 统一使用 CloakBrowser 定制 Chromium（`cloakbrowser==0.3.30`，Chromium 146）；二进制缓存在 `<data_dir>/browser/`；每店固定指纹种子存 `profiles/<shop_id>/.cloak-seed` |
-| 代理协议 | 一律按 `http://账号:密码@主机:端口` 配置。Chromium / Edge 不支持带账号密码的 SOCKS5，扫码浏览器无法使用；带凭证的 `socks5://` 在配置时即拒绝 |
+| 代理协议 | 一律按 `http://账号:密码@主机:端口` 配置。CloakBrowser（Chromium 内核）不支持带账号密码的 SOCKS5，扫码浏览器无法使用；带凭证的 `socks5://` 在配置时即拒绝 |
 | 粘贴导入 | 出口设置可直接粘贴代理商格式 `IP\|端口\|账号\|密码\|到期日`，解析为 `http://` URL 与到期日 |
 | 代理到期 | 记录 `proxy_expires_at`；到期前 7 天提醒；到期后该店暂停（同「出口不通」）。续费后 IP 若变化按「出口 IP 变化」处理 |
 | 独立性 | 以**实际出口 IP** 判重：启用中的店铺两两不同。直连本身也是一个 IP，所以**最多一家店**用 `direct` |
