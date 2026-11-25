@@ -10,6 +10,8 @@ import CatalogPage from "@/pages/catalog";
 import FundPage from "@/pages/fund";
 import LabelingPage from "@/pages/labeling";
 import OrderPage from "@/pages/order";
+import ReconcilePage from "@/pages/reconcile";
+import ShippingPage from "@/pages/shipping";
 import ShopPage from "@/pages/shop";
 import StockPage from "@/pages/stock";
 
@@ -27,6 +29,8 @@ function AppRoutes() {
           <Route path="/" element={<Navigate to="/orders" replace />} />
           <Route path="/orders" element={<OrderPage />} />
           <Route path="/labeling" element={<LabelingPage />} />
+          <Route path="/shipping" element={<ShippingPage />} />
+          <Route path="/reconcile" element={<ReconcilePage />} />
           <Route path="/aftersale" element={<AftersalePage />} />
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/stock" element={<StockPage />} />
