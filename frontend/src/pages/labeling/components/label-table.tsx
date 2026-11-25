@@ -6,13 +6,11 @@ import { formatBjTimeSmart } from "@/lib/time-format";
 import {
   canSelect,
   itemSummary,
-  pageCount as _pageCount,
   rowStatusBadge,
   type LabelOrder,
 } from "../logic/label-columns";
 import styles from "../labeling-page.module.css";
 
-void _pageCount;
 
 interface LabelTableProps {
   rows: LabelOrder[];
