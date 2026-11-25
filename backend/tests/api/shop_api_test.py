@@ -206,3 +206,25 @@ def test_requires_admin(api):
                          ("GET", "/api/events"), ("POST", "/api/shops/1/login")]:
         r = api.client.request(method, path, json={} if method == "POST" else None)
         assert r.status_code == 401, (method, path)
+
+
+def test_create_shop_with_pool_egress(api):
+    from app.domain.egress_rules import proxy_identity
+    from app.store import proxy_pool_store
+    url = proxy_url(8)
+    with api.app.state.engine.begin() as conn:
+        pid = proxy_pool_store.upsert(
+            conn, identity=proxy_identity(url), proxy_url=api.app.state.egress._box.encrypt(
+                url.encode()),
+            proxy_display="203.0.113.8:8000", expires_at=None, now="2026-11-25T00:00:00Z")
+    r = api.client.post("/api/shops", json={
+        "name": "店B", "egress": {"mode": "proxy", "pool_id": pid}})
+    assert r.status_code == 201 and r.json()["proxy_display"] == "203.0.113.8:8000"
+    r = api.client.post("/api/shops", json={
+        "name": "店C", "egress": {"mode": "proxy", "pool_id": pid}})
+    assert r.status_code == 409 and r.json()["error"]["type"] == "ProxyPoolInUse"
+    r = api.client.post("/api/shops", json={
+        "name": "店D", "egress": {"mode": "proxy", "paste": "bad"}})
+    assert r.status_code == 422
+    names = [s["name"] for s in api.client.get("/api/shops").json()]
+    assert "店C" not in names and "店D" not in names

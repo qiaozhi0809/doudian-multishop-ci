@@ -11,7 +11,7 @@ from app.domain.audit import CallRecord
 from app.domain.errors import InvalidRequest, NotFound
 from app.domain.session_health import health_from_expiry
 from app.service.base_data import BaseDataService
-from app.service.egress import EgressConflict
+from app.service.egress import EgressConflict, EgressService, ProxyPoolInUse
 from app.service.events import SHOP_STATUS_CHANGED, EventBus
 from app.service.session_manager import ACTIVE, DISABLED, NEEDS_LOGIN
 from app.store import audit_store, base_data_store, session_store, shop_store
@@ -28,10 +28,12 @@ def _utc_now() -> datetime:
 
 class ShopAdminService:
     def __init__(
-        self, engine: Engine, events: EventBus, clock: Callable[[], datetime] = _utc_now
+        self, engine: Engine, events: EventBus, egress: EgressService,
+        clock: Callable[[], datetime] = _utc_now,
     ) -> None:
         self._engine = engine
         self._events = events
+        self._egress = egress
         self._clock = clock
 
     # ---- 查询 ----
@@ -93,10 +95,34 @@ class ShopAdminService:
 
     # ---- 修改 ----
 
-    def create(self, name: str, entity: str | None = None, shop_no: str | None = None) -> int:
+    def create(
+        self, name: str, entity: str | None = None, shop_no: str | None = None,
+        egress: Mapping[str, Any] | None = None, actor: str = "system",
+    ) -> int:
+        """新增店铺；带 egress 时在同一事务内绑定出口，失败则店铺也不创建。"""
         name = self._valid_name(name)
-        with self._engine.begin() as conn:
-            return shop_store.create(conn, name, self._now(), entity=entity, shop_no=shop_no)
+        now = self._now()
+        new_status: str | None = None
+        try:
+            with self._engine.begin() as conn:
+                sid = shop_store.create(conn, name, now, entity=entity, shop_no=shop_no)
+                if egress is not None:
+                    shop = self._get(conn, sid)
+                    new_status = self._egress.bind_in(
+                        conn, shop, mode=egress["mode"], pool_id=egress.get("pool_id"),
+                        proxy_url=egress.get("proxy_url"), paste=egress.get("paste"),
+                        expires_at=egress.get("expires_at"), now=now, actor=actor)
+        except sa.exc.IntegrityError:
+            if egress is None:
+                raise
+            if egress["mode"] == "proxy":
+                raise ProxyPoolInUse("另一家店铺") from None
+            raise EgressConflict("已有另一家启用店铺使用直连") from None
+        if new_status is not None:
+            self._events.publish(SHOP_STATUS_CHANGED, {
+                "shop_id": sid, "status": new_status, "egress_status": "unchecked",
+            })
+        return sid
 
     def update(
         self, shop_id: int, *, name: str | None = None, entity: str | None = None,

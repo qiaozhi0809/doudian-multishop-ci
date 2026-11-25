@@ -104,7 +104,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
             engine, settings.backups_dir, keep=settings.backup_keep, **clock_kw),
         "ship_deadline": ShipDeadlineWatcher(
             engine, events, warn_hours=settings.ship_deadline_warn_hours, **clock_kw),
-        "shop_admin": ShopAdminService(engine, events, **clock_kw),
+        "shop_admin": ShopAdminService(engine, events, egress, **clock_kw),
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,
             settings.browser_channel, **login_kw,

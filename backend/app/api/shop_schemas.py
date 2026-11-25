@@ -31,6 +31,7 @@ class ShopCreate(BaseModel):
     name: str
     entity: str | None = None
     shop_no: str | None = None
+    egress: "EgressRequest | None" = None
 
 
 class ShopPatch(BaseModel):

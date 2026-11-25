@@ -39,8 +39,16 @@ def list_shops(request: Request) -> list[ShopRow]:
 
 
 @router.post("", response_model=ShopRow, status_code=201)
-def create_shop(body: ShopCreate, request: Request) -> ShopRow:
-    shop_id = _state(request).shop_admin.create(body.name, body.entity, body.shop_no)
+def create_shop(
+    body: ShopCreate, request: Request, admin: str = Depends(require_admin)
+) -> ShopRow:
+    try:
+        shop_id = _state(request).shop_admin.create(
+            body.name, body.entity, body.shop_no,
+            egress=body.egress.model_dump() if body.egress else None, actor=admin,
+        )
+    except ValueError as e:  # 校验信息不含账号密码
+        raise InvalidRequest(str(e)) from None
     return _row(request, shop_id)
 
 

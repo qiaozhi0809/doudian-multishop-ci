@@ -208,7 +208,7 @@ def test_reenable_when_item_taken_says_proxy_in_use(env):
     with env.engine.begin() as conn:
         shop_store.set_status(conn, a, "disabled", "2026-11-25T00:00:00Z")
     env.svc.set_egress(b, "proxy", pool_id=pid)
-    admin = ShopAdminService(env.engine, env.events, clock=lambda: env.now)
+    admin = ShopAdminService(env.engine, env.events, env.svc, clock=lambda: env.now)
     with pytest.raises(EgressConflict, match="代理已被占用") as ei:
         admin.update(a, enabled=True)
     assert str(ei.value) == REENABLE_CONFLICT
