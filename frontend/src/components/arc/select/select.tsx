@@ -11,6 +11,8 @@ import styles from "./select.module.css";
 
 export interface SelectProps extends Omit<ComponentPropsWithoutRef<typeof SelectPrimitive.Root>, "children"> {
   label: string;
+  /** 字段名后面显示灰色小字「可选」。 */
+  optional?: boolean;
   description?: string;
   placeholder?: string;
   id?: string;
@@ -28,7 +30,7 @@ const valueRoll: Variants = {
 const valueFade: Variants = { enter: { opacity: 0 }, center: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: motionTokens.duration.instant } }, exit: { opacity: 0, transition: { duration: motionTokens.duration.instant } } };
 
 export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select(
-  { label, description, placeholder = "Select an option", options, id, className, disabled, onValueChange, ...rootProps },
+  { label, optional, description, placeholder = "Select an option", options, id, className, disabled, onValueChange, ...rootProps },
   ref,
 ) {
   const generatedId = useId();
@@ -45,7 +47,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
 
   return (
     <div className={styles.field}>
-      <label htmlFor={controlId}>{label}</label>
+      <label className="field-label" htmlFor={controlId}>{label}{optional ? <span className="field-optional">可选</span> : null}</label>
       <SelectPrimitive.Root {...rootProps} disabled={disabled} onValueChange={(next) => { setUncontrolledValue(next); onValueChange?.(next); }}>
         <SelectPrimitive.Trigger
           ref={ref}

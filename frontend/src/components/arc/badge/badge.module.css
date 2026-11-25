@@ -54,6 +54,8 @@
 .lg { --badge-height: 28px; --badge-radius: 7px; --badge-pad: 12px; --badge-gap: 6px; --badge-icon: 16px; --badge-dot: 7px; font-size: var(--text-sm); }
 /* Full round ends, the original look. Declared after the sizes so it wins over their radius. */
 .pill { --badge-radius: var(--radius-pill); }
+/* 壹帆智播：徽章一律全圆（方案 C） */
+.badge, .sm, .md, .lg { --badge-radius: var(--radius-button, 6px); }
 .withIcon { padding-inline-start: calc(var(--badge-pad) - 2px); }
 .withDot { padding-inline-start: calc(var(--badge-pad) - 1px); }
 

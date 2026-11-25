@@ -1,6 +1,6 @@
 # Arc 源码来源
 
-本目录是 Arc 组件库源码的**原样复制**，不修改。需要调整时在 `components/custom/` 里组合。
+本目录是 Arc 组件库源码的复制。`button`、`dialog`、`input`、`select`、`textarea`、`segmented-control`、`dropdown-menu`、`tooltip`、`badge` 九个组件已换成壹帆智播 `ui-next` 里改过的版本（桌面工具档，2026-11-25），其余原样。需要调整时优先在 `components/custom/` 里组合。
 
 - 来源：本机 `uiarc-system/vendor`（见其 `NOTICE.md`）
   - Free：`uiarc-v2/uiarc`

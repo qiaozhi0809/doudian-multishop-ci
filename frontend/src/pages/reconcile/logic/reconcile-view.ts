@@ -39,9 +39,9 @@ export function trackingPair(row: Finding): string {
 }
 
 export function runSummary(run: ReconcileRun | null): string {
-  if (run === null) return "还没有对账记录：点「立即对账」建立基线";
-  if (run.status === "running") return "对账进行中，结果会自动刷新";
-  const head = run.status === "failed" ? "对账失败" : "对账完成";
+  if (run === null) return "还没有检查记录：点「立即检查」建立基线";
+  if (run.status === "running") return "检查进行中，结果会自动刷新";
+  const head = run.status === "failed" ? "检查失败" : "检查完成";
   const tail = run.error ? `；${run.error}` : "";
   return `${head}：扫描 ${run.scanned} 单，发现 ${run.finding_count} 条异常${tail}`;
 }

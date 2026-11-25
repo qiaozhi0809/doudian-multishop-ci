@@ -50,7 +50,7 @@ function WaybillCell({ row, printRow }: { row: LabelOrder; printRow?: WaybillPri
   );
 }
 
-/** 打单台表格：首列勾选，阻断行禁用勾选并显示原因（跨页勾选由外部状态维护）。 */
+/** 打单发货表格：首列勾选，阻断行禁用勾选并显示原因（跨页勾选由外部状态维护）。 */
 export function LabelTable({
   rows,
   selected,
@@ -64,7 +64,7 @@ export function LabelTable({
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
-        <caption className={styles.srOnly}>打单台订单池</caption>
+        <caption className={styles.srOnly}>打单发货订单池</caption>
         <thead>
           <tr>
             <th className={styles.checkCol}>

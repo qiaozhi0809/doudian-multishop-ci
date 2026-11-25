@@ -108,7 +108,7 @@ describe("对账页", () => {
     expect(screen.getByText(/3 → 2/)).toBeInTheDocument();
   });
 
-  it("立即对账提交 30 天窗口并刷新结果", async () => {
+  it("立即检查提交 30 天窗口并刷新结果", async () => {
     const fetchMock = mockFetch({
       "GET /api/shops": jsonResponse(shops),
       "GET /api/reconcile/findings": findingsPage([]),
@@ -125,7 +125,7 @@ describe("对账页", () => {
     });
     renderPage();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "立即对账" }));
+    await user.click(await screen.findByRole("button", { name: "立即检查" }));
     const call = fetchMock.mock.calls.find(([u]) => String(u) === "/api/reconcile/run");
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({ window_days: 30 });
     await waitFor(() =>

@@ -66,7 +66,7 @@ export function useShippingActions() {
   useEventSubscription<ShipDoneEvent>("ship_done", (event) => {
     if (event.batch_id !== batchId) return;
     setProgress((state) => applyDone(state, event));
-    void client.invalidateQueries({ queryKey: queryKeys.shippingPoolRoot() });
+    void client.invalidateQueries({ queryKey: queryKeys.labelPoolRoot() });
     void client.invalidateQueries({ queryKey: queryKeys.ordersRoot() });
   });
 

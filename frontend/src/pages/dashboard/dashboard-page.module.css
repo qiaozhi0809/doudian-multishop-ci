@@ -14,12 +14,41 @@
   font-size: var(--text-xs);
 }
 
-.kpiGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
-  gap: var(--space-4);
+/* 指标卡按工作流分三组：发货 / 售后与库存 / 店铺与资金，每组一行、卡片平分整行 */
+.kpiGroups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
+.kpiGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.kpiGroupTitle {
+  padding-left: 4px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.kpiGrid[data-count="4"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* 窄屏：4 张的那组排成 2 × 2，不让最后一张单独掉到下一行 */
+@media (max-width: 1279px) {
+  .kpiGrid[data-count="4"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .sectionTitle {
   margin: 0;
   color: var(--foreground);
@@ -47,16 +76,6 @@
 
 .chartCard,
 .tableCard,
-.pendingCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  padding: var(--space-5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  background: var(--surface);
-}
 
 .tableWrap {
   min-width: 0;
@@ -82,13 +101,21 @@
 /* 指标卡占位：加载与出错时保持同样的卡片高度，布局不跳动。 */
 .placeholderCard {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-height: 7.5rem;
-  padding: var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+  height: 56px;
+  padding: 0 18px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-surface);
+  border-radius: var(--radius-pill);
   background: var(--surface);
+  box-shadow: var(--shadow-resting);
+}
+
+.placeholderSkeleton {
+  flex: none;
+  width: 3rem;
 }
 
 .placeholderLabel {
@@ -98,29 +125,40 @@
 
 .placeholderValue {
   color: var(--text-muted);
-  font-size: var(--text-xl);
+  font-size: var(--text-sm);
 }
 
 /* 金额卡：与资金页保持一致的内容结构（MetricCard 只接受数字）。 */
+/* 金额卡：和 MetricCard 一样的一行胶囊 */
 .statCard {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-6);
+  height: 56px;
+  padding: 0 18px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-surface);
+  border-radius: var(--radius-pill);
   background: var(--surface);
+  box-shadow: var(--shadow-resting);
 }
 
 .statLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
 .statValue {
   color: var(--foreground);
-  font-size: var(--text-2xl);
+  font-size: 20px;
+  white-space: nowrap;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -136,37 +174,42 @@
   font-size: var(--text-sm);
 }
 
-.pendingList {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+
+
+
+
+/* 可点的指标卡：整张卡是链接。悬停底色变浅，名称后出现「›」；键盘聚焦显示焦点框 */
+.kpiLink {
+  display: block;
+  min-width: 0;
+  border-radius: var(--radius-pill);
+  color: inherit;
+  text-decoration: none;
 }
 
-.pendingItem {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-control);
+.kpiLink > * {
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.kpiLink:hover > * {
   background: var(--surface-muted);
 }
 
-.pendingHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  color: var(--foreground);
-  font-size: var(--text-sm);
+/* 名称是卡片里第一块（MetricCard 的标题行 / StatCard 的名称） */
+.kpiLink > * > :first-child::after {
+  content: "›";
+  margin-left: 6px;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
 }
 
-.pendingReason {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  line-height: var(--leading-body);
+.kpiLink:hover > * > :first-child::after,
+.kpiLink:focus-visible > * > :first-child::after {
+  opacity: 1;
+}
+
+.kpiLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

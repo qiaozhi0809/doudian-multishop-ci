@@ -174,7 +174,7 @@ class Signer(Protocol):
 - **平台状态驱动的本地转换**：平台变为「已关闭」（`4`）且本地尚未发货 → 本地转 `cancelled`；
   若该单有 `active` 面单，提示人工作废（不自动作废）。平台已发货而本地未发货 → 交给对账（5.8）。
 - 取号前置：`pending_label` 的订单必须 `platform_status` 为待发货，否则拦截。
-- **供应商代发单不能取号**：「源头好货」等订单出现在待发货里，但商家不能发货（判别字段待定，gaps API-28），同步时标记为不可取号，打单台不显示勾选框。
+- **供应商代发单不能取号**：「源头好货」等订单出现在待发货里，但商家不能发货（判别字段待定，gaps API-28），同步时标记为不可取号，打单发货页不显示勾选框。
 - 取号所需字段（`combine_id`、`sku_order_id`、实际 `sku_id`）`searchlist` 不能直接提供
   （`sku_id` 可能为 0），来源接口待定（gaps API-04）。
 - 单店失败不影响其他店。
@@ -308,6 +308,9 @@ class Signer(Protocol):
    售后 `after_sale/pc/list` 1-based、库存 `stock/manage/list` 1-based
 4. 金额统一整数分（`*_cents`），展示层再换算
 5. 上游不可用时回退本地缓存，并标注数据来源（`source: upstream | local_db`）
+6. **实时计数按店缓存 60 秒**（订单 tab 计数在 `order_query.py`，售后计数、商品计数用 `service/shop_cache.py`）：
+   页面加载、切页、多标签页、多台电脑共用，60 秒内每店最多请求平台一次；只缓存成功结果；
+   该店同步完成后失效；`fetched_at` 是当初取自平台的时间。缓存在进程内存里（单进程部署，不用 Redis）
 
 **刷新策略**：
 

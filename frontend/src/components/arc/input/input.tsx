@@ -10,6 +10,8 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   description?: string;
   error?: string;
+  /** 字段名后面显示灰色小字「可选」。 */
+  optional?: boolean;
 }
 
 /* Digits roll up when a number grows and down when it shrinks; `custom` hands the latest direction to digits already leaving. */
@@ -67,7 +69,7 @@ function MessageRow({ id, text, className, alert }: { id?: string; text: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, description, error, id, className, ...props }, ref,
+  { label, description, error, optional, id, className, ...props }, ref,
 ) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
@@ -75,7 +77,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const errorId = error ? `${controlId}-error` : undefined;
   const describedBy = [props["aria-describedby"], hintId, errorId].filter(Boolean).join(" ") || undefined;
   return <div className={styles.field}>
-    <label className={styles.label} htmlFor={controlId}>{label}</label>
+    <label className="field-label" htmlFor={controlId}>{label}{optional ? <span className="field-optional">可选</span> : null}</label>
     <input {...props} id={controlId} ref={ref} className={[styles.input, className].filter(Boolean).join(" ")} aria-invalid={error ? true : props["aria-invalid"]} aria-describedby={describedBy}/>
     <FieldMessage id={hintId} text={description} className={styles.description} />
     <FieldMessage id={errorId} text={error} className={styles.error} alert />

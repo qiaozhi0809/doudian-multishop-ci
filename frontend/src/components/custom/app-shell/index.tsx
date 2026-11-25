@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
+import { NoticeProvider } from "@/components/custom/notice/notice";
 import { TaskCenter } from "@/components/custom/task-center";
 import { useEvents } from "@/lib/use-events";
 import { useShops } from "@/lib/use-shops";
@@ -10,17 +11,16 @@ import { DryRunBanner } from "./components/dry-run-banner";
 import { HealthIndicator } from "./components/health-indicator";
 import { ShopFilterSelect } from "./components/shop-filter-select";
 import { SideNav } from "./components/side-nav";
-import { TopBar } from "./components/top-bar";
+import { PageHead } from "./components/page-head";
 import { useChangePassword } from "./hooks/use-change-password";
-import { useNavGroups } from "./hooks/use-nav-groups";
+import { usePrefetchMetrics } from "./hooks/use-prefetch-metrics";
 import { useQuickLogin } from "./hooks/use-quick-login";
 import { useShopFilter } from "./hooks/use-shop-filter";
-import { useSideNavCollapsed } from "./hooks/use-side-nav-collapsed";
 import { listAttention, summarizeHealth } from "./logic/health-summary";
 import { pageTitle } from "./logic/nav-items";
 import styles from "./app-shell.module.css";
 
-/** 后台外壳：侧边栏 + 顶栏 + 内容区（`<Outlet />`）。 */
+/** 后台外壳：浮动侧栏（左下角个人中心）+ 内容区（页面标题行 + `<Outlet />`）。 */
 export function AppShell() {
   useEvents();
   const { pathname } = useLocation();
@@ -28,43 +28,39 @@ export function AppShell() {
   const shopsQuery = useShops();
   const shops = shopsQuery.data ?? [];
   const auth = useAuth();
-  const nav = useSideNavCollapsed();
-  const groups = useNavGroups();
   const login = useQuickLogin();
   const password = useChangePassword();
   const system = useSystemInfo();
+  usePrefetchMetrics(shopIds, (shopsQuery.data ?? []).length > 0);
 
   const healthState = shopsQuery.isError ? "error" : shopsQuery.isLoading ? "loading" : "ready";
   return (
+    <NoticeProvider>
     <div className={styles.shell}>
       <SideNav
-        collapsed={nav.collapsed}
-        onToggle={nav.toggle}
         shopIds={shopIds}
-        collapsedGroups={groups.collapsedGroups}
-        onToggleGroup={groups.toggleGroup}
+        scope={<ShopFilterSelect shops={shops} shopIds={shopIds} disabled={healthState !== "ready"} onChange={setShopIds} />}
+        tasks={<TaskCenter />}
+        account={<AdminMenu username={auth.status?.username ?? "管理员"} onChangePassword={() => password.setOpen(true)} onLogout={() => void auth.logout()} />}
       />
-      <div className={styles.main}>
-        <TopBar
-          title={pageTitle(pathname)}
-          filter={<ShopFilterSelect shops={shops} shopIds={shopIds} disabled={healthState !== "ready"} onChange={setShopIds} />}
-          tasks={<TaskCenter />}
-          health={
-            <HealthIndicator
-              state={healthState}
-              summary={summarizeHealth(shops)}
-              attention={listAttention(shops)}
-              onRetry={() => void shopsQuery.refetch()}
-              login={{ pendingIds: login.pendingIds, waitingIds: login.waitingIds, errors: login.errors, onLogin: (id) => void login.login(id) }}
-            />
-          }
-          admin={<AdminMenu username={auth.status?.username ?? "管理员"} onChangePassword={() => password.setOpen(true)} onLogout={() => void auth.logout()} />}
-        />
-        {system.dryRun && <DryRunBanner active />}
-        <main className={styles.content}>
+      <main className={styles.main}>
+        <div className={styles.page}>
+          {system.dryRun && <DryRunBanner active />}
+          <PageHead
+            title={pageTitle(pathname)}
+            health={
+              <HealthIndicator
+                state={healthState}
+                summary={summarizeHealth(shops)}
+                attention={listAttention(shops)}
+                onRetry={() => void shopsQuery.refetch()}
+                login={{ pendingIds: login.pendingIds, waitingIds: login.waitingIds, errors: login.errors, onLogin: (id) => void login.login(id) }}
+              />
+            }
+          />
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
       <ChangePasswordDialog
         open={password.open}
         onOpenChange={password.setOpen}
@@ -74,5 +70,6 @@ export function AppShell() {
         succeeded={password.succeeded}
       />
     </div>
+    </NoticeProvider>
   );
 }

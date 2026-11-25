@@ -26,6 +26,8 @@ export interface DialogContentProps extends ComponentPropsWithoutRef<typeof Dial
   title: string;
   description?: string;
   children: ReactNode;
+  /** confirm: 确认框形态，无头部分隔线与 ×，标题、说明、按钮成一个整块。 */
+  variant?: "default" | "confirm";
 }
 
 const fade: Transition = { duration: motionTokens.duration.instant };
@@ -39,7 +41,7 @@ function SwapText({ text }: { text: string }) {
   </AnimatePresence>;
 }
 
-export function DialogContent({ title, description, children, className, onPointerDownOutside, ...props }: DialogContentProps) {
+export function DialogContent({ title, description, children, className, variant = "default", onPointerDownOutside, onOpenAutoFocus, ...props }: DialogContentProps) {
   const open = useContext(OpenContext);
   const reduced = useReducedMotion();
   // When the open state last changed. Radix waits for the click before treating a press as outside, and a press on the trigger
@@ -50,21 +52,30 @@ export function DialogContent({ title, description, children, className, onPoint
     onPointerDownOutside?.(event);
     if (open !== null && (!change.current.open || event.detail.originalEvent.timeStamp < change.current.at)) event.preventDefault();
   };
-  const classes = [styles.content, className].filter(Boolean).join(" ");
+  const confirm = variant === "confirm";
+  // 确认框打开时不把焦点自动给「取消」：脚本聚焦在某些情况下会被当成键盘聚焦，画出黑色焦点框。
+  // 改为聚焦弹窗本身（无框），键盘用户按 Tab 仍会到按钮上，那时才显示焦点框。
+  const autoFocus: DialogContentProps["onOpenAutoFocus"] = event => {
+    onOpenAutoFocus?.(event);
+    if (!confirm || event.defaultPrevented) return;
+    event.preventDefault();
+    (event.currentTarget as HTMLElement | null ?? event.target as HTMLElement | null)?.focus?.({ preventScroll: true });
+  };
+  const classes = [styles.content, confirm ? styles.confirm : "", className].filter(Boolean).join(" ");
   const inner = <>
-    <div className={styles.header}><div><DialogPrimitive.Title className={styles.title}><SwapText text={title}/></DialogPrimitive.Title>{description ? <DialogPrimitive.Description className={styles.description}><SwapText text={description}/></DialogPrimitive.Description> : null}</div><DialogPrimitive.Close className={styles.close} aria-label="Close dialog"><X size={16} strokeWidth={1.75} aria-hidden="true"/></DialogPrimitive.Close></div>
+    <div className={styles.header}><div><DialogPrimitive.Title className={styles.title}><SwapText text={title}/></DialogPrimitive.Title>{description ? <DialogPrimitive.Description className={styles.description}><SwapText text={description}/></DialogPrimitive.Description> : null}</div>{confirm ? null : <DialogPrimitive.Close className={styles.close} aria-label="关闭"><X size={16} strokeWidth={1.75} aria-hidden="true"/></DialogPrimitive.Close>}</div>
     <div className={styles.body}>{children}</div>
   </>;
   // Under a bare Radix root the open state is unknown here, so CSS keyframes keyed off data-state animate the layers instead.
   if (open === null) return <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay className={`${styles.overlay} ${styles.keyframes}`}/>
-    <DialogPrimitive.Content {...props} onPointerDownOutside={pressOutside} className={`${classes} ${styles.keyframes}`}>{inner}</DialogPrimitive.Content>
+    <DialogPrimitive.Content {...props} onOpenAutoFocus={autoFocus} onPointerDownOutside={pressOutside} className={`${classes} ${styles.keyframes}`}>{inner}</DialogPrimitive.Content>
   </DialogPrimitive.Portal>;
   // The overlay fades while the dialog rises 8px and scales up on a spring. Closing is shorter and quieter, and starts from wherever the entrance is.
   return <AnimatePresence>
     {open && <DialogPrimitive.Portal key="dialog" forceMount>
       <DialogPrimitive.Overlay asChild forceMount><motion.div className={styles.overlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: reduced ? fade : leave }} transition={reduced ? fade : { duration: motionTokens.duration.standard, ease: [...motionTokens.ease.enter] }}/></DialogPrimitive.Overlay>
-      <DialogPrimitive.Content {...props} onPointerDownOutside={pressOutside} asChild forceMount>
+      <DialogPrimitive.Content {...props} onOpenAutoFocus={autoFocus} onPointerDownOutside={pressOutside} asChild forceMount>
         <motion.div className={classes} initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reduced ? { opacity: 0, transition: fade } : { opacity: 0, y: 4, scale: .98, transition: leave }} transition={reduced ? fade : { default: motionTokens.spring.smooth, opacity: { duration: motionTokens.duration.fast, ease: [...motionTokens.ease.enter] } }}>{inner}</motion.div>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>}

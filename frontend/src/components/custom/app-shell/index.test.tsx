@@ -52,47 +52,49 @@ afterEach(() => {
 });
 
 describe("App Shell", () => {
-  it("顶栏显示页面标题，侧边栏有订单与店铺与设置", async () => {
+  it("标题行显示页面标题，侧边栏有全部订单与店铺管理", async () => {
     renderShell("/orders");
-    expect(await screen.findByRole("heading", { level: 1, name: "订单" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "全部订单" })).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "主导航" });
-    expect(within(nav).getByRole("link", { name: "订单" })).toHaveAttribute("aria-current", "page");
-    expect(within(nav).getByRole("link", { name: "店铺与设置" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "全部订单" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "店铺管理" })).toBeInTheDocument();
     expect(screen.getByText("订单内容")).toBeInTheDocument();
   });
 
   it("挂载 useEvents：建立 SSE 连接", async () => {
     renderShell("/orders");
-    await screen.findByRole("heading", { name: "订单" });
+    await screen.findByRole("heading", { name: "全部订单" });
     expect(FakeEventSource.instances).toHaveLength(1);
   });
 
-  it("导航为分组结构，仪表盘 / 发货台 / 对账入口都在", async () => {
+  it("导航为分组结构，概览 / 打单发货 / 发货异常入口都在", async () => {
     renderShell("/orders");
     const nav = await screen.findByRole("navigation", { name: "主导航" });
-    expect(within(nav).getByRole("link", { name: "仪表盘" })).toHaveAttribute("href", "/dashboard");
-    expect(within(nav).getByRole("link", { name: "发货台" })).toHaveAttribute("href", "/shipping");
-    expect(within(nav).getByRole("link", { name: "对账" })).toHaveAttribute("href", "/reconcile");
-    const header = within(nav).getByRole("button", { name: "订单处理" });
-    expect(header).toHaveAttribute("aria-expanded", "true");
-    expect(header).toHaveAttribute("data-active", "true");
-    expect(within(nav).getByRole("link", { name: "订单" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "概览" })).toHaveAttribute("href", "/dashboard");
+    expect(within(nav).getByRole("link", { name: "打单发货" })).toHaveAttribute("href", "/labeling");
+    expect(within(nav).getByRole("link", { name: "发货异常" })).toHaveAttribute("href", "/reconcile");
+    const group = within(nav).getByRole("group", { name: "订单" });
+    expect(within(group).getByRole("link", { name: "全部订单" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("分组可折叠，折叠状态记在本地", async () => {
+  it("进外壳就预取各页指标卡的数（订单 / 售后 / 商品计数、库存与资金汇总）", async () => {
     renderShell("/orders");
-    const user = userEvent.setup();
-    const nav = await screen.findByRole("navigation", { name: "主导航" });
-    const header = within(nav).getByRole("button", { name: "订单处理" });
-    await user.click(header);
-    expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(within(nav).queryByRole("link", { name: "订单" })).not.toBeInTheDocument();
-    expect(localStorage.getItem("doudian.navCollapsedGroups")).toBe('["orders"]');
-    await user.click(header);
-    expect(within(nav).getByRole("link", { name: "订单" })).toBeInTheDocument();
+    await screen.findByRole("heading", { level: 1, name: "全部订单" });
+    const called = () => (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.map(([u]) => String(u).split("?")[0]);
+    await waitFor(() =>
+      expect(called()).toEqual(
+        expect.arrayContaining([
+          "/api/orders/counts",
+          "/api/aftersale/counts",
+          "/api/catalog/products/counts",
+          "/api/catalog/stock/summary",
+          "/api/fund/summary",
+        ]),
+      ),
+    );
   });
 
-  it("顶栏常驻任务中心", async () => {
+  it("侧栏常驻任务中心", async () => {
     renderShell("/orders");
     expect(await screen.findByRole("button", { name: "任务中心" })).toBeInTheDocument();
   });
@@ -129,7 +131,7 @@ describe("App Shell", () => {
   it("导航链接带着当前店铺筛选", async () => {
     renderShell("/orders?shops=1&page=3");
     const nav = await screen.findByRole("navigation", { name: "主导航" });
-    expect(within(nav).getByRole("link", { name: "店铺与设置" })).toHaveAttribute("href", "/shops?shops=1");
+    expect(within(nav).getByRole("link", { name: "店铺管理" })).toHaveAttribute("href", "/shops?shops=1");
   });
 
   it("店铺都正常时显示店铺正常", async () => {
@@ -179,8 +181,11 @@ describe("App Shell", () => {
     renderShell("/orders?page=3", {}, [makeShop(), makeShop({ id: 2, name: "店铺乙" })]);
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /店铺筛选/ }));
-    await user.click(await screen.findByRole("option", { name: "店铺乙" }));
+    await user.click(await screen.findByRole("menuitemcheckbox", { name: "店铺乙" }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/orders?shops=2"));
+    expect(screen.getByRole("button", { name: "店铺筛选，店铺乙", hidden: true })).toBeInTheDocument();
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "全部店铺" }));
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent(/^\/orders$/));
   });
 
   it("管理员菜单显示用户名，退出后回到登录页", async () => {
@@ -194,7 +199,7 @@ describe("App Shell", () => {
     });
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /admin/ }));
-    await user.click(await screen.findByRole("menuitem", { name: "退出" }));
+    await user.click(await screen.findByRole("menuitem", { name: "退出登录" }));
     expect(await screen.findByRole("heading", { name: "登录页" })).toBeInTheDocument();
   });
 
@@ -249,15 +254,15 @@ describe("演练模式横幅", () => {
 
   it("dry_run 开启时顶部有醒目横幅", async () => {
     renderShell("/orders", { "GET /api/system/info": jsonResponse(INFO) });
-    const banner = await screen.findByText(/演练模式（dry run）已开启/);
-    expect(banner).toHaveTextContent("只记录请求");
+    const banner = await screen.findByText(/演练模式/);
+    expect(banner).toHaveTextContent("演练模式：取号、发货、打印、作废不会真的发送");
   });
 
   it("dry_run 关闭（或接口不可用）时没有横幅", async () => {
     renderShell("/orders", {
       "GET /api/system/info": jsonResponse({ ...INFO, dry_run: false }),
     });
-    expect(await screen.findByRole("heading", { level: 1, name: "订单" })).toBeInTheDocument();
-    expect(screen.queryByText(/演练模式（dry run）已开启/)).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "全部订单" })).toBeInTheDocument();
+    expect(screen.queryByText(/演练模式/)).not.toBeInTheDocument();
   });
 });

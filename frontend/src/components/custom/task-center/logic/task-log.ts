@@ -42,8 +42,8 @@ export const TASK_LIMIT = 8;
 export const DEADLINE_TASK_ID = "deadline";
 
 const MODE_TITLES: Record<string, string> = {
-  obtain: "取号（打面单）",
-  fetch_and_ship: "取号并发货",
+  obtain: "打单",
+  fetch_and_ship: "打单并发货",
   void: "作废面单",
 };
 

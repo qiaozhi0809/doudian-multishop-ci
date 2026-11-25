@@ -12,7 +12,7 @@ import { NoticeList } from "./notice-list";
 import { ResumeDialog } from "./resume-dialog";
 import { ShopTable } from "./shop-table";
 
-/** 店铺与设置页：加载中 / 出错 / 空 / 列表四种状态，以及各个对话框。 */
+/** 店铺管理页：加载中 / 出错 / 空 / 列表四种状态，以及各个对话框。 */
 export function ShopPageView({ page }: { page: ShopPage }) {
   const { actions, dialogs } = page;
   const rowActions = (shop: { id: number }) => ({

@@ -52,9 +52,9 @@ export function AftersaleMetrics({ loading, error, data, shopName, onRetry }: Me
       {data.hasData && (
         <>
           <div className={styles.countGrid}>
-            <MetricCard label="待办售后" value={data.pendingTotal} context="待审核 + 待收货 + 仲裁（平台口径）" />
-            <MetricCard label="待审核" value={data.auditTotal} context="各类型待商家审核合计" />
-            <MetricCard label="临近超时" value={data.approachingDeadline} context="处理截止时间紧张" />
+            <MetricCard label="待办售后" value={data.pendingTotal} tone="violet" />
+            <MetricCard label="待审核" value={data.auditTotal} tone="warning" />
+            <MetricCard label="临近超时" value={data.approachingDeadline} tone="danger" />
           </div>
           <div className={styles.countMeta}>
             {data.fetchedAt && (

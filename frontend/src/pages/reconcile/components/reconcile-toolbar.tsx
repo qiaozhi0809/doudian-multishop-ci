@@ -44,9 +44,9 @@ export function ReconcileToolbar(props: ReconcileToolbarProps) {
         />
       </div>
       <div className={styles.actions}>
-        <span className={styles.muted}>对账窗口：最近 30 天</span>
+        <span className={styles.muted}>检查范围：最近 30 天</span>
         <Button onClick={props.onRun} loading={props.running} disabled={props.running}>
-          立即对账
+          立即检查
         </Button>
       </div>
     </div>

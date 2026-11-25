@@ -19,7 +19,7 @@ export interface PrintGateInput {
 
 /** 打印按钮的可用性：组件未启动时置灰并给出原因（flows 10 节强制约束）。 */
 export function printGate(input: PrintGateInput): { disabled: boolean; reason: string | null } {
-  if (input.stage !== "labeled") return { disabled: true, reason: "打印只针对已取号的面单" };
+  if (input.stage !== "labeled") return { disabled: true, reason: "先打单，再到「待发货」里打印" };
   if (input.componentAvailable === null) {
     return { disabled: true, reason: "正在检测打印组件" };
   }

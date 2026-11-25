@@ -13,10 +13,12 @@ import { LabelToolbar } from "./label-toolbar";
 import { PreviewDialog } from "./preview-dialog";
 import { PrintNotice } from "./print-notice";
 import { ReceiverDrawer } from "./receiver-drawer";
+import { CheckDialog } from "./check-dialog";
+import { ShipProgress } from "./ship-progress";
 
-/** 打单台：店铺就绪判断 → 工具栏 → 打印状态 → 进度 → 表格 / 分页 → 预览与收件人。 */
+/** 打单发货：店铺就绪判断 → 阶段与操作 → 打印状态 → 进度 → 表格 / 分页 → 预览、发货检查与收件人。 */
 export function LabelingPageView({ page }: { page: LabelPage }) {
-  const { pool, actions, receiver, print } = page;
+  const { pool, actions, receiver, print, ship } = page;
   if (page.shopsState === "loading") return <Skeleton label="正在读取店铺" lines={4} />;
   if (page.shopsState === "error") {
     return (
@@ -29,7 +31,7 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
     );
   }
   if (page.shopsState === "empty") {
-    return <EmptyNoShops description="先在「店铺与设置」添加店铺并扫码登录，订单才会同步到打单台" />;
+    return <EmptyNoShops />;
   }
 
   const data = pool.query.data;
@@ -52,9 +54,12 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
         printDisabled={gate.disabled}
         printReason={gate.reason}
         printing={print.printing}
+        onShip={() => ship.openCheck([...pool.selected])}
+        shipBusy={ship.checkBusy || ship.shipBusy}
       />
+      {/* 打印只在「待发货」里做，「待打单」不提示打印组件状态 */}
       <PrintNotice
-        notice={componentNotice(print.status)}
+        notice={pool.stage === "labeled" ? componentNotice(print.status) : null}
         summary={print.summary}
         error={print.error}
         onDismissError={print.clearError}
@@ -70,7 +75,14 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
       {print.simulated && (
         <Alert tone="warning" title="演练模式：已记录打印请求，未真正打印" />
       )}
+      {ship.error && <Alert tone="danger" title={ship.error} onDismiss={ship.clearError} />}
+      {ship.simulated && (
+        <Alert tone="warning" title="演练模式：已记录发货请求，未真实发货">
+          本次提交只写入了审计记录并返回模拟结果；关闭演练模式后重新检查并确认才会真实回传平台。
+        </Alert>
+      )}
       <LabelProgress progress={actions.progress} />
+      <ShipProgress progress={ship.progress} />
 
       {pool.query.isLoading && <Skeleton label="正在读取订单池" lines={6} />}
       {pool.query.isError && (
@@ -113,6 +125,7 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
         onClose={actions.closePreview}
         onConfirm={actions.execute}
       />
+      <CheckDialog check={ship.check} busy={ship.shipBusy} onClose={ship.closeCheck} onConfirm={ship.confirm} />
       <ReceiverDrawer
         orderId={receiver.orderId}
         pending={receiver.pending}

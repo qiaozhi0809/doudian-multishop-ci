@@ -22,13 +22,22 @@ describe("App", () => {
   it("renders_shell_routes", async () => {
     mockFetch({ "GET /api/auth/status": jsonResponse(IN), "GET /api/shops": jsonResponse([]) });
     renderAt("/shops");
-    expect(await screen.findByRole("heading", { name: "店铺与设置" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "店铺管理" })).toBeInTheDocument();
   });
 
   it("redirects_root_to_dashboard", async () => {
     mockFetch({ "GET /api/auth/status": jsonResponse(IN), "GET /api/shops": jsonResponse([]) });
     renderAt("/");
-    expect(await screen.findByRole("heading", { name: "仪表盘" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "概览" })).toBeInTheDocument();
+  });
+
+  it("旧的发货台地址跳到打单发货的「待发货」阶段", async () => {
+    mockFetch({
+      "GET /api/auth/status": jsonResponse(IN),
+      "GET /api/shops": jsonResponse([]),
+    });
+    renderAt("/shipping");
+    expect(await screen.findByRole("heading", { name: "打单发货" })).toBeInTheDocument();
   });
 
   it("未登录时进入登录页", async () => {

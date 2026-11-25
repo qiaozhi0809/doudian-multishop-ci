@@ -8,7 +8,7 @@ export function EmptyShops({ onAdd }: { onAdd: () => void }) {
     <EmptyState
       icon={<Store size={24} strokeWidth={1.75} aria-hidden="true" />}
       title="还没有店铺"
-      description="添加店铺后，设置出口并扫码登录，就能同步订单"
+      description="添加后设置出口并扫码登录"
       action={<Button onClick={onAdd}>添加店铺</Button>}
     />
   );
