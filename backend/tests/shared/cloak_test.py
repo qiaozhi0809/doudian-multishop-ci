@@ -57,3 +57,18 @@ def test_raises_when_profile_not_writable(tmp_path):
             get_or_create_seed(ro)
     finally:
         ro.chmod(0o700)
+
+
+def test_new_seed_avoids_sibling_collision(tmp_path, monkeypatch):
+    import random
+
+    sibling = tmp_path / "1"
+    sibling.mkdir()
+    (sibling / ".cloak-seed").write_text("12345", encoding="ascii")
+
+    calls = iter([12345, 54321])
+    monkeypatch.setattr(random, "randint", lambda a, b: next(calls))
+
+    seed = get_or_create_seed(tmp_path / "2")
+
+    assert seed == 54321
