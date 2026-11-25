@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 from playwright.async_api import async_playwright
 
 from app.adapter.doudian.endpoints import BASE_URL
+from app.shared.cloak import cloak_launch_args, get_or_create_seed
 
 ORDER_PAGE_URL = BASE_URL + "/ffa/morder/order/list"
 SESSION_LIFETIME = timedelta(days=60)
@@ -118,13 +119,54 @@ async def await_login(
     return token, headers, await ctx.cookies()
 
 
+def build_cloak_kwargs(profile_dir: Path, proxy: dict | None) -> dict:
+    """CloakBrowser 启动参数。proxy 已由 playwright_proxy() 转成 dict。
+
+    有头模式下不叠加 viewport：CloakBrowser 的屏幕/窗口尺寸由种子派生，
+    额外指定 viewport 会破坏 outerWidth >= innerWidth 的自洽性。
+    """
+    return {
+        "user_data_dir": str(profile_dir),
+        "headless": False,
+        "proxy": proxy,
+        "args": cloak_launch_args(get_or_create_seed(profile_dir)),
+    }
+
+
 async def scan_login(
-    profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = 300
+    profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = 300,
+    use_cloak: bool = False,
 ) -> LoginResult:
-    """打开订单页等待人工扫码。超时抛 TimeoutError，关窗抛 LoginCancelled。"""
+    """打开订单页等待人工扫码。超时抛 TimeoutError，关窗抛 LoginCancelled。
+
+    use_cloak 为真时走 CloakBrowser 定制 Chromium（每店固定指纹）；
+    否则用系统浏览器（channel 指定）。
+    """
+    playwright_proxy_value = playwright_proxy(proxy)
+    if use_cloak:
+        try:
+            from cloakbrowser import launch_persistent_context_async
+        except ImportError as exc:
+            raise RuntimeError(
+                "未安装 cloakbrowser，请先执行：pip install cloakbrowser==0.3.30"
+            ) from exc
+
+        ctx = await launch_persistent_context_async(
+            **build_cloak_kwargs(profile_dir, playwright_proxy_value),
+        )
+        try:
+            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+            token, headers, cookies = await await_login(ctx, page, timeout_s)
+        finally:
+            try:
+                await ctx.close()
+            except Exception:  # noqa: BLE001 - 用户已关窗时 close 会报错
+                pass
+        return LoginResult(cookies, token, session_expiry(cookies, datetime.now(UTC)), headers)
+
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context(
-            str(profile_dir), channel=channel, headless=False, proxy=playwright_proxy(proxy),
+            str(profile_dir), channel=channel, headless=False, proxy=playwright_proxy_value,
         )
         try:
             page = ctx.pages[0] if ctx.pages else await ctx.new_page()
