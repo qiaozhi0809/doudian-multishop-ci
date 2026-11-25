@@ -42,7 +42,11 @@
 
 ## 状态
 
-设计阶段。主链路接口已用测试单验证，剩余缺口见 [docs/gaps.md](docs/gaps.md)；实现待开始。
+**M1（登录 + 基础数据 + 拉单）已完成**：后端 FastAPI 服务（`backend/app`，15 个 service 模块）
+与前端后台骨架（`frontend/src`，auth / shop / order 页面）可运行，后端 44 个测试。
+M2 起（取号 / 打印 / 发货 / 对账 / 只读聚合）待实现。
+
+主链路抖店接口已用测试单验证，剩余缺口见 [docs/gaps.md](docs/gaps.md)。
 
 ## 许可
 

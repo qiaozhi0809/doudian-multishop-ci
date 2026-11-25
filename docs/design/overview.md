@@ -269,7 +269,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 | 阶段 | 交付物 | 状态 |
 |---|---|---|
 | **M0 技术验证** | 拉单、取号、发货、作废、取号发货一体、改物流均已用测试单验证；打印协议已识别。剩余：打印数据转换（API-07）、取号恢复（API-19）等，见 [gaps.md](../gaps.md) | **部分完成** |
-| **M1 登录 + 基础数据 + 拉单** | 扫码登录、Cookie 导出、地址/模板/快递同步、订单入库 | 待开始 |
+| **M1 登录 + 基础数据 + 拉单** | 扫码登录、Cookie 导出、地址/模板/快递同步、订单入库 | **已完成**（后端 `app/service/{session_manager,shop_login,base_data,order_sync,scheduler}.py` + `adapter/browser/login.py`；前端 `pages/{auth,shop,order}`；44 个测试） |
 | **M2 订单池 + 取号** | 聚合界面、筛选勾选、批量取号；按需查看收件人（解密） | 待开始 |
 | **M3 打印** | 官方组件 `wss://localhost:13999` 接通；PDF 兜底 | 待开始 |
 | **M4 发货前检查 + 发货 + 对账** | `sendcheck`、`batchDeliverGoodsByEES`、每日对账 | 待开始 |
@@ -279,7 +279,7 @@ npx shadcn@latest add @uiarc-pro/<id>
 
 ---
 
-### 13.1 前端交付节奏（⏳ DEC-03 待定）
+### 13.1 前端交付节奏（DEC-03 已按「随里程碑交付」执行）
 
 上表把前端集中在 M6，M1~M5 做完无法人工验收。建议**每个里程碑带上它自己的页面**：
 
