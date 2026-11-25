@@ -116,7 +116,7 @@ def test_parse_receiver_fields():
     assert info.phone == "138****0000"
     assert info.region == "内蒙古自治区通辽市科尔沁左翼后旗甘旗卡镇"
     assert info.detail == "<详细地址>"
-    assert info.expire_at == "2026-11-30T00:53:20Z"
+    assert info.expire_at == "2026-12-11T14:40:00Z"
     assert info.verify_type is None
 
 

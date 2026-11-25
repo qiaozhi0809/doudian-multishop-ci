@@ -73,9 +73,12 @@ class ShopRunner:
 
     async def run(
         self, shop_id: int, job: Callable[[FxgClient], Awaitable[T]], *, actor: str,
-        needs_session: bool = True,
+        needs_session: bool = True, risk_pause_exempt: frozenset[str] = frozenset(),
     ) -> T:
-        """needs_session=False 用于扫码登录：此时 job 拿到的客户端不带任何凭证，不得用来发请求。"""
+        """needs_session=False 用于扫码登录：此时 job 拿到的客户端不带任何凭证，不得用来发请求。
+
+        `risk_pause_exempt`：命中的风控码只上抛、不暂停整店（地址解密的 602502151，flows 7.3）。
+        """
         await self.precheck(shop_id, needs_session=needs_session)
 
         async def in_queue() -> T:
@@ -89,7 +92,8 @@ class ShopRunner:
             try:
                 return await job(client)
             except RiskBlocked as e:
-                self._pause(shop_id, f"{RISK_PAUSE_PREFIX}{e.code}")
+                if e.code not in risk_pause_exempt:
+                    self._pause(shop_id, f"{RISK_PAUSE_PREFIX}{e.code}")
                 raise
             except SessionExpired:
                 self._sessions.mark_expired(shop_id)
