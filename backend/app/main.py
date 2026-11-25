@@ -84,6 +84,7 @@ def create_app(
             task_store.recover_after_restart(conn, now_iso)
         for name, service in build_services(settings, engine, overrides).items():
             setattr(app.state, name, service)
+        app.state.proxy_pool.rehash_legacy()  # 补算迁移留下的 legacy: identity
 
         stop = asyncio.Event()
         runner, order_sync = app.state.runner, app.state.order_sync
