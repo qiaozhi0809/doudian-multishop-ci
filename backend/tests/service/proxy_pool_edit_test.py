@@ -76,6 +76,41 @@ def test_change_expiry_only_leaves_shop_untouched(svc, engine, box):
     assert item["expires_at"] == "2027-12-31" and item["proxy_url"] == cipher
 
 
+def test_clear_expiry_sets_null_and_leaves_shop_untouched(svc, engine, box):
+    sid, pid = bind(engine, box)
+    ready(engine, sid)
+    svc.update(pid, expires_at="2027-12-31", actor="admin")
+    before = shop(engine, sid)
+    cipher = pool(engine, pid)["proxy_url"]
+    svc.update(pid, expires_at=None, actor="admin")
+    item = pool(engine, pid)
+    assert item["expires_at"] is None and item["proxy_url"] == cipher
+    after = shop(engine, sid)
+    assert after.pop("proxy_expires_at") is None
+    assert after == {k: v for k, v in before.items() if k != "proxy_expires_at"}
+    assert "proxy_pool.update" in audit_text(engine)
+
+
+def test_update_with_nothing_to_change_writes_no_audit(svc, engine, box):
+    _, pid = bind(engine, box)
+    before = audit_text(engine)
+    svc.update(pid, actor="admin")
+    svc.update(pid, host="203.0.113.5", password=PW, actor="admin")
+    assert audit_text(engine) == before
+
+
+@pytest.mark.parametrize("host", [
+    "x@5.6.7.8", "a/b", "a?b", "a#b", "a:b", "[::1]", "::1", "a b", "a\tb"])
+def test_edit_bad_host_rejected_and_nothing_written(svc, engine, box, host):
+    sid, pid = bind(engine, box)
+    ready(engine, sid)
+    before_shop, before_item = shop(engine, sid), pool(engine, pid)
+    with pytest.raises(ValueError, match="代理主机格式不正确") as e:
+        svc.update(pid, host=host, actor="admin")
+    assert PW not in str(e.value) and USER not in str(e.value)
+    assert shop(engine, sid) == before_shop and pool(engine, pid) == before_item
+
+
 def test_same_values_do_not_reset(svc, engine, box):
     sid, pid = bind(engine, box)
     ready(engine, sid)
@@ -92,6 +127,7 @@ def test_edit_into_existing_identity_conflicts(svc, engine, box):
     with pytest.raises(ProxyPoolInUse) as e:
         svc.update(b, host="203.0.113.1", username=f"{USER}1", actor="admin")
     assert "203.0.113.1:8000" in str(e.value) and PW not in str(e.value)
+    assert "店铺" not in str(e.value) and "重复" in str(e.value)
     assert pool(engine, b) == before
     assert a
 

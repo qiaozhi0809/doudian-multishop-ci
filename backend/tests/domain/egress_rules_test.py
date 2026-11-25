@@ -10,6 +10,7 @@ from app.domain.egress_rules import (
     parse_provider_line,
     proxy_identity,
     split_proxy_url,
+    validate_proxy_host,
     validate_proxy_url,
 )
 
@@ -110,3 +111,20 @@ def test_join_without_account_has_no_at():
     assert parts.username == "" and parts.password == ""
     assert join_proxy_url(parts) == "https://203.0.113.5:8443"
 
+
+
+@pytest.mark.parametrize("host", [
+    "a@1.2.3.4", "a/b", "a?b", "a#b", "a:b", "[::1]", "::1", "a b"])
+def test_validate_proxy_host_rejects(host):
+    with pytest.raises(ValueError, match="代理主机格式不正确"):
+        validate_proxy_host(host)
+    with pytest.raises(ValueError, match="代理主机格式不正确"):
+        validate_proxy_host("")
+    with pytest.raises(ValueError, match="代理主机格式不正确") as e:
+        parse_provider_line(f"{host}|80|user|topsecret|2026-12-31")
+    assert "topsecret" not in str(e.value)
+
+
+@pytest.mark.parametrize("host", ["203.0.113.5", "proxy.example.com", "a-b.example"])
+def test_validate_proxy_host_accepts(host):
+    validate_proxy_host(host)

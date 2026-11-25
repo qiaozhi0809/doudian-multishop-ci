@@ -48,8 +48,8 @@ class EgressConflict(Exception):
 class ProxyPoolInUse(EgressConflict):
     """池项已被另一家启用店铺绑定。"""
 
-    def __init__(self, shop_name: str) -> None:
-        super().__init__(f"代理已被店铺「{shop_name}」使用")
+    def __init__(self, shop_name: str, message: str | None = None) -> None:
+        super().__init__(message or f"代理已被店铺「{shop_name}」使用")
 
 
 @dataclass(frozen=True)

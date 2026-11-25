@@ -31,7 +31,7 @@
 | | `POST /api/shops/{id}/resume` | 解除风控暂停（`paused_reason` 置空） |
 | 代理池 | `GET /api/proxy-pool` | 池列表：`{id, proxy_display, expires_at, expiry_state, in_use_by, last_checked_at, last_check_ip}`；`in_use_by` 只看启用店铺；不回传账号密码 |
 | | `POST /api/proxy-pool/import {text}` | 批量导入多行代理商格式 → `{added, skipped, failed, failures[{line, reason}]}`；按 `identity` 去重，坏行不影响其余行 |
-| | `PATCH /api/proxy-pool/{id} {host?, port?, username?, password?, expires_at?}` | 编辑池项（密码留空表示不改）；被启用店铺占用时连锁清空该店出口 IP、复位为 `unchecked` 并转 `needs_login` |
+| | `PATCH /api/proxy-pool/{id} {host?, port?, username?, password?, expires_at?}` | 编辑池项（密码留空表示不改；`expires_at` 不传表示不改、传 `null` 表示清空为不限且不复位店铺；主机不得含 `@ / ? # :` `[ ]` 或空白，暂不支持 IPv6）；被启用店铺占用时连锁清空该店出口 IP、复位为 `unchecked` 并转 `needs_login` |
 | | `DELETE /api/proxy-pool/{id}` | 删除池项；被启用店铺占用时 409 |
 | | `POST /api/proxy-pool/{id}/check` | 手动检测，经该代理取出口 IP → `{ip, reason, elapsed_ms, ip_in_use_by}`；`reason` 为 `timeout` / `proxy_unavailable` / `network` / `bad_echo` |
 | 订单 | `GET /api/orders` | 跨店列表（筛选、排序、分页） |

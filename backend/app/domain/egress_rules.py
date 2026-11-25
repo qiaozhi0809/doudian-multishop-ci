@@ -36,12 +36,25 @@ def validate_proxy_url(url: str) -> list[str]:
     return errors
 
 
+_HOST_FORBIDDEN = frozenset("@/?#:[]")
+
+
+def validate_proxy_host(host: str) -> None:
+    """主机只允许域名或 IPv4：含 `@ / ? # : [ ]` 或空白即拒绝（IPv6 暂不支持）。
+
+    否则 urlparse 会按最后一个 `@` 切分，把主机里的片段并进账号密码。
+    """
+    if not host or any(c in _HOST_FORBIDDEN or c.isspace() for c in host):
+        raise ValueError("代理主机格式不正确")
+
+
 def parse_provider_line(line: str) -> tuple[str, str]:
     """`IP|端口|账号|密码|到期日` → (`http://账号:密码@IP:端口`, 到期日 ISO 日期)。"""
     parts = [p.strip() for p in line.strip().split("|")]
     if len(parts) != _PROVIDER_FIELDS or not all(parts):
         raise ValueError("代理商格式应为 IP|端口|账号|密码|到期日")
     host, port, user, password, expires = parts
+    validate_proxy_host(host)
     if not port.isdigit():
         raise ValueError("端口必须是数字")
     try:

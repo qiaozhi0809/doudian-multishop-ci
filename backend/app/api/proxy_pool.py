@@ -12,7 +12,7 @@ from app.api.proxy_pool_schemas import (
     PoolPatch,
 )
 from app.domain.errors import InvalidRequest
-from app.service.proxy_pool import ProxyPoolService
+from app.service.proxy_pool import UNCHANGED, ProxyPoolService
 
 router = APIRouter(prefix="/api/proxy-pool", tags=["proxy-pool"])
 
@@ -54,7 +54,10 @@ def patch_pool(
     try:
         _svc(request).update(
             pool_id, host=body.host, port=body.port, username=body.username,
-            password=body.password, expires_at=body.expires_at, actor=admin)
+            password=body.password,
+            # 区分「没传」与「传了 null（清空为不限）」
+            expires_at=body.expires_at if "expires_at" in body.model_fields_set else UNCHANGED,
+            actor=admin)
     except ValueError as e:  # 校验信息不含账号密码
         raise InvalidRequest(str(e)) from None
     return _item(request, pool_id)

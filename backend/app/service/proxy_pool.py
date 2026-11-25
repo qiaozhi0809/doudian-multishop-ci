@@ -21,6 +21,7 @@ from app.domain.egress_rules import (
     parse_provider_line,
     proxy_identity,
     split_proxy_url,
+    validate_proxy_host,
     validate_proxy_url,
 )
 from app.domain.errors import NotFound
@@ -35,6 +36,7 @@ log = structlog.get_logger()
 MAX_IMPORT_LINES = 500
 MAX_PORT = 65535
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
+UNCHANGED: Any = object()  # update(expires_at=...) 的「不改」哨兵；None 表示清空为不限
 
 
 @dataclass(frozen=True)
@@ -162,12 +164,16 @@ class ProxyPoolService:
     def update(
         self, pool_id: int, *, host: str | None = None, port: int | None = None,
         username: str | None = None, password: str | None = None,
-        expires_at: str | None = None, actor: str,
+        expires_at: str | None = UNCHANGED, actor: str,
     ) -> None:
-        """改池项；None 表示不改。出口身份变了则复位所有引用店铺，提交后发事件。"""
+        """改池项；host/port/账号/密码 为 None、expires_at 为 UNCHANGED 表示不改，
+        expires_at=None 表示清空为不限（只改到期日，不复位店铺）。
+        出口身份变了则复位所有引用店铺，提交后发事件。"""
         if port is not None and not 1 <= port <= MAX_PORT:
             raise ValueError("端口必须在 1-65535 之间")
-        if expires_at is not None:
+        if host is not None:
+            validate_proxy_host(host.strip())
+        if expires_at is not None and expires_at is not UNCHANGED:
             try:
                 datetime.strptime(expires_at, "%Y-%m-%d")
             except ValueError:
@@ -191,7 +197,7 @@ class ProxyPoolService:
             if errors := validate_proxy_url(new_url):
                 raise ValueError(errors[0])
             fields: dict[str, Any] = {}
-            if expires_at is not None:
+            if expires_at is not UNCHANGED and expires_at != item["expires_at"]:
                 fields["expires_at"] = expires_at
             new_identity = proxy_identity(new_url)
             egress_changed = new_identity != proxy_identity(old_url)
@@ -201,11 +207,15 @@ class ProxyPoolService:
                     holder = next((
                         r for r in proxy_pool_store.referrers(conn, clash["id"])
                         if r["status"] != "disabled"), None)
-                    raise ProxyPoolInUse(
-                        holder["name"] if holder else f"池项 {clash['proxy_display']}")
+                    if holder is None:
+                        raise ProxyPoolInUse(
+                            "", f"与池项 {clash['proxy_display']} 重复")
+                    raise ProxyPoolInUse(holder["name"])
                 fields.update(
                     identity=new_identity, proxy_url=self._box.encrypt(new_url.encode()),
                     proxy_display=display_proxy(new_url))
+            if not fields:
+                return  # 没有任何改动：不写库、不记审计
             proxy_pool_store.update(conn, pool_id, now, **fields)
             if egress_changed:
                 for r in proxy_pool_store.referrers(conn, pool_id):

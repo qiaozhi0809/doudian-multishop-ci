@@ -53,6 +53,23 @@ def test_patch_and_validation(api):
     assert api.client.patch("/api/proxy-pool/999", json={"port": 80}).status_code == 404
 
 
+def test_patch_null_clears_expiry_and_empty_body_is_noop(api):
+    pid = import_one(api)
+    assert api.client.get("/api/proxy-pool").json()[0]["expires_at"] == "2027-06-30"
+    r = api.client.patch(f"/api/proxy-pool/{pid}", json={})
+    assert r.status_code == 200 and r.json()["expires_at"] == "2027-06-30"
+    r = api.client.patch(f"/api/proxy-pool/{pid}", json={"expires_at": None})
+    assert r.status_code == 200 and r.json()["expires_at"] is None
+    assert api.client.get("/api/proxy-pool").json()[0]["expires_at"] is None
+
+
+def test_patch_host_with_at_sign_is_422(api):
+    pid = import_one(api)
+    r = api.client.patch(f"/api/proxy-pool/{pid}", json={"host": "x@5.6.7.8"})
+    assert r.status_code == 422 and PW not in r.text
+    assert api.client.get("/api/proxy-pool").json()[0]["proxy_display"] == "203.0.113.5:8000"
+
+
 def test_delete_free_missing_and_in_use(api):
     pid = import_one(api)
     shop = api.client.post("/api/shops", json={"name": "店A"}).json()["id"]

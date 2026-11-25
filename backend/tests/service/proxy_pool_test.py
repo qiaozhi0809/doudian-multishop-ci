@@ -15,6 +15,7 @@ from tests.service.proxy_pool_support import (
     PW,
     T0,
     URL_A,
+    USER,
     audit_text,
     bind,
     box,  # noqa: F401  (夹具)
@@ -32,6 +33,14 @@ def test_import_partial_failure_reports_line_numbers(svc, engine):
     assert [n for n, _ in s.failures] == [3, 7]
     assert PW not in repr(s) and PW not in audit_text(engine)
     assert "bad|line" not in repr(s)
+
+
+def test_import_host_with_at_sign_fails_and_stores_nothing(svc, engine):
+    s = svc.import_text(f"a@203.0.113.9|8000|{USER}|{PW}|2027-06-30", "admin")
+    assert (s.added, s.failed) == (0, 1)
+    assert s.failures == [(1, "代理主机格式不正确")]
+    assert count(engine) == 0
+    assert PW not in repr(s) and PW not in audit_text(engine)
 
 
 def test_import_twice_and_in_batch_duplicates_skipped(svc, engine):
