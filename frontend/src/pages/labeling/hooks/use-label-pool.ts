@@ -15,7 +15,7 @@ import {
   type Stage,
 } from "../logic/label-columns";
 
-/** 打单台订单池：阶段与页码在 URL 里；勾选集合在刷新之间保留（失效行自动移除）。 */
+/** 打单发货订单池：阶段与页码在 URL 里；勾选集合在刷新之间保留（失效行自动移除）。 */
 export function useLabelPool() {
   const { shopIds } = useShopFilter();
   const [params, setParams] = useSearchParams();

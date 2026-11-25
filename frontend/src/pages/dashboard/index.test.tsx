@@ -52,11 +52,11 @@ const routes = () => ({
   }),
 });
 
-function renderPage() {
+function renderPage(entry = "/dashboard") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/dashboard"]}>
+      <MemoryRouter initialEntries={[entry]}>
         <DashboardPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -66,7 +66,7 @@ function renderPage() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("仪表盘", () => {
-  it("用已有聚合接口展示真实指标、店铺排行与待补说明", async () => {
+  it("用已有聚合接口展示真实指标与店铺排行，不显示没有数据源的「待补」指标", async () => {
     mockFetch(routes());
     renderPage();
 
@@ -94,8 +94,8 @@ describe("仪表盘", () => {
     const firstRow = within(rankingTable).getByRole("row", { name: /店铺甲/ });
     expect(within(firstRow).getByText("正常")).toBeInTheDocument();
 
-    expect(screen.getAllByText("待补").length).toBeGreaterThan(0);
-    expect(screen.getByText("支付 GMV")).toBeInTheDocument();
+    expect(screen.queryByText("待补")).not.toBeInTheDocument();
+    expect(screen.queryByText("支付 GMV")).not.toBeInTheDocument();
   });
 
   it("单个数据源失败时只有对应卡片显示暂无，其他指标照常", async () => {
@@ -117,5 +117,29 @@ describe("仪表盘", () => {
     mockFetch({ ...routes(), "GET /api/shops": jsonResponse([]) });
     renderPage();
     expect(await screen.findByText("还没有店铺")).toBeInTheDocument();
+  });
+
+  it("指标卡可点，跳到对应页面并带上店铺范围", async () => {
+    mockFetch(routes());
+    renderPage("/dashboard?shops=1");
+    const kpi = await screen.findByRole("region", { name: "关键指标" });
+    const linkOf = (label: string) => within(kpi).getByText(label).closest("a");
+    await waitFor(() => expect(linkOf("保证金余额")).toHaveAttribute("href", "/fund?tab=margin&shops=1"));
+    expect(linkOf("在营店铺")).toHaveAttribute("href", "/shops?shops=1");
+    expect(linkOf("待发货")).toHaveAttribute("href", "/labeling?shops=1");
+    expect(linkOf("24 小时内须发")).toHaveAttribute("href", "/orders?shops=1");
+    expect(linkOf("售后待办")).toHaveAttribute("href", "/aftersale?shops=1");
+    expect(linkOf("库存预警")).toHaveAttribute("href", "/stock?view=alarm&shops=1");
+    expect(linkOf("在售商品")).toHaveAttribute("href", "/catalog?shops=1");
+  });
+
+  it("指标卡按发货 / 售后与库存 / 店铺与资金分组，组内从左到右越来越急", async () => {
+    mockFetch(routes());
+    renderPage();
+    const group = async (name: string) =>
+      (await within(await screen.findByRole("group", { name })).findAllByRole("link")).map((a) => a.textContent ?? "");
+    expect((await group("发货")).map((t) => t.replace(/[\d,.\s/¥]+$/, ""))).toEqual(["待发货", "24 小时内须发", "超时未发"]);
+    expect((await group("售后与库存")).map((t) => t.replace(/[\d,.\s/¥]+$/, ""))).toEqual(["售后待办", "库存预警", "售罄"]);
+    expect(await group("店铺与资金")).toHaveLength(4);
   });
 });

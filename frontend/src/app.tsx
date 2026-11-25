@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "@/components/custom/app-shell";
 import AftersalePage from "@/pages/aftersale";
 import AuthPage from "@/pages/auth";
@@ -12,12 +12,20 @@ import FundPage from "@/pages/fund";
 import LabelingPage from "@/pages/labeling";
 import OrderPage from "@/pages/order";
 import ReconcilePage from "@/pages/reconcile";
-import ShippingPage from "@/pages/shipping";
 import ShopPage from "@/pages/shop";
 import StockPage from "@/pages/stock";
 
 const createQueryClient = () =>
   new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
+
+/** 发货台已并入「打单发货」：旧地址跳到它的「待发货」阶段，店铺范围等参数照带。 */
+function ShippingRedirect() {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  params.set("stage", "labeled");
+  params.delete("page");
+  return <Navigate to={`/labeling?${params.toString()}`} replace />;
+}
 
 function AppRoutes() {
   useUnauthorizedRedirect();
@@ -31,7 +39,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/orders" element={<OrderPage />} />
           <Route path="/labeling" element={<LabelingPage />} />
-          <Route path="/shipping" element={<ShippingPage />} />
+          <Route path="/shipping" element={<ShippingRedirect />} />
           <Route path="/reconcile" element={<ReconcilePage />} />
           <Route path="/aftersale" element={<AftersalePage />} />
           <Route path="/catalog" element={<CatalogPage />} />

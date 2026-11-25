@@ -14,7 +14,7 @@ interface ResumeDialogProps {
 export function ResumeDialog({ shop, pending, onOpenChange, onConfirm }: ResumeDialogProps) {
   return (
     <Dialog open={shop !== null} onOpenChange={onOpenChange}>
-      <DialogContent title="恢复店铺" description={shop ? `${shop.name} 因风控被暂停，恢复后会重新向平台发起请求` : undefined}>
+      <DialogContent title="恢复店铺" description={shop?.name}>
         <div className={styles.form}>
           <p className={styles.muted}>请先确认风控问题已处理。如果仍被拦截，该店可能再次被暂停。</p>
           <div className={styles.formActions}>

@@ -27,7 +27,7 @@ export function StockPageView({ page }: { page: StockPageState }) {
     );
   }
   if (page.shopsState === "empty") {
-    return <EmptyNoShops description="先在「店铺与设置」添加店铺并登录，库存快照才会同步到这里" />;
+    return <EmptyNoShops />;
   }
 
   const data = page.list.data;

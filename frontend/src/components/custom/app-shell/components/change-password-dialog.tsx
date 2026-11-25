@@ -37,7 +37,7 @@ export function ChangePasswordDialog({ open, onOpenChange, onSubmit, pending, er
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="修改密码" description="修改后，其他设备上的登录会失效">
+      <DialogContent title="修改密码">
         <form onSubmit={handleSubmit} noValidate className={styles.dialogForm}>
           <PasswordField
             label="原密码"

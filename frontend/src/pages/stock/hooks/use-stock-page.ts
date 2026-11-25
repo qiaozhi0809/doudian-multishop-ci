@@ -4,13 +4,13 @@ import { useSearchParams } from "react-router-dom";
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
 import { api } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
+import { metricQueries } from "@/lib/metric-queries";
 import { queryKeys } from "@/lib/query-keys";
 import { useShops } from "@/lib/use-shops";
 import { PAGE_SIZE, isStockView, type StockView } from "../logic/stock-page";
 import { useStockSync } from "./use-stock-sync";
 
 type PageData = components["schemas"]["StockPage"];
-type Summary = components["schemas"]["StockSummary"];
 type Warehouses = components["schemas"]["WarehousesResponse"];
 
 /** 库存页数据：预警筛选与页码在 URL 里；预警汇总来自本地快照，仓库列表来自上游。 */
@@ -57,10 +57,7 @@ export function useStockPage() {
     placeholderData: keepPreviousData,
   });
 
-  const summary = useQuery({
-    queryKey: queryKeys.stockSummary(shopIds),
-    queryFn: () => api.get<Summary>("/api/catalog/stock/summary", { shop_ids: shopIds }),
-  });
+  const summary = useQuery(metricQueries.stockSummary(shopIds));
 
   const warehouses = useQuery({
     queryKey: queryKeys.stockWarehouses(shopIds),

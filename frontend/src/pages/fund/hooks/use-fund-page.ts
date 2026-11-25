@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
 import { api } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
+import { metricQueries } from "@/lib/metric-queries";
 import { queryKeys } from "@/lib/query-keys";
 import { useShops } from "@/lib/use-shops";
 import {
@@ -14,7 +15,6 @@ import {
 } from "../logic/fund-page";
 import { useFundSync } from "./use-fund-sync";
 
-type Summary = components["schemas"]["FundSummary"];
 type UnsettledPage = components["schemas"]["UnsettledPage"];
 type MarginResponse = components["schemas"]["MarginResponse"];
 type BillsResponse = components["schemas"]["BillsResponse"];
@@ -54,10 +54,7 @@ export function useFundPage() {
     [setParams],
   );
 
-  const summary = useQuery({
-    queryKey: queryKeys.fundSummary(shopIds),
-    queryFn: () => api.get<Summary>("/api/fund/summary", { shop_ids: shopIds }),
-  });
+  const summary = useQuery(metricQueries.fundSummary(shopIds));
 
   const unsettled = useQuery({
     queryKey: queryKeys.fundUnsettled(shopIds, page),

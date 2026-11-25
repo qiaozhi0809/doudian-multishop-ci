@@ -1,6 +1,7 @@
 /* Press scale is driven by Motion (whileTap) alone, so transform never gets a CSS transition here. */
-.button { position: relative; display: inline-flex; min-height: var(--control-height-md); align-items: center; justify-content: center; gap: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-control); padding: 0 var(--space-4); font: inherit; font-size: var(--text-sm); font-weight: 500; line-height: var(--leading-body); white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard); }
+.button { position: relative; display: inline-flex; min-height: var(--control-height-md); align-items: center; justify-content: center; gap: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-button, var(--radius-control)); padding: 0 var(--space-4); font: inherit; font-size: var(--text-sm); font-weight: 500; line-height: var(--leading-body); white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard); }
 .button:disabled { cursor: not-allowed; opacity: .52; }
+.primary:disabled { opacity: 1; color: var(--text-muted); background: var(--surface-muted); border-color: var(--border); }
 .button[aria-busy="true"] { cursor: progress; }
 /* Anchors of floating layers never scale: Radix opens on pointerdown and would measure a shrunken trigger. */
 .button:is([aria-haspopup]:not([aria-haspopup="false"]), [data-state], [role="combobox"]) { transform: none !important; }
@@ -14,6 +15,10 @@
 .primary { color: var(--background); background: var(--foreground); border-color: var(--foreground); }
 .secondary { color: var(--foreground); background: var(--surface); border-color: var(--border); }
 .ghost { color: var(--text-secondary); background: transparent; border-color: transparent; }
+.destructive { color: #fff; background: var(--danger); border-color: var(--danger); }
+.destructive:disabled { opacity: 1; color: var(--text-muted); background: var(--surface-muted); border-color: var(--border); }
+.destructive:hover:not(:disabled) { opacity: .91; }
+.destructive:active:not(:disabled) { opacity: .84; }
 .danger { color: var(--danger); background: var(--surface); border-color: var(--border); }
 /* A disabled outlined button keeps its shape and fades only its label, so it still reads as a button that is off, not as plain text. */
 .secondary:disabled, .danger:disabled { opacity: 1; color: var(--text-muted); background: var(--surface-muted); border-color: var(--border); }
@@ -32,8 +37,35 @@
 .sm { min-height: var(--control-height-sm); padding-inline: var(--space-3); font-size: var(--text-sm); }
 .md { min-height: var(--control-height-md); }
 .lg { min-height: var(--control-height-lg); padding-inline: var(--space-5); font-size: var(--text-sm); }
-.loader { position: absolute; left: 50%; top: 50%; display: grid; width: var(--space-4); height: var(--space-4); margin: calc(var(--space-4) / -2); }
+/* ---- 按钮里的图标（R1–R5、R8）：页面不用再写 size / strokeWidth ---- */
+/* 图标大小跟按钮走：小 14、中 16、大 18，线条 1.75；图标和文字的间距：小 6、中大 8 */
+.labelPhase svg { width: 16px; height: 16px; stroke-width: 1.75; }
+.sm .labelPhase svg { width: 14px; height: 14px; }
+.lg .labelPhase svg { width: 18px; height: 18px; }
+.sm, .sm .labelPhase { gap: 6px; }
+/* 笔画少、墨迹小的图标（加号、减号、对勾、叉号）大 1px，看起来才和文字一样重 */
+.labelPhase svg:is(:global(.lucide-plus), :global(.lucide-minus), :global(.lucide-check), :global(.lucide-x)) { width: 17px; height: 17px; }
+.sm .labelPhase svg:is(:global(.lucide-plus), :global(.lucide-minus), :global(.lucide-check), :global(.lucide-x)) { width: 15px; height: 15px; }
+.lg .labelPhase svg:is(:global(.lucide-plus), :global(.lucide-minus), :global(.lucide-check), :global(.lucide-x)) { width: 19px; height: 19px; }
+/* 图标在左的按钮，左内边距少 2，「图标 + 文字」整体才看着居中（文字是文本节点选不到，图标在右的暂不处理） */
+.sm:not(.iconOnly):has(.labelPhase > svg:first-child) { padding-left: 10px; }
+.md:not(.iconOnly):has(.labelPhase > svg:first-child) { padding-left: 14px; }
+.lg:not(.iconOnly):has(.labelPhase > svg:first-child) { padding-left: 18px; }
+/* 按重心微调：播放三角看着偏左，右移 1px；星星、下载、上传、箭头重心偏下，上移 */
+.labelPhase svg:global(.lucide-play) { translate: 1px 0; }
+.labelPhase svg:is(:global(.lucide-star), :global(.lucide-download), :global(.lucide-upload)) { translate: 0 -.75px; }
+.labelPhase svg:is(:global(.lucide-arrow-up), :global(.lucide-arrow-down)) { translate: 0 -.5px; }
+/* 纯图标按钮：<Button iconOnly aria-label="…">，宽高相等（32 / 36 / 48）、图标正中 */
+.iconOnly { padding: 0; width: var(--control-height-md); }
+.iconOnly.sm { width: var(--control-height-sm); padding: 0; }
+.iconOnly.lg { width: var(--control-height-lg); padding: 0; }
+.iconOnly .labelPhase svg:global(.lucide-play) { translate: 1.5px 0; }
+/* 转圈：文字保留，转圈挂在文字左边；整组向右挪半个转圈宽，按钮宽度不变、整体仍居中。纯图标按钮转圈盖在图标位置，图标淡出。 */
+.loader { position: absolute; right: 100%; top: calc(50% - 7px); display: grid; width: 14px; height: 14px; margin-right: 6px; }
 .spinner { border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
-.loadingLabel { opacity: 0; }
+.loadingLabel { translate: 10px 0; }
+.iconOnly .loadingLabel { translate: none; }
+.iconOnly .loadingLabel .labelContent { opacity: 0; }
+.iconOnly .loader { right: auto; left: calc(50% - 7px); margin-right: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .button { transition: none; } .labelSlot { transition: opacity var(--duration-instant) linear; } .spinner { animation-duration: .01ms; animation-iteration-count: 1; } }

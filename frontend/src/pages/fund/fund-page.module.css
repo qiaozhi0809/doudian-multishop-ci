@@ -31,24 +31,36 @@
   gap: var(--space-3);
 }
 
+/* 金额卡：和 MetricCard 一样的一行胶囊 */
 .statCard {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+  height: 56px;
+  padding: 0 18px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-pill);
   background: var(--surface);
+  box-shadow: var(--shadow-resting);
 }
 
 .statLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
 .statValue {
   color: var(--foreground);
-  font-size: var(--text-2xl);
+  font-size: 20px;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }

@@ -46,6 +46,7 @@ export const queryKeys = {
   aftersaleRoot: () => ["aftersale"] as const,
   aftersaleList: (shopIds: number[], filters: AftersaleFilters) =>
     ["aftersale", "list", shopIds, filters] as const,
+  aftersaleTotals: (shopIds: number[]) => ["aftersale", "totals", shopIds] as const,
   aftersaleStatuses: (shopIds: number[]) => ["aftersale", "statuses", shopIds] as const,
   aftersaleCounts: (shopIds: number[]) => ["aftersale", "counts", shopIds] as const,
   productsRoot: () => ["products"] as const,
@@ -69,9 +70,6 @@ export const queryKeys = {
   printWaybillsRoot: () => ["printWaybills"] as const,
   printWaybills: (waybillIds: number[]) => ["printWaybills", waybillIds] as const,
   // ---- M4 发货 / 对账 ----
-  shippingPoolRoot: () => ["shippingPool"] as const,
-  shippingPool: (shopIds: number[], page: number) =>
-    ["shippingPool", shopIds, { page }] as const,
   reconcileRoot: () => ["reconcile"] as const,
   reconcileFindings: (shopIds: number[], filters: ReconcileFilters) =>
     ["reconcile", "findings", shopIds, filters] as const,

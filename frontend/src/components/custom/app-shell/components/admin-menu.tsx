@@ -1,4 +1,6 @@
-import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
+import { KeyRound } from "lucide-react";
+import { UserMenu } from "@/components/custom/user-menu/user-menu";
+import { useTheme } from "@/lib/theme";
 
 interface AdminMenuProps {
   username: string;
@@ -6,15 +8,17 @@ interface AdminMenuProps {
   onLogout: () => void;
 }
 
-/** 当前管理员菜单：修改密码、退出。 */
+/** 左下角个人中心：头像 + 管理员名；菜单里切主题、修改密码、退出登录。 */
 export function AdminMenu({ username, onChangePassword, onLogout }: AdminMenuProps) {
+  const [theme, setTheme] = useTheme();
   return (
-    <DropdownMenu
-      label={username}
-      items={[
-        { label: "修改密码", onSelect: onChangePassword },
-        { label: "退出", onSelect: onLogout, separatorBefore: true },
-      ]}
+    <UserMenu
+      name={username}
+      initial={username.slice(0, 1).toUpperCase()}
+      theme={theme}
+      onThemeChange={setTheme}
+      items={[{ label: "修改密码", icon: <KeyRound size={16} strokeWidth={1.75} />, onSelect: onChangePassword }]}
+      onSignOut={onLogout}
     />
   );
 }

@@ -27,7 +27,7 @@ export function AftersalePageView({ page }: { page: AftersalePageState }) {
     );
   }
   if (page.shopsState === "empty") {
-    return <EmptyNoShops description="先在「店铺与设置」添加店铺并登录，售后单才会同步到这里" />;
+    return <EmptyNoShops />;
   }
 
   const data = page.list.data;
@@ -35,6 +35,7 @@ export function AftersalePageView({ page }: { page: AftersalePageState }) {
     <div className={styles.page}>
       <AftersaleToolbar
         view={page.view}
+        viewTotals={page.viewTotals}
         onViewChange={page.setView}
         status={page.status}
         onStatusChange={page.setStatus}

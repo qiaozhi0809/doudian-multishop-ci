@@ -15,12 +15,7 @@ export function BackupCard({ backup }: { backup: BackupState }) {
   return (
     <section className={styles.backupCard} aria-label="数据备份">
       <div className={styles.backupHead}>
-        <div>
-          <strong>数据备份</strong>
-          <p className={styles.backupHint}>
-            服务每天自动备份一次，保留最近若干份；需要时也可以现在手动备份。
-          </p>
-        </div>
+        <strong>数据备份</strong>
         <Button variant="secondary" onClick={backup.toggle}>
           {backup.open ? "收起" : "查看快照"}
         </Button>
@@ -30,7 +25,7 @@ export function BackupCard({ backup }: { backup: BackupState }) {
           <p className={styles.backupHint}>
             {latest && backup.list
               ? `最近快照：${formatBjTime(latest.created_at)} · ${sizeText(latest.size_bytes)} · 保留最近 ${backup.list.keep} 份`
-              : "暂无快照：可以现在手动备份"}
+              : "暂无快照"}
           </p>
           <div>
             <Button variant="secondary" onClick={backup.run} disabled={backup.pending}>

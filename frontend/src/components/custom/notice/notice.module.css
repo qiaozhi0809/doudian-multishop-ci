@@ -1,0 +1,78 @@
+/* 右下角浮动提示（同壹帆智播）：白底、轻阴影、左边一个状态色小圆点 */
+.toasts {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(380px, calc(100vw - 48px));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  pointer-events: auto;
+  animation: toast-in 180ms ease-out both;
+}
+
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.toast[data-tone="success"] .dot { background: var(--success); }
+.toast[data-tone="warning"] .dot { background: var(--warning); }
+.toast[data-tone="danger"] .dot { background: var(--danger); }
+.toast[data-tone="info"] .dot { background: var(--accent); }
+
+.text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--foreground);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}

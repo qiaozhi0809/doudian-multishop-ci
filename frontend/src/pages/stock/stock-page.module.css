@@ -24,10 +24,21 @@
   gap: var(--space-3);
 }
 
+/* 仓库清单：和表格一样的白色卡片，一店一行 */
 .warehouses {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-resting);
+}
+
+.warehouseError {
+  color: var(--danger);
+  font-size: var(--text-sm);
 }
 
 .sectionTitle {

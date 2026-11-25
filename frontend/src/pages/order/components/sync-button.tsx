@@ -1,6 +1,6 @@
 import { RefreshCw } from "lucide-react";
-import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
+import { SyncMessageBar } from "@/components/custom/sync-control/sync-control";
 
 export function SyncButton({ pending, onClick }: { pending: boolean; onClick: () => void }) {
   return (
@@ -11,11 +11,7 @@ export function SyncButton({ pending, onClick }: { pending: boolean; onClick: ()
   );
 }
 
+/** 同步结果：和其他页面一样走右下角浮动提示。 */
 export function SyncMessage({ message, onDismiss }: { message: { tone: "success" | "info" | "danger"; text: string } | null; onDismiss: () => void }) {
-  if (!message) return null;
-  return (
-    <div role="status" aria-live="polite">
-      <Alert tone={message.tone} title={message.text} onDismiss={onDismiss} />
-    </div>
-  );
+  return <SyncMessageBar message={message} onDismiss={onDismiss} />;
 }

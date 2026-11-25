@@ -2,7 +2,7 @@ import { Alert } from "@/components/arc/alert/alert";
 import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
 import { HoldToConfirm } from "@/components/arc/hold-to-confirm/hold-to-confirm";
 import { checkSummary, confirmLabel, placeHolderText, type ShipCheck } from "../logic/ship-messages";
-import styles from "../shipping-page.module.css";
+import styles from "../labeling-page.module.css";
 
 interface CheckDialogProps {
   check: ShipCheck | null;

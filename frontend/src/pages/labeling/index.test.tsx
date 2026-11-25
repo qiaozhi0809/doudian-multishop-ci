@@ -1,123 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { FakeEventSource } from "@/test/fake-event-source";
-import { makeShop } from "@/test/fixtures";
 import { jsonResponse, mockFetch } from "@/test/mock-fetch";
-import LabelingPage from "./index";
-
-const shops = [makeShop({ id: 1, name: "店铺甲" })];
-
-const row = (id: number, over: Record<string, unknown> = {}) => ({
-  id,
-  shop_id: 1,
-  shop_name: "店铺甲",
-  order_no: `6900000${id}`,
-  status: "pending_label",
-  platform_status: 2,
-  combine_id: "c1",
-  exception_reason: null,
-  amount_cents: 123456,
-  pay_time: "2026-11-20T01:30:00Z",
-  exp_ship_time: "2026-11-22T01:30:00Z",
-  items: [
-    { sku_order_id: "s1", product_id: "p1", product_name: "商品甲", sku_spec: null, quantity: 1, price_cents: null },
-  ],
-  blocked_reason: null,
-  waybill: null,
-  ...over,
-});
-const page = (items: unknown[], total = items.length) =>
-  jsonResponse({ items, total, page: 1, page_size: 50 });
-
-const printStatus = (available = true) => ({
-  available,
-  printers: available ? ["Printer A"] : [],
-  default_printer: available ? "Printer A" : null,
-  error: available ? null : "请先启动抖店官方打印组件",
-  checked_at: "2026-11-25T00:00:00Z",
-});
-
-/** 打印组件状态在每个打单台页面都会探测一次，所有用例都要登记。 */
-const printRoutes = (available = true) => ({
-  "GET /api/print/status": jsonResponse(printStatus(available)),
-});
-
-const labeledRow = (id: number, over: Record<string, unknown> = {}) =>
-  row(id, {
-    status: "label_obtained",
-    waybill: {
-      id: id * 10,
-      courier_code: "zhongtong",
-      waybill_no: `7920000000000${id}`,
-      status: "active",
-      seq: 1,
-      obtained_at: "2026-11-20T02:00:00Z",
-      template_code: "T1",
-    },
-    ...over,
-  });
-
-const printRow = (waybillId: number, job: Record<string, unknown> | null) => ({
-  waybill_id: waybillId,
-  waybill_no: `7920000000000${waybillId / 10}`,
-  waybill_status: "active",
-  has_print_data: true,
-  job:
-    job === null
-      ? null
-      : {
-          id: 100,
-          waybill_id: waybillId,
-          printer_name: "Printer A",
-          status: "queued",
-          result_code: null,
-          result_detail: null,
-          attempts: 0,
-          created_at: "2026-11-25T00:00:00Z",
-          finished_at: null,
-          ...job,
-        },
-});
-
-const preview = (over: Record<string, unknown> = {}) => ({
-  preview_id: "p1",
-  mode: "obtain",
-  shops: [
-    {
-      shop_id: 1,
-      shop_name: "店铺甲",
-      courier_code: "zhongtong",
-      courier_name: "中通快递",
-      template_code: "T1",
-      ebill_id: "e1",
-      net_code: "n1",
-      account_balance: 10,
-      ready_order_ids: [1],
-    },
-  ],
-  blocked: [],
-  shop_errors: [],
-  total_ready: 1,
-  total_blocked: 0,
-  dry_run: false,
-  ...over,
-});
-
-function renderPage(path = "/labeling") {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/labeling" element={<LabelingPage />} />
-          <Route path="/shops" element={<h1>店铺页</h1>} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-}
+import { labeledRow, page, preview, printRoutes, printRow, renderPage, row, shops } from "./labeling-test-fixtures";
 
 let restoreEvents: () => void;
 beforeEach(() => {
@@ -128,7 +13,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("打单台", () => {
+describe("打单发货", () => {
   it("还没有店铺时引导去店铺页", async () => {
     mockFetch({ ...printRoutes(), "GET /api/shops": jsonResponse([]) });
     renderPage();
@@ -162,11 +47,11 @@ describe("打单台", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(await screen.findByLabelText("选择订单 69000001"));
-    await user.click(screen.getByRole("button", { name: "打面单" }));
+    await user.click(screen.getByRole("button", { name: "打单" }));
 
-    expect(await screen.findByText("预览：打面单")).toBeInTheDocument();
+    expect(await screen.findByText("预览：打单")).toBeInTheDocument();
     expect(screen.getByText(/中通快递/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /按住确认打面单/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /按住确认打单/ })).toBeInTheDocument();
     const call = fetchMock.mock.calls.find(([u]) => String(u) === "/api/labels/preview");
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({ order_ids: [1] });
   });
@@ -188,7 +73,7 @@ describe("打单台", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(await screen.findByLabelText("选择订单 69000001"));
-    await user.click(screen.getByRole("button", { name: "打面单" }));
+    await user.click(screen.getByRole("button", { name: "打单" }));
     expect(await screen.findByText(/1 单会被跳过/)).toBeInTheDocument();
     expect(screen.getByText(/69000002：缺少合单 ID/)).toBeInTheDocument();
     expect(screen.getByText(/没有默认发货地址/)).toBeInTheDocument();
@@ -204,9 +89,9 @@ describe("打单台", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(await screen.findByLabelText("选择订单 69000001"));
-    await user.click(screen.getByRole("button", { name: "打面单" }));
+    await user.click(screen.getByRole("button", { name: "打单" }));
     expect(await screen.findByText(/演练模式：本次只记录请求/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /按住确认打面单（演练）/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /按住确认打单（演练）/ })).toBeEnabled();
   });
 
   it("阶段切换写入 URL 并请求对应阶段", async () => {
@@ -217,7 +102,7 @@ describe("打单台", () => {
     });
     renderPage();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "已取号" }));
+    await user.click(await screen.findByRole("button", { name: "待发货" }));
     await waitFor(() =>
       expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain(
         "/api/labels/pool?stage=labeled&page=1&page_size=50",
@@ -225,7 +110,7 @@ describe("打单台", () => {
     );
   });
 
-  it("已取号阶段：勾选后按面单提交打印任务", async () => {
+  it("待发货阶段：勾选后按面单提交打印任务", async () => {
     const fetchMock = mockFetch({
       ...printRoutes(),
       "GET /api/shops": jsonResponse(shops),
@@ -272,4 +157,5 @@ describe("打单台", () => {
     expect(await screen.findByText("打印中")).toBeInTheDocument();
     expect(await screen.findByText("打印中：剩余 1 张面单")).toBeInTheDocument();
   });
+
 });

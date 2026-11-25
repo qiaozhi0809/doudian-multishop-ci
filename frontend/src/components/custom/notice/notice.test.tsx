@@ -1,0 +1,57 @@
+import { useEffect } from "react";
+import { act, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { NoticeProvider, useNotice, type Notify } from "./notice";
+
+const ref: { notify: Notify | null } = { notify: null };
+function Grab() {
+  const n = useNotice();
+  useEffect(() => {
+    ref.notify = n;
+  }, [n]);
+  return null;
+}
+const notify = (...args: Parameters<Notify>) => ref.notify?.(...args);
+
+function renderProvider() {
+  render(
+    <MemoryRouter>
+      <NoticeProvider>
+        <Grab />
+      </NoticeProvider>
+    </MemoryRouter>,
+  );
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+  ref.notify = null;
+});
+
+describe("右下角浮动提示", () => {
+  it("同一个 key 只留最新一条，普通提示 4 秒后自动消失", () => {
+    vi.useFakeTimers();
+    renderProvider();
+    act(() => notify("店铺甲：等待扫码", "info", { key: "login:1" }));
+    act(() => notify("店铺甲：登录成功", "success", { key: "login:1" }));
+    expect(screen.queryByText("店铺甲：等待扫码")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("店铺甲：登录成功");
+    act(() => vi.advanceTimersByTime(4100));
+    expect(screen.queryByText("店铺甲：登录成功")).not.toBeInTheDocument();
+  });
+
+  it("报错用 alert，停留 8 秒", () => {
+    vi.useFakeTimers();
+    renderProvider();
+    act(() => notify("店铺甲：出口不通", "danger"));
+    act(() => vi.advanceTimersByTime(4100));
+    expect(screen.getByRole("alert")).toHaveTextContent("店铺甲：出口不通");
+    act(() => vi.advanceTimersByTime(4000));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("不在 Provider 里时 useNotice 返回 null（调用方退回页面内提示）", () => {
+    render(<Grab />);
+    expect(ref.notify).toBeNull();
+  });
+});

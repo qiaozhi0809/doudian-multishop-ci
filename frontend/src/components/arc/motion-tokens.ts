@@ -12,11 +12,12 @@ export const motionTokens = {
     responsive: { type: "spring", stiffness: 520, damping: 44 },
     gentle: { type: "spring", stiffness: 340, damping: 34 },
     /** Presses, toggles, thumbs, and small indicators. Settles fast and never overshoots, so nothing jitters. */
-    snappy: { type: "spring", visualDuration: 0.26, bounce: 0 },
+    // 本项目（桌面工具档）调快：原值 0.26 / 0.4 / 0.42 在天天点的后台里显得拖，跟不上手
+    snappy: { type: "spring", visualDuration: 0.16, bounce: 0 },
     /** Panels, height changes, and layout shifts. Critically damped, never overshoots. */
-    smooth: { type: "spring", visualDuration: 0.4, bounce: 0 },
+    smooth: { type: "spring", visualDuration: 0.22, bounce: 0 },
     /** Shape morphs, shared layout highlights, and width changes that follow new content. No bounce: sizes and positions settle without overshoot. */
-    morph: { type: "spring", visualDuration: 0.42, bounce: 0 },
+    morph: { type: "spring", visualDuration: 0.2, bounce: 0 },
   },
   /** Stagger steps in seconds. Keep total stagger under roughly 0.4s. */
   stagger: { char: 0.016, word: 0.04, line: 0.08, item: 0.035 },

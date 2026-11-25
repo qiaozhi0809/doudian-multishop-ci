@@ -6,6 +6,8 @@ import styles from "../aftersale-page.module.css";
 
 interface ToolbarProps {
   view: View;
+  /** 各视图的单数；还没取到时不显示数字。 */
+  viewTotals?: Record<View, number>;
   onViewChange: (view: View) => void;
   status: number | undefined;
   onStatusChange: (status: number | undefined) => void;
@@ -21,7 +23,13 @@ export function AftersaleToolbar(props: ToolbarProps) {
       <div className={styles.filters}>
         <SegmentedControl
           label="售后视图"
-          options={[...VIEW_OPTIONS]}
+          options={VIEW_OPTIONS.map((option) => ({
+            ...option,
+            accessory:
+              props.viewTotals === undefined ? undefined : (
+                <span className={styles.viewCount}>{props.viewTotals[option.value]}</span>
+              ),
+          }))}
           value={props.view}
           onValueChange={(value) => {
             if (isView(value)) props.onViewChange(value);

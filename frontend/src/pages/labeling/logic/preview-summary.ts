@@ -44,7 +44,7 @@ export interface ProgressState {
 }
 
 export const MODE_LABELS: Record<ExecMode, string> = {
-  obtain: "打面单",
+  obtain: "打单",
   fetch_and_ship: "打单并发货",
   void: "作废面单",
 };

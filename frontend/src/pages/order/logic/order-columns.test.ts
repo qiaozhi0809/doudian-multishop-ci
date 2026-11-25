@@ -21,8 +21,8 @@ describe("itemSummary", () => {
 describe("localStatusBadge（ui-guidelines 第 5 节）", () => {
   it.each([
     ["synced", "待处理", "neutral"],
-    ["pending_label", "待取号", "neutral"],
-    ["label_obtained", "已取号", "info"],
+    ["pending_label", "待打单", "neutral"],
+    ["label_obtained", "已打单", "info"],
     ["printed", "已打印", "info"],
     ["shipped", "已发货", "success"],
     ["exception", "异常", "danger"],

@@ -33,9 +33,9 @@ export function StockSummaryCards({
   }
   return (
     <div className={styles.countGrid}>
-      <MetricCard label="商品数" value={data.total} context="有库存快照的商品" />
-      <MetricCard label="库存预警" value={data.alarm_count} context="平台标记需补货" />
-      <MetricCard label="售罄" value={data.sold_out_count} context="总库存为 0" />
+      <MetricCard label="商品数" value={data.total} tone="neutral" />
+      <MetricCard label="库存预警" value={data.alarm_count} tone="warning" />
+      <MetricCard label="售罄" value={data.sold_out_count} tone="danger" />
     </div>
   );
 }
@@ -51,17 +51,17 @@ export function WarehouseList({
   loading: boolean;
 }) {
   if (loading) return <Skeleton label="正在读取仓库" lines={1} />;
-  if (shops.length === 0) return <p className={styles.muted}>还没有仓库数据</p>;
+  // 没有仓库的店不列出：一行「暂无仓库」只是噪音；取数失败的店仍然要标出来
+  const rows = shops.filter((shop) => shop.error || shop.items.length > 0);
+  if (rows.length === 0) return null;
   return (
     <section className={styles.warehouses} aria-label="仓库列表">
       <h2 className={styles.sectionTitle}>仓库</h2>
-      {shops.map((shop) => (
+      {rows.map((shop) => (
         <div key={shop.shopId} className={styles.warehouseShop}>
           <span className={styles.warehouseShopName}>{shopName(shop.shopId)}</span>
           {shop.error ? (
-            <span className={styles.muted}>获取失败：{shop.error}</span>
-          ) : shop.items.length === 0 ? (
-            <span className={styles.muted}>暂无仓库</span>
+            <span className={styles.warehouseError}>获取失败：{shop.error}</span>
           ) : (
             shop.items.map((item) => (
               <Badge key={item.warehouse_id} tone="neutral" outline>

@@ -88,3 +88,61 @@ async def test_detail_fetches_upstream(env):
     params = env.transport.requests[0]["params"]
     assert params["after_sale_id"] == "140000000000000001"
     assert params["aftersale_platform_source"] == "fxg"
+
+
+# ---- 计数缓存（shop_cache）：每店 60 秒，只缓存成功结果，同步后失效 ----
+
+class Clock:
+    def __init__(self) -> None:
+        from datetime import UTC, datetime
+        self.now = datetime(2026, 11, 25, 8, 0, tzinfo=UTC)
+
+    def __call__(self):
+        return self.now
+
+    def advance(self, seconds: int) -> None:
+        from datetime import timedelta
+        self.now += timedelta(seconds=seconds)
+
+
+def counts_requests(env) -> int:
+    return sum(1 for r in env.transport.requests if "fields" in (r.get("params") or {}))
+
+
+async def test_counts_cached_per_shop_for_60_seconds(env):
+    clock = Clock()
+    svc = AftersaleService(env.engine, env.runner, clock=clock)
+    env.transport.responses[:] = [reply(fx("aftersale_counts")), reply(fx("aftersale_counts"))]
+
+    (first,) = await svc.counts([env.shop_id], "admin")
+    clock.advance(59)
+    (second,) = await svc.counts([env.shop_id], "admin")
+    assert counts_requests(env) == 1  # 60 秒内不再请求平台
+    assert second.fetched_at == first.fetched_at  # 显示当初取数的时间
+    assert second.pending_total == first.pending_total
+
+    clock.advance(2)
+    (third,) = await svc.counts([env.shop_id], "admin")
+    assert counts_requests(env) == 2
+    assert third.fetched_at != first.fetched_at
+
+
+async def test_counts_failure_not_cached(env):
+    svc = AftersaleService(env.engine, env.runner, clock=Clock())
+    env.transport.responses[:] = [
+        BizRejected("100021", "售后数据不可用"), reply(fx("aftersale_counts")),
+    ]
+    (failed,) = await svc.counts([env.shop_id], "admin")
+    (ok,) = await svc.counts([env.shop_id], "admin")
+    assert (failed.source, ok.source) == ("error", "upstream")
+
+
+async def test_sync_invalidates_counts_cache(env):
+    svc = AftersaleService(env.engine, env.runner, clock=Clock())
+    env.transport.responses[:] = [
+        reply(fx("aftersale_counts")), reply(fx("aftersale_list")), reply(fx("aftersale_counts")),
+    ]
+    await svc.counts([env.shop_id], "admin")
+    await svc.sync([env.shop_id], "admin")
+    await svc.counts([env.shop_id], "admin")
+    assert counts_requests(env) == 2  # 同步后马上重新取

@@ -14,9 +14,15 @@ interface LabelToolbarProps {
   printDisabled: boolean;
   printReason: string | null;
   printing: boolean;
+  onShip: () => void;
+  shipBusy: boolean;
 }
 
-/** 阶段切换 + 写操作入口；没有勾选 / 组件未启动时按钮禁用并保持可见（ui-guidelines 第 7 节）。 */
+/**
+ * 阶段切换 + 这一阶段的操作（只露这一步能做的，主按钮在最前）：
+ * 待打单 → 打单 / 打单并发货；待发货 → 发货 / 打印面单 / 作废面单。
+ * 没有勾选 / 组件未启动时按钮禁用并保持可见（ui-guidelines 第 7 节）。
+ */
 export function LabelToolbar({
   stage,
   onStageChange,
@@ -27,6 +33,8 @@ export function LabelToolbar({
   printDisabled,
   printReason,
   printing,
+  onShip,
+  shipBusy,
 }: LabelToolbarProps) {
   const none = selectedCount === 0 || busy;
   return (
@@ -35,37 +43,38 @@ export function LabelToolbar({
         options={STAGE_OPTIONS}
         value={stage}
         onValueChange={(value) => onStageChange(value as Stage)}
-        label="面单阶段"
+        label="打单发货阶段"
       />
       <div className={styles.toolbarActions}>
         <span className={styles.muted}>已选 {selectedCount} 单</span>
-        <Button onClick={() => onPreview("obtain")} disabled={none} loading={busy}>
-          打面单
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => onPreview("fetch_and_ship")}
-          disabled={none}
-        >
-          打单并发货
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={onPrint}
-          disabled={printDisabled}
-          loading={printing}
-          title={printReason ?? undefined}
-        >
-          打印面单
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => onPreview("void")}
-          disabled={none || stage !== "labeled"}
-          title={stage !== "labeled" ? "作废只能针对已取号的面单" : undefined}
-        >
-          作废面单
-        </Button>
+        {stage === "pending" ? (
+          <>
+            <Button onClick={() => onPreview("obtain")} disabled={none} loading={busy}>
+              打单
+            </Button>
+            <Button variant="secondary" onClick={() => onPreview("fetch_and_ship")} disabled={none}>
+              打单并发货
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={onShip} disabled={selectedCount === 0 || shipBusy || busy} loading={shipBusy}>
+              发货
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={onPrint}
+              disabled={printDisabled}
+              loading={printing}
+              title={printReason ?? undefined}
+            >
+              打印面单
+            </Button>
+            <Button variant="secondary" onClick={() => onPreview("void")} disabled={none}>
+              作废面单
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

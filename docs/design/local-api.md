@@ -34,15 +34,15 @@
 | | `GET /api/orders/{id}` | 详情（含商品行、面单历史） |
 | | `POST /api/orders/sync` | 立即拉单 |
 | | `POST /api/orders/{id}/receiver` | 按需解密单个订单的收件人，结果只返回给前端、不入库（用户查看时；不在取号链路，DEC-06；受额度与限速约束，见 [flows.md](flows.md) 7.3）。冷却中返回 429 `DecryptCooldown` |
-| 取号 | `GET /api/labels/pool?shop_ids=&stage=pending\|labeled&page=&page_size=` | 打单台订单池（本地库）：每单附 `blocked_reason` 与当前有效面单；`pending` = `synced` / `pending_label`，`labeled` = `label_obtained` / `printed` |
+| 取号 | `GET /api/labels/pool?shop_ids=&stage=pending\|labeled&page=&page_size=` | 打单发货订单池（本地库）：每单附 `blocked_reason` 与当前有效面单；`pending` = `synced` / `pending_label`，`labeled` = `label_obtained` / `printed` |
 | | `POST /api/labels/preview` · `POST /api/labels/execute` | 两步提交取号（打面单）；预览响应按店列出 `courier_code` / `template_code` / `ebill_id` / `net_code` / `ready_order_ids`，以及逐单 `blocked` 与整店 `shop_errors` |
 | | `POST /api/labels/fetch-and-ship/preview` · `POST /api/labels/fetch-and-ship/execute` | 两步提交「打单并发货」（一体接口） |
 | | `POST /api/labels/void/preview` · `POST /api/labels/void/execute` | 两步提交作废；预览列出待作废面单 |
 | 打印 | `GET /api/print/status` | 打印组件探测（`getPrinters`，2 秒超时）+ 打印机列表；组件未启动时前端打印按钮置灰 |
 | | `POST /api/print/jobs {waybill_ids, printer_name?}` | 提交打印批次（202）；每张面单一条 `print_job`；无打印数据的面单转手动补打提示 |
 | | `GET /api/print/jobs/{id}` | 单条打印回执：`queued` / `success` / `failed` + `result_code` / 尝试次数 / 回执详情 |
-| | `GET /api/print/waybills?waybill_ids=1,2` | 面单可打印信息（`has_print_data`）与最近一次打印任务（打单台状态显示） |
-| 发货 | `GET /api/shipping/pool?shop_ids=&page=&page_size=` | 发货台订单池：`label_obtained` / `printed` 且有有效面单的订单（本地库） |
+| | `GET /api/print/waybills?waybill_ids=1,2` | 面单可打印信息（`has_print_data`）与最近一次打印任务（打单发货页状态显示） |
+| 发货 | `GET /api/shipping/pool?shop_ids=&page=&page_size=` | 待发货订单池：`label_obtained` / `printed` 且有有效面单的订单（本地库）。前端已改用打单发货页「待发货」阶段（`/api/labels/pool?stage=labeled`），本接口保留 |
 | | `POST /api/shipping/check {order_ids}` | 发货前检查（`sendcheck`）：按店返回 `total` / `double_check_num` / `double_check_detail` / `place_holder`，以及不可发货的 `blocked` 与整店 `shop_errors` |
 | | `POST /api/shipping/ship {order_ids, double_check_ack?}` | 提交发货（202）：提交前重新检查；有二次确认项但未确认时 422；逐店按运单号调用 `batchDeliverGoodsByEES`，幂等键 `ship:{shop_id}:{courier_code}:{tracking_no}` |
 | | `GET /api/shipping/batches/{batch_id}` | 批次逐单结果（`pending` / `success` / `failed` + `fail_msg`） |

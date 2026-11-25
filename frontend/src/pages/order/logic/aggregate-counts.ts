@@ -1,3 +1,4 @@
+import type { KpiTone } from "@/lib/kpi-tone";
 import type { components } from "@/lib/api-types";
 
 type OrderCountsResponse = components["schemas"]["OrderCountsResponse"];
@@ -5,11 +6,11 @@ type OrderCounts = components["schemas"]["OrderCounts"];
 export type CountKey = keyof OrderCounts;
 
 /** 平台口径的四项计数（api/order-page.md C.1）。只展示计数，不用于筛选列表。 */
-export const COUNT_ITEMS: { key: CountKey; label: string }[] = [
-  { key: "stock_up", label: "待发货" },
-  { key: "exp_ship", label: "24 小时内须发" },
-  { key: "ship_delay", label: "超时未发" },
-  { key: "in_aftersale", label: "售后中" },
+export const COUNT_ITEMS: { key: CountKey; label: string; tone: KpiTone }[] = [
+  { key: "stock_up", label: "待发货", tone: "info" },
+  { key: "exp_ship", label: "24 小时内须发", tone: "warning" },
+  { key: "ship_delay", label: "超时未发", tone: "danger" },
+  { key: "in_aftersale", label: "售后中", tone: "violet" },
 ];
 
 export interface AggregatedCounts {

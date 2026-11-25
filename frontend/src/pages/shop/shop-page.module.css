@@ -42,15 +42,18 @@
 }
 
 /* 宽表格只在自身卡片内横向滚动：首列（店铺名）固定在左，操作列固定在右，窄屏下也总能看到操作按钮。 */
+/* 列宽合计约 750：1100 宽的窗口里放得下，不用横向滚动 */
 .tableWrap table {
-  min-width: 56rem;
+  min-width: 47rem;
 }
 
+/* 首列（店铺）和末列（操作）固定；中间横向滚动时从两条分隔线下面穿过，不会半截字露在外面 */
 .tableWrap :is(td, th):first-child {
   position: sticky;
   left: 0;
   z-index: 2;
   background: var(--surface);
+  border-right: 1px solid var(--border-subtle);
 }
 
 .tableWrap :is(td, th):last-child {
@@ -67,6 +70,22 @@
   align-items: flex-start;
   gap: var(--space-1);
   padding: var(--space-2) 0;
+}
+
+/* 单行单元格：内容不换行，列宽不够时表格自己横向滚动 */
+.cellLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+/* 「直连 / 代理」不压缩；代理地址太长时才省略，悬停看全 */
+.egressMode {
+  flex: none;
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cellRow {

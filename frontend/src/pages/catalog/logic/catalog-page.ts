@@ -8,12 +8,13 @@ export type GroupItem = components["schemas"]["GroupItem"];
 
 export const PAGE_SIZE = 50;
 export const PRODUCT_COUNT_ITEMS = [
-  { key: "onsale", label: "在售" },
-  { key: "audit", label: "审核中" },
-  { key: "unpass", label: "未通过" },
-  { key: "draft", label: "草稿" },
-  { key: "forbidden", label: "禁售 / 下架" },
-  { key: "sell_out_new", label: "售罄" },
+  // 第一行正常状态，第二行要处理的；红色集中在右下角
+  { key: "onsale", label: "在售", tone: "success" },
+  { key: "draft", label: "草稿", tone: "neutral" },
+  { key: "audit", label: "审核中", tone: "info" },
+  { key: "sell_out_new", label: "售罄", tone: "warning" },
+  { key: "unpass", label: "未通过", tone: "danger" },
+  { key: "forbidden", label: "禁售 / 下架", tone: "danger" },
 ] as const;
 export type ProductCountKey = (typeof PRODUCT_COUNT_ITEMS)[number]["key"];
 

@@ -4,13 +4,13 @@ import { useSearchParams } from "react-router-dom";
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
 import { api } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
+import { metricQueries } from "@/lib/metric-queries";
 import { queryKeys } from "@/lib/query-keys";
 import { useShops } from "@/lib/use-shops";
 import { PAGE_SIZE } from "../logic/catalog-page";
 import { useCatalogSync } from "./use-catalog-sync";
 
 type PageData = components["schemas"]["ProductPage"];
-type CountsResponse = components["schemas"]["ProductCountsResponse"];
 type GroupsResponse = components["schemas"]["ProductGroupsResponse"];
 
 /** 商品页数据：关键字与页码在 URL 里；计数与分组来自上游（每店一请求，失败隔离）。 */
@@ -55,10 +55,7 @@ export function useCatalogPage() {
     placeholderData: keepPreviousData,
   });
 
-  const counts = useQuery({
-    queryKey: queryKeys.productCounts(shopIds),
-    queryFn: () => api.get<CountsResponse>("/api/catalog/products/counts", { shop_ids: shopIds }),
-  });
+  const counts = useQuery(metricQueries.productCounts(shopIds));
 
   const groups = useQuery({
     queryKey: queryKeys.productGroups(shopIds),

@@ -85,3 +85,26 @@ async def test_failures_are_isolated_per_shop(env):
     assert result.source == "error"
     assert result.counts is None
     assert result.error and "商品数据不可用" in result.error
+
+
+# ---- 商品计数缓存（shop_cache）：60 秒内不重复请求平台，同步商品后失效 ----
+
+async def test_product_counts_cached_and_invalidated_by_sync(env):
+    from datetime import UTC, datetime
+    now = datetime(2026, 11, 25, 8, 0, tzinfo=UTC)
+    svc = CatalogService(env.engine, env.runner, clock=lambda: now)
+    env.transport.responses[:] = [
+        reply(fx("product_counts")), reply(fx("product_list")), reply(fx("product_counts")),
+    ]
+
+    def count_calls() -> int:
+        return sum(1 for r in env.transport.requests if "aggsProductCount" in r["url"])
+
+    (first,) = await svc.product_counts([env.shop_id], "admin")
+    (second,) = await svc.product_counts([env.shop_id], "admin")
+    assert count_calls() == 1
+    assert second.counts == first.counts and second.fetched_at == first.fetched_at
+
+    await svc.sync_products([env.shop_id], "admin")
+    await svc.product_counts([env.shop_id], "admin")
+    assert count_calls() == 2  # 同步后马上重新取
