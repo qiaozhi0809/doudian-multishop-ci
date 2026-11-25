@@ -29,6 +29,7 @@ Thumbs.db
 
 # M1 后端运行产物
 logs/
+run/
 *.db
 *.db-wal
 *.db-shm
