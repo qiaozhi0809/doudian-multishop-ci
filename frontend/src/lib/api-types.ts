@@ -4,6 +4,117 @@
  */
 
 export interface paths {
+    "/api/aftersale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Aftersale */
+        get: operations["list_aftersale_api_aftersale_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/aftersale/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aftersale Counts */
+        get: operations["aftersale_counts_api_aftersale_counts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/aftersale/statuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Statuses
+         * @description 筛选下拉用：本地出现过的状态 + 平台文案。
+         */
+        get: operations["list_statuses_api_aftersale_statuses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/aftersale/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Aftersale
+         * @description 显式指定的店铺先预检（暂停 / 出口 / 会话不通即报错）；不指定则只跑可用店铺。
+         */
+        post: operations["sync_aftersale_api_aftersale_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/aftersale/todo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Todo
+         * @description 跨店待办队列：仍在流转（有处理截止时间）的售后单，按截止时间升序。
+         */
+        get: operations["list_todo_api_aftersale_todo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/aftersale/{after_sale_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aftersale Detail */
+        get: operations["aftersale_detail_api_aftersale__after_sale_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login": {
         parameters: {
             query?: never;
@@ -92,6 +203,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Products */
+        get: operations["list_products_api_catalog_products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/products/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Product Counts */
+        get: operations["product_counts_api_catalog_products_counts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/products/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Product Groups */
+        get: operations["product_groups_api_catalog_products_groups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/products/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Products */
+        post: operations["sync_products_api_catalog_products_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Stock */
+        get: operations["list_stock_api_catalog_stock_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/stock/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stock Summary */
+        get: operations["stock_summary_api_catalog_stock_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/stock/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Stock */
+        post: operations["sync_stock_api_catalog_stock_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/stock/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Warehouses */
+        get: operations["warehouses_api_catalog_stock_warehouses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -101,6 +348,94 @@ export interface paths {
         };
         /** Events */
         get: operations["events_api_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fund/bills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Bills
+         * @description 上游账单（不落库）；新店通常为空。金额字段未校准时 amount_status=pending。
+         */
+        get: operations["list_bills_api_fund_bills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fund/margin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Margin */
+        get: operations["list_margin_api_fund_margin_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fund/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fund Summary */
+        get: operations["fund_summary_api_fund_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fund/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Fund */
+        post: operations["sync_fund_api_fund_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fund/unsettled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Unsettled */
+        get: operations["list_unsettled_api_fund_unsettled_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -505,6 +840,114 @@ export interface components {
             /** Region */
             region: string | null;
         };
+        /** AftersaleButton */
+        AftersaleButton: {
+            /** Code */
+            code: string;
+            /**
+             * Disabled
+             * @default false
+             */
+            disabled: boolean;
+            /** Text */
+            text?: string | null;
+        };
+        /** AftersaleCountsResponse */
+        AftersaleCountsResponse: {
+            /** Shops */
+            shops: components["schemas"]["ShopAftersaleCounts"][];
+        };
+        /** AftersaleDetail */
+        AftersaleDetail: {
+            /** After Sale Id */
+            after_sale_id: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /** Shop Id */
+            shop_id: number;
+        };
+        /** AftersaleDisplay */
+        AftersaleDisplay: {
+            /** Buttons */
+            buttons?: components["schemas"]["AftersaleButton"][];
+            /** Buyer Nick */
+            buyer_nick?: string | null;
+            /** Detail Link */
+            detail_link?: string | null;
+            /** Left Node Time */
+            left_node_time?: number | null;
+            /** Order Info */
+            order_info?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Platform Intervene
+             * @default false
+             */
+            platform_intervene: boolean;
+            /** Reason Text */
+            reason_text?: string | null;
+            /** Status Text */
+            status_text?: string | null;
+            /** Type Text */
+            type_text?: string | null;
+        };
+        /** AftersalePage */
+        AftersalePage: {
+            /** Items */
+            items: components["schemas"]["AftersaleRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** AftersaleRow */
+        AftersaleRow: {
+            /** After Sale Id */
+            after_sale_id: string;
+            /** Apply Time */
+            apply_time: string | null;
+            display: components["schemas"]["AftersaleDisplay"];
+            /** Id */
+            id: number;
+            /** Order No */
+            order_no: string | null;
+            /** Refund Amount Cents */
+            refund_amount_cents: number | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Status */
+            status: number | null;
+            /** Status Deadline */
+            status_deadline: string | null;
+            /** Synced At */
+            synced_at: string;
+            /** Type */
+            type: number | null;
+        };
+        /** AftersaleStatusOption */
+        AftersaleStatusOption: {
+            /** Label */
+            label: string;
+            /** Status */
+            status: number;
+        };
+        /** AftersaleStatusesResponse */
+        AftersaleStatusesResponse: {
+            /** Items */
+            items: components["schemas"]["AftersaleStatusOption"][];
+        };
+        /** AftersaleSyncResponse */
+        AftersaleSyncResponse: {
+            /** Shops */
+            shops: components["schemas"]["ShopAftersaleSync"][];
+        };
         /** AuthStatus */
         AuthStatus: {
             /** Logged In */
@@ -539,6 +982,29 @@ export interface components {
             ready_for_label: boolean;
             /** Templates */
             templates: number;
+        };
+        /** BillItem */
+        BillItem: {
+            /** Amount Cents */
+            amount_cents: number;
+            /** Amount Field */
+            amount_field?: string | null;
+            /**
+             * Amount Status
+             * @enum {string}
+             */
+            amount_status: "confirmed" | "pending";
+            /** Raw */
+            raw: {
+                [key: string]: unknown;
+            };
+        };
+        /** BillsResponse */
+        BillsResponse: {
+            /** Days */
+            days: number;
+            /** Shops */
+            shops: components["schemas"]["ShopBills"][];
         };
         /** ChangePassword */
         ChangePassword: {
@@ -622,6 +1088,27 @@ export interface components {
             /** Shop Ids */
             shop_ids: number[];
         };
+        /** FundSummary */
+        FundSummary: {
+            /** Shops */
+            shops: components["schemas"]["ShopFundSummary"][];
+            /** Total Unsettled Amount Cents */
+            total_unsettled_amount_cents: number;
+            /** Total Unsettled Count */
+            total_unsettled_count: number;
+        };
+        /** FundSyncResponse */
+        FundSyncResponse: {
+            /** Shops */
+            shops: components["schemas"]["ShopFundSync"][];
+        };
+        /** GroupItem */
+        GroupItem: {
+            /** Group Id */
+            group_id: string;
+            /** Name */
+            name?: string | null;
+        };
         /** Health */
         Health: {
             /** Status */
@@ -689,6 +1176,34 @@ export interface components {
             total_blocked: number;
             /** Total Ready */
             total_ready: number;
+        };
+        /** MarginResponse */
+        MarginResponse: {
+            /** Items */
+            items: components["schemas"]["MarginRow"][];
+        };
+        /** MarginRow */
+        MarginRow: {
+            /** Balance Cents */
+            balance_cents: number | null;
+            /** Basic Balance Cents */
+            basic_balance_cents: number | null;
+            /** Basic Payable Cents */
+            basic_payable_cents: number | null;
+            /** Id */
+            id: number;
+            /** Level */
+            level: string | null;
+            /** Payable Cents */
+            payable_cents: number | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Synced At */
+            synced_at: string;
+            /** Withdrawable Cents */
+            withdrawable_cents: number | null;
         };
         /** OrderCounts */
         OrderCounts: {
@@ -812,6 +1327,73 @@ export interface components {
             /** Shop Name */
             shop_name: string;
         };
+        /** ProductCountsResponse */
+        ProductCountsResponse: {
+            /** Shops */
+            shops: components["schemas"]["ShopProductCounts"][];
+        };
+        /** ProductDisplay */
+        ProductDisplay: {
+            /** Category Name */
+            category_name?: string | null;
+            /** Img */
+            img?: string | null;
+            /** Product Url */
+            product_url?: string | null;
+            /** Quality Score */
+            quality_score?: number | null;
+            /** Sell Num 30D */
+            sell_num_30d?: number | null;
+        };
+        /** ProductGroupsResponse */
+        ProductGroupsResponse: {
+            /** Shops */
+            shops: components["schemas"]["ShopGroups"][];
+        };
+        /** ProductPage */
+        ProductPage: {
+            /** Items */
+            items: components["schemas"]["ProductRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** ProductRow */
+        ProductRow: {
+            display: components["schemas"]["ProductDisplay"];
+            /** Id */
+            id: number;
+            /** Name */
+            name: string | null;
+            /** Price Higher Cents */
+            price_higher_cents: number | null;
+            /** Price Lower Cents */
+            price_lower_cents: number | null;
+            /** Product Id */
+            product_id: string;
+            /** Sell Num */
+            sell_num: number | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Status */
+            status: string | null;
+            /** Stock Num */
+            stock_num: number | null;
+            /** Synced At */
+            synced_at: string;
+            /** Tab */
+            tab: string | null;
+        };
+        /** ProductSyncResponse */
+        ProductSyncResponse: {
+            /** Shops */
+            shops: components["schemas"]["ShopProductSync"][];
+        };
         /**
          * ReceiverOut
          * @description 按需解密的收件人：只返回给前端，不入库（flows 7.3）。
@@ -830,6 +1412,57 @@ export interface components {
             /** Region */
             region: string | null;
         };
+        /** ShopAftersaleCounts */
+        ShopAftersaleCounts: {
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            } | null;
+            /** Error */
+            error?: string | null;
+            /** Fetched At */
+            fetched_at?: string | null;
+            /**
+             * Pending Total
+             * @default 0
+             */
+            pending_total: number;
+            /** Shop Id */
+            shop_id: number;
+            /** Source */
+            source: string;
+        };
+        /** ShopAftersaleSync */
+        ShopAftersaleSync: {
+            /** Complete */
+            complete: boolean;
+            /** Error */
+            error?: string | null;
+            /** Fetched */
+            fetched: number;
+            /** Shop Id */
+            shop_id: number;
+            /** Synced At */
+            synced_at?: string | null;
+        };
+        /** ShopBills */
+        ShopBills: {
+            /** Error */
+            error?: string | null;
+            /** Fetched At */
+            fetched_at?: string | null;
+            /** Items */
+            items?: components["schemas"]["BillItem"][] | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Source */
+            source: string;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
         /** ShopCreate */
         ShopCreate: {
             /** Entity */
@@ -838,6 +1471,55 @@ export interface components {
             name: string;
             /** Shop No */
             shop_no?: string | null;
+        };
+        /** ShopFundSummary */
+        ShopFundSummary: {
+            /** Margin Balance Cents */
+            margin_balance_cents?: number | null;
+            /** Margin Level */
+            margin_level?: string | null;
+            /** Margin Payable Cents */
+            margin_payable_cents?: number | null;
+            /** Margin Synced At */
+            margin_synced_at?: string | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Synced At */
+            synced_at?: string | null;
+            /** Unsettled Amount Cents */
+            unsettled_amount_cents: number;
+            /** Unsettled Count */
+            unsettled_count: number;
+        };
+        /** ShopFundSync */
+        ShopFundSync: {
+            /** Error */
+            error?: string | null;
+            /** Margin Synced */
+            margin_synced: boolean;
+            /** Note */
+            note?: string | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Synced At */
+            synced_at?: string | null;
+            /** Unsettled Count */
+            unsettled_count: number;
+        };
+        /** ShopGroups */
+        ShopGroups: {
+            /** Error */
+            error?: string | null;
+            /** Fetched At */
+            fetched_at?: string | null;
+            /** Items */
+            items?: components["schemas"]["GroupItem"][] | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Source */
+            source: string;
         };
         /** ShopOrderCounts */
         ShopOrderCounts: {
@@ -864,6 +1546,34 @@ export interface components {
             entity?: string | null;
             /** Name */
             name?: string | null;
+        };
+        /** ShopProductCounts */
+        ShopProductCounts: {
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            } | null;
+            /** Error */
+            error?: string | null;
+            /** Fetched At */
+            fetched_at?: string | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Source */
+            source: string;
+        };
+        /** ShopProductSync */
+        ShopProductSync: {
+            /** Complete */
+            complete: boolean;
+            /** Error */
+            error?: string | null;
+            /** Fetched */
+            fetched: number;
+            /** Shop Id */
+            shop_id: number;
+            /** Synced At */
+            synced_at?: string | null;
         };
         /** ShopRow */
         ShopRow: {
@@ -902,6 +1612,42 @@ export interface components {
              */
             status: "active" | "needs_login" | "disabled";
         };
+        /** ShopStockSync */
+        ShopStockSync: {
+            /**
+             * Alarm Count
+             * @default 0
+             */
+            alarm_count: number;
+            /** Complete */
+            complete: boolean;
+            /** Error */
+            error?: string | null;
+            /** Fetched */
+            fetched: number;
+            /** Shop Id */
+            shop_id: number;
+            /**
+             * Sold Out Count
+             * @default 0
+             */
+            sold_out_count: number;
+            /** Synced At */
+            synced_at?: string | null;
+        };
+        /** ShopWarehouses */
+        ShopWarehouses: {
+            /** Error */
+            error?: string | null;
+            /** Fetched At */
+            fetched_at?: string | null;
+            /** Items */
+            items?: components["schemas"]["WarehouseItem"][] | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Source */
+            source: string;
+        };
         /** Started */
         Started: {
             /**
@@ -910,6 +1656,58 @@ export interface components {
              * @constant
              */
             status: "started";
+        };
+        /** StockPage */
+        StockPage: {
+            /** Items */
+            items: components["schemas"]["StockRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** StockRow */
+        StockRow: {
+            /** Future Stock Num */
+            future_stock_num: number | null;
+            /** Id */
+            id: number;
+            /** Is Alarming */
+            is_alarming: boolean;
+            /** Name */
+            name?: string | null;
+            /** Product Id */
+            product_id: string;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Spot Stock Num */
+            spot_stock_num: number | null;
+            /** Synced At */
+            synced_at: string;
+            /** Total Occupied Stock Num */
+            total_occupied_stock_num: number | null;
+            /** Total Stock Num */
+            total_stock_num: number | null;
+            /** Total Unoccupied Stock Num */
+            total_unoccupied_stock_num: number | null;
+        };
+        /** StockSummary */
+        StockSummary: {
+            /** Alarm Count */
+            alarm_count: number;
+            /** Sold Out Count */
+            sold_out_count: number;
+            /** Total */
+            total: number;
+        };
+        /** StockSyncResponse */
+        StockSyncResponse: {
+            /** Shops */
+            shops: components["schemas"]["ShopStockSync"][];
         };
         /** SyncStarted */
         SyncStarted: {
@@ -928,6 +1726,58 @@ export interface components {
             name: string | null;
             /** Template Code */
             template_code: string;
+        };
+        /** UnsettledDisplay */
+        UnsettledDisplay: {
+            /** Collection Subject Name */
+            collection_subject_name?: string | null;
+            /** Product Name */
+            product_name?: string | null;
+            /** Settlement Delay Days */
+            settlement_delay_days?: number | null;
+            /** Sku Detail Text */
+            sku_detail_text?: string | null;
+        };
+        /** UnsettledPage */
+        UnsettledPage: {
+            /** Items */
+            items: components["schemas"]["UnsettledRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** UnsettledRow */
+        UnsettledRow: {
+            display: components["schemas"]["UnsettledDisplay"];
+            /** Ecom Order Status */
+            ecom_order_status: string | null;
+            /** Expected Settle Time */
+            expected_settle_time: string | null;
+            /** Id */
+            id: number;
+            /** Income Amount Cents */
+            income_amount_cents: number | null;
+            /** Platform Service Fee Cents */
+            platform_service_fee_cents: number | null;
+            /** Product Id */
+            product_id: string | null;
+            /** Settle Period Detail */
+            settle_period_detail: string | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Shop Order No */
+            shop_order_no: string;
+            /** Sku Order No */
+            sku_order_no: string;
+            /** Synced At */
+            synced_at: string;
+            /** Unsettled Amount Cents */
+            unsettled_amount_cents: number | null;
         };
         /** VoidPreviewRequest */
         VoidPreviewRequest: {
@@ -978,6 +1828,18 @@ export interface components {
             /** Waybill No */
             waybill_no: string | null;
         };
+        /** WarehouseItem */
+        WarehouseItem: {
+            /** Name */
+            name?: string | null;
+            /** Warehouse Id */
+            warehouse_id: string;
+        };
+        /** WarehousesResponse */
+        WarehousesResponse: {
+            /** Shops */
+            shops: components["schemas"]["ShopWarehouses"][];
+        };
         /** WaybillRow */
         WaybillRow: {
             /** Courier Code */
@@ -1004,6 +1866,201 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_aftersale_api_aftersale_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                status?: number | null;
+                pending?: boolean;
+                keyword?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AftersalePage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    aftersale_counts_api_aftersale_counts_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AftersaleCountsResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_statuses_api_aftersale_statuses_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AftersaleStatusesResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sync_aftersale_api_aftersale_sync_post: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AftersaleSyncResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_todo_api_aftersale_todo_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AftersalePage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    aftersale_detail_api_aftersale__after_sale_id__get: {
+        parameters: {
+            query: {
+                shop_id: number;
+            };
+            header?: never;
+            path: {
+                after_sale_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AftersaleDetail"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     login_api_auth_login_post: {
         parameters: {
             query?: never;
@@ -1165,6 +2222,261 @@ export interface operations {
             };
         };
     };
+    list_products_api_catalog_products_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                tab?: string | null;
+                keyword?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductPage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    product_counts_api_catalog_products_counts_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductCountsResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    product_groups_api_catalog_products_groups_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductGroupsResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sync_products_api_catalog_products_sync_post: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductSyncResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_stock_api_catalog_stock_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                alarm_only?: boolean;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockPage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    stock_summary_api_catalog_stock_summary_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockSummary"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sync_stock_api_catalog_stock_sync_post: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockSyncResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    warehouses_api_catalog_stock_warehouses_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarehousesResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     events_api_events_get: {
         parameters: {
             query?: never;
@@ -1181,6 +2493,165 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_bills_api_fund_bills_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                days?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillsResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_margin_api_fund_margin_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarginResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    fund_summary_api_fund_summary_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundSummary"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sync_fund_api_fund_sync_post: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundSyncResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_unsettled_api_fund_unsettled_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnsettledPage"];
                 };
             };
             /** @description 错误信封 */

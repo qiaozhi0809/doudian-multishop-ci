@@ -1,0 +1,123 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.counts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.countGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.statLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.statValue {
+  color: var(--foreground);
+  font-size: var(--text-2xl);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.statContext {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.countMeta {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.tableWrap table {
+  min-width: 56rem;
+}
+
+.tableWrap :is(td, th):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+}
+
+.productCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.billShop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.billHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.billShopName {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
