@@ -26,7 +26,7 @@
 | 后端 | Python 3.12 + FastAPI + curl_cffi |
 | 存储 | SQLite（WAL）+ SQLAlchemy Core + Alembic |
 | 打印 | 抖店官方打印组件（本地 WebSocket） |
-| 登录 | Playwright + 系统 Edge（首次扫码，之后走协议） |
+| 登录 | CloakBrowser 定制 Chromium（首次扫码，之后走协议） |
 
 ## 模块范围
 

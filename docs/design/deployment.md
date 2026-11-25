@@ -34,7 +34,7 @@ D:\doudian-multishop\            ← 安装目录（可任意）
 | Python | 3.12.x（64 位） | `python --version`；安装时勾选 Add to PATH |
 | 磁盘 | ≥ 5 GB 可用（数据库 + 浏览器 profile + 备份） | 资源管理器 |
 | 网络 | 能访问 `fxg.jinritemai.com`；代理出口按店准备 | 浏览器打开抖店后台 |
-| CloakBrowser 二进制 | 首次扫码登录时自动下载（约 200MB，缓存在 `<data_dir>\browser\`） | 该目录下出现 `chromium-146.*\chrome.exe` |
+| 下载源可达 | 能直连 `https://cloakbrowser.dev`（失败会自动回退 GitHub Releases）下载约 200MB；或已预置 `<data_dir>\browser\chromium-146.*\` | 第 3 节步骤 2 的预下载命令成功输出二进制路径 |
 | 抖店官方打印组件 | 已安装并**保持运行**（`wss://localhost:13999`） | `netstat -ano \| findstr 13999` 有 LISTENING |
 | 打印机 | 系统打印机已添加、能打测试页 | 打印机设置 |
 | 时间 | 与网络时间同步（对账 / 超时告警依赖系统时间） | `w32tm /query /status` |
@@ -51,10 +51,15 @@ D:\doudian-multishop\            ← 安装目录（可任意）
    python -m venv .venv
    .\.venv\Scripts\python.exe -m pip install --upgrade pip
    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+   # 预下载 CloakBrowser 定制浏览器（约 200MB，直连下载，不走店铺代理）
+   $env:CLOAKBROWSER_CACHE_DIR = "$env:LOCALAPPDATA\doudian-multishop\browser"
+   .\.venv\Scripts\python.exe -c "import cloakbrowser; print(cloakbrowser.ensure_binary())"
    ```
 
    `requirements.txt` 是 `uv export` 生成的**锁定版本**清单，不安装开发依赖。
    开发机也可以用 `uv sync`，见 [engineering-rules.md](../engineering-rules.md)。
+
+   预下载输出应为 `...\browser\chromium-146.*\chrome.exe`。这一步失败说明出单机无法直连外网——请在能联网的机器上执行同样命令，再把整个 `browser` 目录拷过来。
 
 3. 前端产物：发布包里已带 `frontend\dist\`。若没有（例如只拿了源码），在开发机执行
    `cd frontend && pnpm install && pnpm build`，再把 `frontend\dist` 整个拷过来。
@@ -83,7 +88,7 @@ D:\doudian-multishop\            ← 安装目录（可任意）
 | `DD_DRY_RUN` | `false` | 演练模式，见 §5 |
 | `DD_USE_CLOAK` | `true` | 是否使用 CloakBrowser 定制 Chromium；设为 `false` 时回退系统浏览器 |
 | `DD_CLOAK_CACHE_DIR` | `<data_dir>\browser` | CloakBrowser 二进制缓存目录 |
-| `DD_BROWSER_CHANNEL` | `msedge`（Windows） | 仅在 `DD_USE_CLOAK=false` 时生效的兜底浏览器通道 |
+| `DD_BROWSER_CHANNEL` | `msedge`（Windows） | 仅 `DD_USE_CLOAK=false` 时生效的兜底通道。**应急专用**：此时所有店铺共用本机真实 Edge 指纹，多店同时使用会破坏「每店固定指纹」的隔离目标 |
 | `DD_PRINTER_NAME` | 空 | 取号请求的 printer 字段 / 默认打印机名 |
 | `DD_MAX_CONCURRENT_SHOPS` | `3` | 同时执行的店铺数上限 |
 | `DD_RECONCILE_DAILY` | `true` | 每日定时全店对账开关 |
