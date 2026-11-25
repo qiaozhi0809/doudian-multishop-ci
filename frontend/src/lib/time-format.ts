@@ -45,3 +45,11 @@ export function formatRemaining(iso: string | null, now: Date = new Date()): str
   if (ms < DAY_MS) return `剩 ${Math.max(1, Math.ceil(ms / HOUR_MS))} 小时`;
   return `剩 ${Math.ceil(ms / DAY_MS)} 天`;
 }
+
+/** 北京时间今天的只显示 `HH:mm`，其余显示完整时间（悬停再显示完整时间，ui-guidelines 第 6 节）。 */
+export function formatBjTimeSmart(iso: string | null, now: Date = new Date()): string {
+  const full = formatBjTime(iso);
+  if (full === EMPTY) return EMPTY;
+  const today = formatBjTime(now.toISOString()).slice(0, 10);
+  return full.startsWith(today) ? full.slice(11) : full;
+}

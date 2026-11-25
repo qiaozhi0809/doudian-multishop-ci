@@ -1,4 +1,4 @@
-import { daysUntil, formatBjTime, formatRemaining, parseExpiry } from "./time-format";
+import { daysUntil, formatBjTime, formatBjTimeSmart, formatRemaining, parseExpiry } from "./time-format";
 
 describe("formatBjTime", () => {
   const originalTz = process.env.TZ;
@@ -58,5 +58,22 @@ describe("到期时间", () => {
     expect(formatRemaining(at(-1), NOW)).toBe("已过期");
     expect(formatRemaining(null, NOW)).toBe("暂无");
     expect(formatRemaining("bad", NOW)).toBe("暂无");
+  });
+});
+
+describe("formatBjTimeSmart", () => {
+  // 北京时间 2026-11-25 10:00
+  const NOW = new Date("2026-11-25T02:00:00Z");
+  it("北京时间今天的只显示 HH:mm", () => {
+    expect(formatBjTimeSmart("2026-11-25T00:30:00Z", NOW)).toBe("08:30");
+    expect(formatBjTimeSmart("2026-11-24T16:05:00Z", NOW)).toBe("00:05"); // 北京时间 25 日 00:05
+  });
+  it("不是今天的显示完整时间（按北京时间判断，不看浏览器时区）", () => {
+    expect(formatBjTimeSmart("2026-11-24T15:59:00Z", NOW)).toBe("2026-11-24 23:59");
+    expect(formatBjTimeSmart("2026-11-26T00:00:00Z", NOW)).toBe("2026-11-26 08:00");
+  });
+  it("空值与无效值显示「暂无」", () => {
+    expect(formatBjTimeSmart(null, NOW)).toBe("暂无");
+    expect(formatBjTimeSmart("bad", NOW)).toBe("暂无");
   });
 });

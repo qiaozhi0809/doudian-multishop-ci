@@ -10,21 +10,24 @@ interface ShopTableProps {
   actionsFor: (row: ShopRow) => RowActions & { onResume: () => void };
 }
 
+/** Arc 表格的列默认可排序（sortable !== false），只有店铺名与到期时间有意义，其余列显式关闭。 */
 export function ShopTable({ shops, pending, waitingShopIds, actionsFor }: ShopTableProps) {
   const columns: DataColumn<ShopRow>[] = [
     { key: "name", label: "店铺", sortable: true, width: 140, render: (v) => <span className={styles.shopName}>{String(v)}</span> },
     {
       key: "status",
       label: "状态",
+      sortable: false,
       width: 170,
       render: (_, row) => <StatusCell row={row} waiting={waitingShopIds.includes(row.id)} onResume={actionsFor(row).onResume} />,
     },
-    { key: "egress_status", label: "出口", width: 230, render: (_, row) => <EgressCell row={row} /> },
+    { key: "egress_status", label: "出口", sortable: false, width: 230, render: (_, row) => <EgressCell row={row} /> },
     { key: "expires_at", label: "到期时间", sortable: true, width: 140, render: (_, row) => <ExpiryCell row={row} /> },
-    { key: "ready_for_label", label: "取号就绪", width: 90, render: (_, row) => <ReadyCell row={row} /> },
+    { key: "ready_for_label", label: "取号就绪", sortable: false, width: 90, render: (_, row) => <ReadyCell row={row} /> },
     {
       key: "actions",
       label: "操作",
+      sortable: false,
       width: 270,
       render: (_, row) => (
         <ActionsCell row={row} actions={actionsFor(row)} pending={pending} waiting={waitingShopIds.includes(row.id)} />

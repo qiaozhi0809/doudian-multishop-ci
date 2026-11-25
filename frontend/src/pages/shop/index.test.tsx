@@ -63,6 +63,16 @@ describe("店铺与设置页", () => {
     expect(b.getByText("未就绪")).toBeInTheDocument();
   });
 
+  it("只有店铺名与到期时间可排序，操作、状态等列没有排序按钮", async () => {
+    mockFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
+    renderPage();
+    await screen.findByRole("table");
+    const sortable = (name: string) => within(screen.getByRole("columnheader", { name })).queryByRole("button");
+    expect(sortable("店铺")).not.toBeNull();
+    expect(sortable("到期时间")).not.toBeNull();
+    for (const name of ["状态", "出口", "取号就绪", "操作"]) expect(sortable(name)).toBeNull();
+  });
+
   it("全局店铺筛选只显示选中的店铺", async () => {
     mockFetch({ "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" }), makeShop({ id: 2, name: "店铺乙" })]) });
     renderPage("/shops?shops=2");
