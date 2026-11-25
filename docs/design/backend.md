@@ -422,7 +422,7 @@ class Signer(Protocol):
 | 出口 IP 变化 | 与 `egress_ip` 不同 → `egress_status=changed`，新 IP 存 `egress_ip_pending`，暂停该店；人工确认后 pending 转正、状态 `ok` |
 | 出口 IP 重复 | 与其他启用店铺的 `egress_ip` 相同 → **`created_at` 较晚**的那家店 `egress_status=duplicate`（新 IP 存 `egress_ip_pending`），暂停 |
 | 代理凭证 | 代理 URL（含账号密码）与 cookie 一样用 `SecretBox` 加密存库；日志只显示主机与端口 |
-| 设备参数 | 不伪造。各店 profile 使用本机真实浏览器参数；扫码时记录该浏览器的 `User-Agent` 与 `sec-ch-ua*` 头，协议通道发请求时使用同一组值（参数前后不一致本身就是风控信号） |
+| 设备参数 | 浏览器统一使用 CloakBrowser 定制 Chromium；每店一个固定指纹种子（`profiles/<shop_id>/.cloak-seed`），跨会话不变。扫码时记录该浏览器的 `User-Agent` 与 `sec-ch-ua*` 头，协议通道发请求时使用同一组值（参数前后不一致本身就是风控信号）。**禁止轮换指纹种子** |
 | 统一入口 | 凡是会请求抖店的操作（定时任务、手动同步 / 探测 / 计数、扫码），都经 `ShopRunner.run`：先出口检查，再进该店串行队列（5.7） |
 
 **代理池（配置来源，不是轮换）**：`proxy_pool` 表（`store/proxy_pool_store.py`、`service/proxy_pool.py`、`api/proxy_pool.py`）只是候选代理清单，
