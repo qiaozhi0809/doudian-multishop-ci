@@ -17,3 +17,4 @@ class TaskType(StrEnum):
     FETCH_AND_SHIP = "fetch_and_ship"
     VOID_LABEL = "void_label"
     RECOVER_LABEL = "recover_label"
+    SHIP = "ship"

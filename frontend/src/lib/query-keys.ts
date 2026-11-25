@@ -23,6 +23,12 @@ export interface PageFilter {
   page: number;
 }
 
+export interface ReconcileFilters {
+  kind: string;
+  status: string;
+  page: number;
+}
+
 /** 查询 key 统一在此定义；带店铺筛选条件。`*Root()` 用于前缀失效。 */
 export const queryKeys = {
   authStatus: () => ["auth", "status"] as const,
@@ -61,4 +67,11 @@ export const queryKeys = {
   printStatus: () => ["printStatus"] as const,
   printWaybillsRoot: () => ["printWaybills"] as const,
   printWaybills: (waybillIds: number[]) => ["printWaybills", waybillIds] as const,
+  // ---- M4 发货 / 对账 ----
+  shippingPoolRoot: () => ["shippingPool"] as const,
+  shippingPool: (shopIds: number[], page: number) =>
+    ["shippingPool", shopIds, { page }] as const,
+  reconcileRoot: () => ["reconcile"] as const,
+  reconcileFindings: (shopIds: number[], filters: ReconcileFilters) =>
+    ["reconcile", "findings", shopIds, filters] as const,
 };

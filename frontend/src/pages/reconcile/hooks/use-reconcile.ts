@@ -1,0 +1,119 @@
+import { useCallback, useState } from "react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
+import { api, ApiError } from "@/lib/api-client";
+import type { components } from "@/lib/api-types";
+import { queryKeys } from "@/lib/query-keys";
+import { useEventSubscription } from "@/lib/use-events";
+import {
+  PAGE_SIZE,
+  isKind,
+  isStatus,
+  type Finding,
+  type KindFilter,
+  type StatusFilter,
+} from "../logic/reconcile-view";
+
+type FindingsPage = components["schemas"]["ReconcileFindingsPage"];
+
+function message(error: unknown): string {
+  return error instanceof ApiError ? error.message : "操作失败，请重试";
+}
+
+/** 对账页：筛选在 URL 里；触发后靠 SSE + 轮询刷新同一个查询。 */
+export function useReconcile() {
+  const { shopIds } = useShopFilter();
+  const client = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const [error, setError] = useState<string | null>(null);
+
+  const kindParam = params.get("kind");
+  const kind: KindFilter = isKind(kindParam) ? kindParam : "all";
+  const statusParam = params.get("status");
+  const status: StatusFilter = isStatus(statusParam) ? statusParam : "all";
+  const rawPage = Number(params.get("page"));
+  const page = Number.isInteger(rawPage) && rawPage >= 1 ? rawPage : 1;
+
+  const update = useCallback(
+    (changes: Record<string, string | null>) => {
+      setParams((prev) => {
+        const next = new URLSearchParams(prev);
+        for (const [key, value] of Object.entries(changes)) {
+          if (value === null) next.delete(key);
+          else next.set(key, value);
+        }
+        return next;
+      });
+    },
+    [setParams],
+  );
+
+  const setKind = (value: KindFilter) =>
+    update({ kind: value === "all" ? null : value, page: null });
+  const setStatus = (value: StatusFilter) =>
+    update({ status: value === "all" ? null : value, page: null });
+  const setPage = (value: number) =>
+    update({ page: value > 1 ? String(value) : null });
+
+  const query = useQuery({
+    queryKey: queryKeys.reconcileFindings(shopIds, { kind, status, page }),
+    queryFn: () =>
+      api.get<FindingsPage>("/api/reconcile/findings", {
+        shop_ids: shopIds,
+        kind: kind === "all" ? undefined : kind,
+        status: status === "all" ? undefined : status,
+        page,
+        page_size: PAGE_SIZE,
+      }),
+    placeholderData: keepPreviousData,
+    refetchInterval: (q) =>
+      q.state.data?.run?.status === "running" ? 3000 : false,
+  });
+
+  const runMutation = useMutation({
+    mutationFn: () =>
+      api.post<components["schemas"]["ReconcileStarted"]>("/api/reconcile/run", {
+        window_days: 30,
+      }),
+    onSuccess: () => {
+      setError(null);
+      void client.invalidateQueries({ queryKey: queryKeys.reconcileRoot() });
+    },
+    onError: (e) => setError(message(e)),
+  });
+
+  const markMutation = useMutation({
+    mutationFn: (findingId: number) =>
+      api.patch<Finding>(`/api/reconcile/findings/${findingId}`, { status: "handled" }),
+    onSuccess: () => {
+      setError(null);
+      void client.invalidateQueries({ queryKey: queryKeys.reconcileRoot() });
+    },
+    onError: (e) => setError(message(e)),
+  });
+
+  useEventSubscription("reconcile_done", () => {
+    void client.invalidateQueries({ queryKey: queryKeys.reconcileRoot() });
+  });
+
+  return {
+    query,
+    rows: query.data?.items ?? [],
+    run: query.data?.run ?? null,
+    kind,
+    status,
+    page,
+    setKind,
+    setStatus,
+    setPage,
+    runNow: () => runMutation.mutate(),
+    running: runMutation.isPending || query.data?.run?.status === "running",
+    markHandled: markMutation.mutate,
+    marking: markMutation.isPending,
+    error,
+    clearError: () => setError(null),
+  };
+}
+
+export type ReconcileState = ReturnType<typeof useReconcile>;

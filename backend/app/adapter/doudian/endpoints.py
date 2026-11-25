@@ -79,6 +79,14 @@ PRODUCT_TYPES = Endpoint(
 RECEIVE_INFO = Endpoint("receive_info", "GET", "/api/order/receiveinfo", bid.ORDER)
 ORDER_LOGISTICS = Endpoint("order_logistics", "GET", "/api/order/getOrderLogistics", bid.ORDER)
 
+# ---- M4 发货（docs/api/write.md A.2.3 / A.2.4）----
+# sendcheck 是只读检查（可退避重试）；发货是写接口，超时重试由 service 控制（重复发货平台不拦）
+SEND_CHECK = Endpoint("send_check", "POST", "/api/order/sendcheck", bid.ORDER, body="json")
+BATCH_DELIVER = Endpoint(
+    "batch_deliver", "POST", "/api/order/batchDeliverGoodsByEES",
+    bid.ORDER, body="json", write=True,
+)
+
 # ---- M3 打印：补打面单数据（docs/design/flows.md 第 10 节）----
 # 查询型 POST：只读语义，允许退避重试；返回结构尚未实测，
 # 解析容错见 adapter/doudian/print_parsers.py
@@ -96,6 +104,14 @@ def searchlist_pending_params(page: int) -> dict[str, str | int]:
     return {
         "tab": OrderTab.STOCK_UP.value, "order_status": OrderTab.STOCK_UP.value, "scene": 1,
         "page": page, "pageSize": SEARCHLIST_MAX_PAGE_SIZE,
+    }
+
+
+def searchlist_all_params(page: int) -> dict[str, str | int]:
+    """全部状态的订单（对账 / 仪表盘事实同步）：tab=all 时 order_status 为空串。"""
+    return {
+        "tab": OrderTab.ALL.value, "order_status": "", "page": page,
+        "pageSize": SEARCHLIST_MAX_PAGE_SIZE,
     }
 
 

@@ -1,0 +1,25 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "success_package_list": [
+      {
+        "logistics_company_code": "zhongtong",
+        "tracking_no": "79200000000001",
+        "shop_order_list": [
+          {"shop_order_id": "6900000000000000001", "sku_orders": []}
+        ]
+      }
+    ],
+    "fail_package_list": [
+      {
+        "logistics_company_code": "zhongtong",
+        "tracking_no": "79200000000002",
+        "fail_msg": "运单号已被使用",
+        "shop_order_list": [
+          {"shop_order_id": "6900000000000000002", "sku_orders": []}
+        ]
+      }
+    ]
+  }
+}

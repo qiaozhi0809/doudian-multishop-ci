@@ -13,5 +13,10 @@ def void_key(shop_id: int, courier_code: str, waybill_no: str) -> str:
     return f"void:{shop_id}:{courier_code}:{waybill_no}"
 
 
+def ship_key(shop_id: int, courier_code: str, tracking_no: str) -> str:
+    """发货幂等键（backend 5.6）：平台不阻止重复发货，本地必须先查这个键。"""
+    return f"ship:{shop_id}:{courier_code}:{tracking_no}"
+
+
 def next_seq(voided_count: int) -> int:
     return voided_count + 1

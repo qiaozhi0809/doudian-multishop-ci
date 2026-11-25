@@ -23,6 +23,8 @@ from app.api import fund as fund_api
 from app.api import label as label_api
 from app.api import order as order_api
 from app.api import print as print_api
+from app.api import reconcile as reconcile_api
+from app.api import shipping as shipping_api
 from app.api import shop as shop_api
 from app.api.common_schemas import ErrorEnvelope, Health
 from app.api.deps import require_admin
@@ -96,7 +98,7 @@ def create_app(
 
     for module in (
         auth_api, shop_api, order_api, label_api, print_api, event_api,
-        aftersale_api, catalog_api, fund_api,
+        aftersale_api, catalog_api, fund_api, shipping_api, reconcile_api,
     ):
         app.include_router(module.router)
     _mount_frontend(app, settings)

@@ -722,6 +722,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reconcile/findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Findings */
+        get: operations["findings_api_reconcile_findings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reconcile/findings/{finding_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Mark Finding */
+        patch: operations["mark_finding_api_reconcile_findings__finding_id__patch"];
+        trace?: never;
+    };
+    "/api/reconcile/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run */
+        post: operations["run_api_reconcile_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shipping/batches/{batch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Batch */
+        get: operations["batch_api_shipping_batches__batch_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shipping/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check */
+        post: operations["check_api_shipping_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shipping/pool": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pool */
+        get: operations["pool_api_shipping_pool_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shipping/ship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ship */
+        post: operations["ship_api_shipping_ship_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shops": {
         parameters: {
             query?: never;
@@ -1073,6 +1192,17 @@ export interface components {
             days: number;
             /** Shops */
             shops: components["schemas"]["ShopBills"][];
+        };
+        /** BlockedShipOut */
+        BlockedShipOut: {
+            /** Order Id */
+            order_id: number;
+            /** Order No */
+            order_no: string;
+            /** Reason */
+            reason: string;
+            /** Shop Name */
+            shop_name: string;
         };
         /** ChangePassword */
         ChangePassword: {
@@ -1528,6 +1658,223 @@ export interface components {
             /** Region */
             region: string | null;
         };
+        /** ReconcileFindingRow */
+        ReconcileFindingRow: {
+            /** Created At */
+            created_at: string;
+            /** Detail */
+            detail: string | null;
+            /** Handled At */
+            handled_at: string | null;
+            /** Id */
+            id: number;
+            /** Kind */
+            kind: string;
+            /** Kind Title */
+            kind_title: string;
+            /** Local Company Code */
+            local_company_code: string | null;
+            /** Local Status */
+            local_status: number | null;
+            /** Local Tracking No */
+            local_tracking_no: string | null;
+            /** Platform Company Code */
+            platform_company_code: string | null;
+            /** Platform Status */
+            platform_status: number | null;
+            /** Platform Tracking No */
+            platform_tracking_no: string | null;
+            /** Run Id */
+            run_id: string;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Shop Order Id */
+            shop_order_id: string;
+            /** Status */
+            status: string;
+        };
+        /** ReconcileFindingsPage */
+        ReconcileFindingsPage: {
+            /** Items */
+            items: components["schemas"]["ReconcileFindingRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            run: components["schemas"]["ReconcileRunRow"] | null;
+            /** Total */
+            total: number;
+        };
+        /** ReconcileMarkRequest */
+        ReconcileMarkRequest: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "handled";
+        };
+        /** ReconcileRunRequest */
+        ReconcileRunRequest: {
+            /** Window Days */
+            window_days?: number | null;
+        };
+        /** ReconcileRunRow */
+        ReconcileRunRow: {
+            /** Error */
+            error: string | null;
+            /** Finding Count */
+            finding_count: number;
+            /** Finished At */
+            finished_at: string | null;
+            /** Id */
+            id: number;
+            /** Run Id */
+            run_id: string;
+            /** Scanned */
+            scanned: number;
+            /** Shop Ids */
+            shop_ids: number[];
+            /** Started At */
+            started_at: string;
+            /** Status */
+            status: string;
+            /** Window Days */
+            window_days: number;
+        };
+        /** ReconcileStarted */
+        ReconcileStarted: {
+            /** Run Id */
+            run_id: string;
+            /** Shop Ids */
+            shop_ids: number[];
+            /** Started At */
+            started_at: string;
+            /** Status */
+            status: string;
+            /** Window Days */
+            window_days: number;
+        };
+        /** ShipBatchResponse */
+        ShipBatchResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Failed */
+            failed: number;
+            /** Items */
+            items: components["schemas"]["ShipmentRow"][];
+            /** Ok */
+            ok: number;
+            /** Pending */
+            pending: number;
+        };
+        /** ShipCheckRequest */
+        ShipCheckRequest: {
+            /** Order Ids */
+            order_ids: number[];
+        };
+        /** ShipCheckResponse */
+        ShipCheckResponse: {
+            /** Blocked */
+            blocked: components["schemas"]["BlockedShipOut"][];
+            /** Double Check Total */
+            double_check_total: number;
+            /** Dry Run */
+            dry_run: boolean;
+            /** Shop Errors */
+            shop_errors: components["schemas"]["ShopCheckErrorOut"][];
+            /** Shops */
+            shops: components["schemas"]["ShopCheckOut"][];
+            /** Total Orders */
+            total_orders: number;
+        };
+        /** ShipPoolPage */
+        ShipPoolPage: {
+            /** Items */
+            items: components["schemas"]["ShipPoolRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** ShipPoolRow */
+        ShipPoolRow: {
+            /** Amount Cents */
+            amount_cents: number | null;
+            /** Courier Code */
+            courier_code: string;
+            /** Exp Ship Time */
+            exp_ship_time: string | null;
+            /** Id */
+            id: number;
+            /** Order No */
+            order_no: string;
+            /** Pay Time */
+            pay_time: string | null;
+            /** Platform Status */
+            platform_status: number | null;
+            /** Printed */
+            printed: boolean;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Status */
+            status: string;
+            /** Tracking No */
+            tracking_no: string;
+            /** Waybill Id */
+            waybill_id: number;
+        };
+        /** ShipRequest */
+        ShipRequest: {
+            /**
+             * Double Check Ack
+             * @default false
+             */
+            double_check_ack: boolean;
+            /** Order Ids */
+            order_ids: number[];
+        };
+        /** ShipStartedOut */
+        ShipStartedOut: {
+            /** Batch Id */
+            batch_id: string;
+            /** Order Count */
+            order_count: number;
+            /** Package Count */
+            package_count: number;
+            /** Shop Ids */
+            shop_ids: number[];
+        };
+        /** ShipmentRow */
+        ShipmentRow: {
+            /** Batch Id */
+            batch_id: string;
+            /** Courier Code */
+            courier_code: string;
+            /** Created At */
+            created_at: string;
+            /** Fail Msg */
+            fail_msg: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Id */
+            id: number;
+            /** Order Id */
+            order_id: number;
+            /** Shop Id */
+            shop_id: number;
+            /** Status */
+            status: string;
+            /** Tracking No */
+            tracking_no: string;
+            /** Waybill Id */
+            waybill_id: number | null;
+        };
         /** ShopAftersaleCounts */
         ShopAftersaleCounts: {
             /** Counts */
@@ -1578,6 +1925,38 @@ export interface components {
              * @default 0
              */
             total: number;
+        };
+        /** ShopCheckErrorOut */
+        ShopCheckErrorOut: {
+            /** Reason */
+            reason: string;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+        };
+        /** ShopCheckOut */
+        ShopCheckOut: {
+            /** Double Check Detail */
+            double_check_detail: {
+                [key: string]: unknown;
+            }[];
+            /** Double Check Num */
+            double_check_num: number;
+            /** Order Nos */
+            order_nos: string[];
+            /** Place Holder */
+            place_holder: {
+                [key: string]: unknown;
+            } | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Total */
+            total: number;
+            /** Without Aftersale */
+            without_aftersale: string[];
         };
         /** ShopCreate */
         ShopCreate: {
@@ -3297,6 +3676,242 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WaybillPrintList"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    findings_api_reconcile_findings_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                run_id?: string | null;
+                kind?: string | null;
+                status?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconcileFindingsPage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    mark_finding_api_reconcile_findings__finding_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                finding_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconcileMarkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconcileFindingRow"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    run_api_reconcile_run_post: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReconcileRunRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconcileStarted"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    batch_api_shipping_batches__batch_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipBatchResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    check_api_shipping_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShipCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipCheckResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    pool_api_shipping_pool_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipPoolPage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    ship_api_shipping_ship_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShipRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipStartedOut"];
                 };
             };
             /** @description 错误信封 */

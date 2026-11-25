@@ -626,6 +626,34 @@
         "title": "BillsResponse",
         "type": "object"
       },
+      "BlockedShipOut": {
+        "properties": {
+          "order_id": {
+            "title": "Order Id",
+            "type": "integer"
+          },
+          "order_no": {
+            "title": "Order No",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "order_no",
+          "shop_name",
+          "reason"
+        ],
+        "title": "BlockedShipOut",
+        "type": "object"
+      },
       "ChangePassword": {
         "properties": {
           "new_password": {
@@ -2218,6 +2246,715 @@
         "title": "ReceiverOut",
         "type": "object"
       },
+      "ReconcileFindingRow": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "handled_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handled At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "kind_title": {
+            "title": "Kind Title",
+            "type": "string"
+          },
+          "local_company_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Company Code"
+          },
+          "local_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Status"
+          },
+          "local_tracking_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Tracking No"
+          },
+          "platform_company_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Company Code"
+          },
+          "platform_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Status"
+          },
+          "platform_tracking_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Tracking No"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "shop_order_id": {
+            "title": "Shop Order Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "shop_id",
+          "shop_name",
+          "shop_order_id",
+          "kind",
+          "kind_title",
+          "local_status",
+          "platform_status",
+          "local_tracking_no",
+          "platform_tracking_no",
+          "local_company_code",
+          "platform_company_code",
+          "detail",
+          "status",
+          "created_at",
+          "handled_at"
+        ],
+        "title": "ReconcileFindingRow",
+        "type": "object"
+      },
+      "ReconcileFindingsPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReconcileFindingRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReconcileRunRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "run"
+        ],
+        "title": "ReconcileFindingsPage",
+        "type": "object"
+      },
+      "ReconcileMarkRequest": {
+        "properties": {
+          "status": {
+            "enum": [
+              "open",
+              "handled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ReconcileMarkRequest",
+        "type": "object"
+      },
+      "ReconcileRunRequest": {
+        "properties": {
+          "window_days": {
+            "anyOf": [
+              {
+                "maximum": 90.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Days"
+          }
+        },
+        "title": "ReconcileRunRequest",
+        "type": "object"
+      },
+      "ReconcileRunRow": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finding_count": {
+            "title": "Finding Count",
+            "type": "integer"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "scanned": {
+            "title": "Scanned",
+            "type": "integer"
+          },
+          "shop_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Shop Ids",
+            "type": "array"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "status",
+          "shop_ids",
+          "window_days",
+          "started_at",
+          "finished_at",
+          "scanned",
+          "finding_count",
+          "error"
+        ],
+        "title": "ReconcileRunRow",
+        "type": "object"
+      },
+      "ReconcileStarted": {
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "shop_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Shop Ids",
+            "type": "array"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "shop_ids",
+          "window_days",
+          "started_at"
+        ],
+        "title": "ReconcileStarted",
+        "type": "object"
+      },
+      "ShipBatchResponse": {
+        "properties": {
+          "batch_id": {
+            "title": "Batch Id",
+            "type": "string"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ShipmentRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "batch_id",
+          "ok",
+          "failed",
+          "pending",
+          "items"
+        ],
+        "title": "ShipBatchResponse",
+        "type": "object"
+      },
+      "ShipCheckRequest": {
+        "properties": {
+          "order_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Order Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "order_ids"
+        ],
+        "title": "ShipCheckRequest",
+        "type": "object"
+      },
+      "ShipCheckResponse": {
+        "properties": {
+          "blocked": {
+            "items": {
+              "$ref": "#/components/schemas/BlockedShipOut"
+            },
+            "title": "Blocked",
+            "type": "array"
+          },
+          "double_check_total": {
+            "title": "Double Check Total",
+            "type": "integer"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "shop_errors": {
+            "items": {
+              "$ref": "#/components/schemas/ShopCheckErrorOut"
+            },
+            "title": "Shop Errors",
+            "type": "array"
+          },
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopCheckOut"
+            },
+            "title": "Shops",
+            "type": "array"
+          },
+          "total_orders": {
+            "title": "Total Orders",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "shops",
+          "blocked",
+          "shop_errors",
+          "total_orders",
+          "double_check_total",
+          "dry_run"
+        ],
+        "title": "ShipCheckResponse",
+        "type": "object"
+      },
+      "ShipPoolPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ShipPoolRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "ShipPoolPage",
+        "type": "object"
+      },
+      "ShipPoolRow": {
+        "properties": {
+          "amount_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Cents"
+          },
+          "courier_code": {
+            "title": "Courier Code",
+            "type": "string"
+          },
+          "exp_ship_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exp Ship Time"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "order_no": {
+            "title": "Order No",
+            "type": "string"
+          },
+          "pay_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pay Time"
+          },
+          "platform_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Status"
+          },
+          "printed": {
+            "title": "Printed",
+            "type": "boolean"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tracking_no": {
+            "title": "Tracking No",
+            "type": "string"
+          },
+          "waybill_id": {
+            "title": "Waybill Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "shop_id",
+          "shop_name",
+          "order_no",
+          "status",
+          "platform_status",
+          "amount_cents",
+          "pay_time",
+          "exp_ship_time",
+          "waybill_id",
+          "courier_code",
+          "tracking_no",
+          "printed"
+        ],
+        "title": "ShipPoolRow",
+        "type": "object"
+      },
+      "ShipRequest": {
+        "properties": {
+          "double_check_ack": {
+            "default": false,
+            "title": "Double Check Ack",
+            "type": "boolean"
+          },
+          "order_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Order Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "order_ids"
+        ],
+        "title": "ShipRequest",
+        "type": "object"
+      },
+      "ShipStartedOut": {
+        "properties": {
+          "batch_id": {
+            "title": "Batch Id",
+            "type": "string"
+          },
+          "order_count": {
+            "title": "Order Count",
+            "type": "integer"
+          },
+          "package_count": {
+            "title": "Package Count",
+            "type": "integer"
+          },
+          "shop_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Shop Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch_id",
+          "shop_ids",
+          "package_count",
+          "order_count"
+        ],
+        "title": "ShipStartedOut",
+        "type": "object"
+      },
+      "ShipmentRow": {
+        "properties": {
+          "batch_id": {
+            "title": "Batch Id",
+            "type": "string"
+          },
+          "courier_code": {
+            "title": "Courier Code",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "fail_msg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail Msg"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "integer"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tracking_no": {
+            "title": "Tracking No",
+            "type": "string"
+          },
+          "waybill_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waybill Id"
+          }
+        },
+        "required": [
+          "id",
+          "batch_id",
+          "shop_id",
+          "order_id",
+          "waybill_id",
+          "courier_code",
+          "tracking_no",
+          "status",
+          "fail_msg",
+          "created_at",
+          "finished_at"
+        ],
+        "title": "ShipmentRow",
+        "type": "object"
+      },
       "ShopAftersaleCounts": {
         "properties": {
           "counts": {
@@ -2379,6 +3116,95 @@
           "source"
         ],
         "title": "ShopBills",
+        "type": "object"
+      },
+      "ShopCheckErrorOut": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "reason"
+        ],
+        "title": "ShopCheckErrorOut",
+        "type": "object"
+      },
+      "ShopCheckOut": {
+        "properties": {
+          "double_check_detail": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Double Check Detail",
+            "type": "array"
+          },
+          "double_check_num": {
+            "title": "Double Check Num",
+            "type": "integer"
+          },
+          "order_nos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Order Nos",
+            "type": "array"
+          },
+          "place_holder": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Holder"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "without_aftersale": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Without Aftersale",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "order_nos",
+          "total",
+          "double_check_num",
+          "double_check_detail",
+          "without_aftersale",
+          "place_holder"
+        ],
+        "title": "ShopCheckOut",
         "type": "object"
       },
       "ShopCreate": {
@@ -5998,6 +6824,440 @@
         "summary": "Waybills",
         "tags": [
           "print"
+        ]
+      }
+    },
+    "/api/reconcile/findings": {
+      "get": {
+        "operationId": "findings_api_reconcile_findings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileFindingsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Findings",
+        "tags": [
+          "reconcile"
+        ]
+      }
+    },
+    "/api/reconcile/findings/{finding_id}": {
+      "patch": {
+        "operationId": "mark_finding_api_reconcile_findings__finding_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finding_id",
+            "required": true,
+            "schema": {
+              "title": "Finding Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileMarkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileFindingRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Mark Finding",
+        "tags": [
+          "reconcile"
+        ]
+      }
+    },
+    "/api/reconcile/run": {
+      "post": {
+        "operationId": "run_api_reconcile_run_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ReconcileRunRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Run",
+        "tags": [
+          "reconcile"
+        ]
+      }
+    },
+    "/api/shipping/batches/{batch_id}": {
+      "get": {
+        "operationId": "batch_api_shipping_batches__batch_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Batch",
+        "tags": [
+          "shipping"
+        ]
+      }
+    },
+    "/api/shipping/check": {
+      "post": {
+        "operationId": "check_api_shipping_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShipCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipCheckResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Check",
+        "tags": [
+          "shipping"
+        ]
+      }
+    },
+    "/api/shipping/pool": {
+      "get": {
+        "operationId": "pool_api_shipping_pool_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipPoolPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Pool",
+        "tags": [
+          "shipping"
+        ]
+      }
+    },
+    "/api/shipping/ship": {
+      "post": {
+        "operationId": "ship_api_shipping_ship_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipStartedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Ship",
+        "tags": [
+          "shipping"
         ]
       }
     },

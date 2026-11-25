@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "total": 1,
+    "doubleCheckNum": 1,
+    "doubleCheckDetail": [
+      {"type": 1, "title": "请确认发货信息", "message": "买家收货地址异常"}
+    ],
+    "withOutAftersalShopOrders": [],
+    "placeHolder": null
+  }
+}

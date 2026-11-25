@@ -1,6 +1,11 @@
 import sqlalchemy as sa
 
-from app.store import aggregate_schema, schema  # noqa: F401  M5 表注册到同一 metadata
+from app.store import (  # noqa: F401  M4 / M5 表注册到同一 metadata
+    aggregate_schema,
+    reconcile_schema,
+    schema,
+    shipping_schema,
+)
 from app.store.db import make_engine
 from app.store.migrate import upgrade_to_head
 
@@ -9,6 +14,7 @@ TABLES = {
     "ebill_account", "waybill_template", "courier", "audit_log",
     "waybills", "tasks", "print_job",
     "aftersale", "product_snapshot", "stock_snapshot", "fund_unsettled", "margin_account",
+    "order_fact", "reconcile_run", "reconcile_findings", "shipment",
 }
 
 
