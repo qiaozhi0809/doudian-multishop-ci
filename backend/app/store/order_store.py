@@ -126,3 +126,12 @@ def items_by_order(
     for r in rows:
         out[r["order_id"]].append(dict(r))
     return out
+
+
+def get_by_ids(conn: sa.Connection, order_ids: Sequence[int]) -> list[dict[str, Any]]:
+    if not order_ids:
+        return []
+    rows = conn.execute(
+        sa.select(orders).where(orders.c.id.in_(order_ids)).order_by(orders.c.id)
+    ).mappings()
+    return [dict(r) for r in rows]
