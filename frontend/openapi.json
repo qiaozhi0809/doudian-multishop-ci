@@ -1116,6 +1116,183 @@
         "title": "PreviewShopError",
         "type": "object"
       },
+      "PrintJobRow": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "printer_name": {
+            "title": "Printer Name",
+            "type": "string"
+          },
+          "result_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Code"
+          },
+          "result_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Detail"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "waybill_id": {
+            "title": "Waybill Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "waybill_id",
+          "printer_name",
+          "status",
+          "result_code",
+          "result_detail",
+          "attempts",
+          "created_at",
+          "finished_at"
+        ],
+        "title": "PrintJobRow",
+        "type": "object"
+      },
+      "PrintRequest": {
+        "properties": {
+          "printer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Printer Name"
+          },
+          "waybill_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Waybill Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "waybill_ids"
+        ],
+        "title": "PrintRequest",
+        "type": "object"
+      },
+      "PrintStarted": {
+        "properties": {
+          "job_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Job Ids",
+            "type": "array"
+          },
+          "waybill_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Waybill Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "job_ids",
+          "waybill_ids"
+        ],
+        "title": "PrintStarted",
+        "type": "object"
+      },
+      "PrinterStatus": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "default_printer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Printer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "printers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Printers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "available",
+          "printers",
+          "default_printer",
+          "error",
+          "checked_at"
+        ],
+        "title": "PrinterStatus",
+        "type": "object"
+      },
       "ReceiverOut": {
         "description": "按需解密的收件人：只返回给前端，不入库（flows 7.3）。",
         "properties": {
@@ -1709,6 +1886,68 @@
           "waybill_no"
         ],
         "title": "VoidWaybill",
+        "type": "object"
+      },
+      "WaybillPrintList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WaybillPrintRow"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "WaybillPrintList",
+        "type": "object"
+      },
+      "WaybillPrintRow": {
+        "properties": {
+          "has_print_data": {
+            "title": "Has Print Data",
+            "type": "boolean"
+          },
+          "job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrintJobRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waybill_id": {
+            "title": "Waybill Id",
+            "type": "integer"
+          },
+          "waybill_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waybill No"
+          },
+          "waybill_status": {
+            "title": "Waybill Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "waybill_id",
+          "waybill_no",
+          "waybill_status",
+          "has_print_data",
+          "job"
+        ],
+        "title": "WaybillPrintRow",
         "type": "object"
       },
       "WaybillRow": {
@@ -2603,6 +2842,162 @@
         "summary": "Decrypt Receiver",
         "tags": [
           "orders"
+        ]
+      }
+    },
+    "/api/print/jobs": {
+      "post": {
+        "operationId": "submit_api_print_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrintStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Submit",
+        "tags": [
+          "print"
+        ]
+      }
+    },
+    "/api/print/jobs/{job_id}": {
+      "get": {
+        "operationId": "job_api_print_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrintJobRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Job",
+        "tags": [
+          "print"
+        ]
+      }
+    },
+    "/api/print/status": {
+      "get": {
+        "operationId": "status_api_print_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrinterStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "print"
+        ]
+      }
+    },
+    "/api/print/waybills": {
+      "get": {
+        "operationId": "waybills_api_print_waybills_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "waybill_ids",
+            "required": true,
+            "schema": {
+              "title": "Waybill Ids",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaybillPrintList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Waybills",
+        "tags": [
+          "print"
         ]
       }
     },

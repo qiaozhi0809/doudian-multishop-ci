@@ -274,3 +274,20 @@ tasks = sa.Table(
     sa.Column("finished_at", _NOW),
 )
 sa.Index("idx_tasks_status", tasks.c.status, tasks.c.created_at)
+
+# ---- M3：打印任务（data-model 6.2 ⑤-b） ----
+
+print_job = sa.Table(
+    "print_job",
+    metadata,
+    _id(),
+    sa.Column("waybill_id", sa.Integer, sa.ForeignKey("waybills.id"), nullable=False),
+    sa.Column("printer_name", sa.Text, nullable=False),
+    sa.Column("status", sa.Text, nullable=False, server_default="queued"),
+    sa.Column("result_code", sa.Text),
+    sa.Column("result_detail", sa.Text),
+    sa.Column("attempts", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("created_at", _NOW, nullable=False),
+    sa.Column("finished_at", _NOW),
+)
+sa.Index("idx_print_job_waybill", print_job.c.waybill_id, print_job.c.created_at.desc())

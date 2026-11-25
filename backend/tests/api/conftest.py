@@ -16,6 +16,7 @@ from app.config import Settings
 from app.main import create_app
 from tests.conftest import ADMIN_PASSWORD, ADMIN_USER, FAST_HASHER
 from tests.fakes import ok
+from tests.service.print_support import FakeComponent
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "doudian"
 
@@ -56,6 +57,7 @@ class ApiEnv:
     app: object
     client: TestClient
     transport: RoutingTransport
+    print_component: object = None
     ips: dict = field(default_factory=dict)  # 代理 URL -> 探测到的 IP
     scan_impl: object = None
     scan_calls: list = field(default_factory=list)
@@ -114,15 +116,17 @@ def api(tmp_path, clock):
         env.scan_calls.append((profile_dir, channel, proxy, timeout_s))
         return await env.scan_impl(profile_dir, channel, proxy, timeout_s)
 
+    print_component = FakeComponent()
     app = create_app(
         Settings(data_dir=tmp_path / "data", frontend_dist=tmp_path / "no-dist"),
         clock=clock, hasher=FAST_HASHER,
         client_factory=factory, fetch_ip=fetch_ip, scan=scan,
+        print_component=print_component,
     )
     with TestClient(app, base_url="http://127.0.0.1:8787") as client:
         client.post("/api/auth/setup", json={"username": ADMIN_USER, "password": ADMIN_PASSWORD})
         client.post("/api/auth/login", json={"username": ADMIN_USER, "password": ADMIN_PASSWORD})
-        env = ApiEnv(app, client, transport)
+        env = ApiEnv(app, client, transport, print_component)
         # 记录事件（发布可能来自后台线程，列表追加是线程安全的）
         bus = app.state.events
         original = bus.publish

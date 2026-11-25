@@ -78,6 +78,14 @@ PRODUCT_TYPES = Endpoint(
 RECEIVE_INFO = Endpoint("receive_info", "GET", "/api/order/receiveinfo", bid.ORDER)
 ORDER_LOGISTICS = Endpoint("order_logistics", "GET", "/api/order/getOrderLogistics", bid.ORDER)
 
+# ---- M3 打印：补打面单数据（docs/design/flows.md 第 10 节）----
+# 查询型 POST：只读语义，允许退避重试；返回结构尚未实测，
+# 解析容错见 adapter/doudian/print_parsers.py
+BATCH_GET_PRINT_INFOS = Endpoint(
+    "batch_get_print_infos", "POST", "/shopuser/olSend/batchGetPrintInfos",
+    bid.ORDER, body="json",
+)
+
 
 # ---- searchlist 的两种查询参数 ----
 # tab 与 order_status 必须同时传；全部订单时 order_status 为空串（docs/api/read.md）

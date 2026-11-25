@@ -319,6 +319,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/print/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit */
+        post: operations["submit_api_print_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/print/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Job */
+        get: operations["job_api_print_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/print/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status */
+        get: operations["status_api_print_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/print/waybills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Waybills */
+        get: operations["waybills_api_print_waybills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shops": {
         parameters: {
             query?: never;
@@ -812,6 +880,54 @@ export interface components {
             /** Shop Name */
             shop_name: string;
         };
+        /** PrintJobRow */
+        PrintJobRow: {
+            /** Attempts */
+            attempts: number;
+            /** Created At */
+            created_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Id */
+            id: number;
+            /** Printer Name */
+            printer_name: string;
+            /** Result Code */
+            result_code: string | null;
+            /** Result Detail */
+            result_detail: string | null;
+            /** Status */
+            status: string;
+            /** Waybill Id */
+            waybill_id: number;
+        };
+        /** PrintRequest */
+        PrintRequest: {
+            /** Printer Name */
+            printer_name?: string | null;
+            /** Waybill Ids */
+            waybill_ids: number[];
+        };
+        /** PrintStarted */
+        PrintStarted: {
+            /** Job Ids */
+            job_ids: number[];
+            /** Waybill Ids */
+            waybill_ids: number[];
+        };
+        /** PrinterStatus */
+        PrinterStatus: {
+            /** Available */
+            available: boolean;
+            /** Checked At */
+            checked_at: string;
+            /** Default Printer */
+            default_printer: string | null;
+            /** Error */
+            error: string | null;
+            /** Printers */
+            printers: string[];
+        };
         /**
          * ReceiverOut
          * @description 按需解密的收件人：只返回给前端，不入库（flows 7.3）。
@@ -977,6 +1093,23 @@ export interface components {
             waybill_id: number;
             /** Waybill No */
             waybill_no: string | null;
+        };
+        /** WaybillPrintList */
+        WaybillPrintList: {
+            /** Items */
+            items: components["schemas"]["WaybillPrintRow"][];
+        };
+        /** WaybillPrintRow */
+        WaybillPrintRow: {
+            /** Has Print Data */
+            has_print_data: boolean;
+            job: components["schemas"]["PrintJobRow"] | null;
+            /** Waybill Id */
+            waybill_id: number;
+            /** Waybill No */
+            waybill_no: string | null;
+            /** Waybill Status */
+            waybill_status: string;
         };
         /** WaybillRow */
         WaybillRow: {
@@ -1569,6 +1702,130 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReceiverOut"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    submit_api_print_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrintRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrintStarted"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    job_api_print_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrintJobRow"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    status_api_print_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrinterStatus"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    waybills_api_print_waybills_get: {
+        parameters: {
+            query: {
+                waybill_ids: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaybillPrintList"];
                 };
             };
             /** @description 错误信封 */

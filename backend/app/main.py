@@ -14,10 +14,12 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.adapter.print.component import PrintComponent
 from app.api import auth as auth_api
 from app.api import event as event_api
 from app.api import label as label_api
 from app.api import order as order_api
+from app.api import print as print_api
 from app.api import shop as shop_api
 from app.api.common_schemas import ErrorEnvelope, Health
 from app.api.deps import require_admin
@@ -44,9 +46,10 @@ def create_app(
     settings: Settings | None = None, *, clock: Callable[[], datetime] | None = None,
     hasher: PasswordHasher | None = None, client_factory: ClientFactory | None = None,
     fetch_ip: FetchIp | None = None, scan: ScanFn | None = None,
+    print_component: PrintComponent | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
-    overrides = Overrides(clock, hasher, client_factory, fetch_ip, scan)
+    overrides = Overrides(clock, hasher, client_factory, fetch_ip, scan, print_component)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -88,7 +91,7 @@ def create_app(
     async def health() -> Health:
         return Health(status="ok")
 
-    for module in (auth_api, shop_api, order_api, label_api, event_api):
+    for module in (auth_api, shop_api, order_api, label_api, print_api, event_api):
         app.include_router(module.router)
     _mount_frontend(app, settings)
     return app
