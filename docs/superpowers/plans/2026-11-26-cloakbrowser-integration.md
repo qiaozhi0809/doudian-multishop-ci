@@ -390,10 +390,11 @@ git commit -m "feat(browser): 登录通道支持 CloakBrowser"
 ### Task 4: 服务层与接线
 
 **Files:**
-- Modify: `backend/app/service/shop_login.py:28-60`（构造与 `profile` 生成）
+- Modify: `backend/app/service/shop_login.py:20-25,28-60`（`_USER_FACING` + 构造与 `profile` 生成）
 - Modify: `backend/app/wiring.py:112-116`（`login_flow` 构造）
 - Modify: `backend/app/main.py:70-82`（启动时设 CloakBrowser 环境变量）
 - Modify: `backend/app/shared/cloak.py`（追加 `apply_env`）
+- Modify: `backend/app/adapter/browser/login.py`（新增 `CloakUnavailable` 领域异常）
 - Test: `backend/tests/service/shop_login_flow_test.py`（新建）
 - Test: `backend/tests/shared/cloak_test.py`（追加 `apply_env` 测试）
 
@@ -418,6 +419,14 @@ def test_flow_accepts_use_cloak_flag():
 
     assert "use_cloak" in params
     assert params["use_cloak"].default is False
+
+
+def test_cloak_unavailable_is_user_facing():
+    """CloakBrowser 不可用的提示必须能出现在用户可见的错误里，否则安装提示被吞成「登录失败」。"""
+    from app.adapter.browser.login import CloakUnavailable
+    from app.service.shop_login import _USER_FACING
+
+    assert CloakUnavailable in _USER_FACING
 ```
 
 在 `backend/tests/shared/cloak_test.py` 末尾追加（并把 `apply_env` 加入该文件顶部的 import）：
@@ -451,6 +460,22 @@ Run: `cd backend && .venv/Scripts/python.exe -m pytest tests/service/shop_login_
 Expected: FAIL — `assert 'use_cloak' in params`
 
 - [ ] **Step 3: 写实现**
+
+`backend/app/adapter/browser/login.py` 在 `LoginResult` 定义之后加：
+
+```python
+class CloakUnavailable(RuntimeError):
+    """CloakBrowser 不可用（未安装或启动失败）；消息面向用户，可直接展示。"""
+```
+
+把 `scan_login` 里的 `raise RuntimeError(...)` 改为 `raise CloakUnavailable(...)`。它继承 `RuntimeError`，所以 Task 3 已有的 `pytest.raises(RuntimeError, match="cloakbrowser")` 仍然通过，无需改那条测试。
+
+`backend/app/service/shop_login.py` 顶部把 `CloakUnavailable` 加进 `app.adapter.browser.login` 的 import，并把 `_USER_FACING` 补上它：
+
+```python
+_USER_FACING = (DoudianError, EgressNotReady, EgressConflict, ShopPaused, NotFound,
+                LoginCancelled, CloakUnavailable)
+```
 
 `backend/app/service/shop_login.py` 构造函数签名末尾加 `use_cloak: bool = False`，保存为 `self._use_cloak = use_cloak`；调用 `scan_login(...)` 处传 `use_cloak=self._use_cloak`。
 
