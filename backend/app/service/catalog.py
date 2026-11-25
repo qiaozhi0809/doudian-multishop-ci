@@ -18,6 +18,7 @@ from app.adapter.doudian.catalog_parsers import (
     product_display,
 )
 from app.adapter.doudian.client import FxgClient
+from app.service.shop_cache import ShopTtlCache
 from app.service.shop_fanout import ShopResult, fan_out
 from app.service.shop_runner import ShopRunner
 from app.store import catalog_store, shop_store
@@ -76,6 +77,7 @@ class CatalogService:
         self._engine = engine
         self._runner = runner
         self._clock = clock
+        self._counts_cache: ShopTtlCache[dict[str, int]] = ShopTtlCache(clock)
 
     # ---- 商品同步 ----
 
@@ -84,6 +86,8 @@ class CatalogService:
             shop_ids, self._runner, actor, self._sync_products_shop,
             event="catalog.products.sync.unexpected",
         )
+        for r in results:  # 同步过的店，下次取商品计数重新请求平台
+            self._counts_cache.invalidate(r.shop_id)
         now = self._stamp()
         return [
             ShopProductSync(
@@ -132,17 +136,18 @@ class CatalogService:
     # ---- 商品计数 / 分组（上游，单店失败隔离）----
 
     async def product_counts(self, shop_ids: Sequence[int], actor: str) -> list[ShopCounts]:
-        results = await fan_out(
+        """每店缓存 60 秒（shop_cache）；fetched_at 是数据当初取自平台的时间。"""
+        results = await self._counts_cache.fan_out(
             shop_ids, self._runner, actor, self._counts_job,
             event="catalog.products.counts.unexpected",
         )
-        fetched = self._stamp()
         return [
             ShopCounts(
-                shop_id=r.shop_id, source="upstream" if r.ok else "error", counts=r.data,
-                error=r.error, fetched_at=fetched if r.ok else None,
+                shop_id=r.shop_id, source="upstream" if r.ok else "error",
+                counts=dict(r.data) if r.data else r.data,
+                error=r.error, fetched_at=at.strftime(_ISO_FMT) if at else None,
             )
-            for r in results
+            for r, at in results
         ]
 
     @staticmethod

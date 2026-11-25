@@ -308,6 +308,9 @@ class Signer(Protocol):
    售后 `after_sale/pc/list` 1-based、库存 `stock/manage/list` 1-based
 4. 金额统一整数分（`*_cents`），展示层再换算
 5. 上游不可用时回退本地缓存，并标注数据来源（`source: upstream | local_db`）
+6. **实时计数按店缓存 60 秒**（订单 tab 计数在 `order_query.py`，售后计数、商品计数用 `service/shop_cache.py`）：
+   页面加载、切页、多标签页、多台电脑共用，60 秒内每店最多请求平台一次；只缓存成功结果；
+   该店同步完成后失效；`fetched_at` 是当初取自平台的时间。缓存在进程内存里（单进程部署，不用 Redis）
 
 **刷新策略**：
 
