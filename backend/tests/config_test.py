@@ -34,3 +34,10 @@ def test_defaults():
     assert (s.host, s.port) == ("127.0.0.1", 8787)
     assert s.egress_echo_url == "https://ifconfig.me/ip"
     assert s.dev_mode is False and s.dry_run is False
+
+
+def test_cloak_defaults(tmp_path):
+    s = Settings(_platform="win32", data_dir=tmp_path)
+
+    assert s.use_cloak is True
+    assert s.cloak_cache_dir == tmp_path / "browser"

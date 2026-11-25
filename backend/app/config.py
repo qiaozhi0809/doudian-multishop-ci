@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8787
     browser_channel: str = "chrome"
+    use_cloak: bool = True
+    cloak_cache_dir: Path = Path()
     egress_echo_url: str = "https://ifconfig.me/ip"
     dev_mode: bool = False
     dry_run: bool = False
@@ -54,6 +56,8 @@ class Settings(BaseSettings):
             self.data_dir = _default_data_dir(platform)
         if not _is_absolute(self.data_dir, platform):
             self.data_dir = self.data_dir.resolve()
+        if "cloak_cache_dir" not in self.model_fields_set:
+            self.cloak_cache_dir = self.data_dir / "browser"
 
 
 def _default_data_dir(platform: str) -> Path:
