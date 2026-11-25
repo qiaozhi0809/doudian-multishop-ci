@@ -2,6 +2,8 @@
 
 种子决定 CloakBrowser 生成的整套指纹（硬件并发、内存、屏幕、窗口、GPU 等）。
 固定种子 = 该店铺永远呈现同一台设备，与「每店固定出口 IP」是同一个思路。
+同级 profile 目录之间的种子互不重复；复制 profile 目录产生的重复值会被
+检测并重建，避免两家店呈现同一台设备。
 """
 
 import random
@@ -17,14 +19,28 @@ def _sibling_seeds(profile_dir: Path) -> set[int]:
     parent = profile_dir.parent
     if not parent.is_dir():
         return set()
+    try:
+        own = profile_dir.resolve()
+    except (OSError, RuntimeError):
+        own = profile_dir
     seeds: set[int] = set()
     for child in parent.iterdir():
-        if child == profile_dir or not child.is_dir():
+        if not child.is_dir():
+            continue
+        try:
+            # 跳过自身及指向自身的别名（pytest 的 <name>current 符号链接等），
+            # 否则会把本目录的种子误当成同级已用值而反复重建。
+            if child.resolve() == own:
+                continue
+        except (OSError, RuntimeError):
             continue
         marker = child / SEED_FILE
         if not marker.is_file():
             continue
-        text = marker.read_text(encoding="ascii", errors="ignore").strip()
+        try:
+            text = marker.read_text(encoding="ascii", errors="ignore").strip()
+        except OSError:
+            continue
         if text.isdigit() and SEED_MIN <= int(text) <= SEED_MAX:
             seeds.add(int(text))
     return seeds
@@ -33,18 +49,22 @@ def _sibling_seeds(profile_dir: Path) -> set[int]:
 def get_or_create_seed(profile_dir: Path) -> int:
     """读取该 profile 的固定指纹种子；缺失或非法时生成并落盘。
 
-    新种子会避开同级 profile 目录已用的种子，防止复制 profile 目录后
-    两家店变成同一台设备。profile 目录不可写时抛 OSError——调用方应据此
+    新种子会避开同级 profile 目录已用的种子；已有种子与同级目录冲突
+    （例如复制 profile 目录导致）时按非法处理并重建——保证不同店铺
+    不会呈现同一台设备。profile 目录不可写时抛 OSError——调用方应据此
     报错，而不是静默换随机值，否则同一店铺的身份会在每次启动时变化。
     """
     profile_dir.mkdir(parents=True, exist_ok=True)
     path = profile_dir / SEED_FILE
+    used = _sibling_seeds(profile_dir)
     if path.is_file():
         text = path.read_text(encoding="ascii", errors="ignore").strip()
         if text.isdigit() and SEED_MIN <= int(text) <= SEED_MAX:
-            return int(text)
+            seed = int(text)
+            # 与同级目录冲突（复制 profile 导致）时视为非法，走重建
+            if seed not in used:
+                return seed
 
-    used = _sibling_seeds(profile_dir)
     for _ in range(100):
         seed = random.randint(SEED_MIN, SEED_MAX)
         if seed not in used:

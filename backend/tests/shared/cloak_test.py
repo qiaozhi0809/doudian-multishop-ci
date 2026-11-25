@@ -72,3 +72,16 @@ def test_new_seed_avoids_sibling_collision(tmp_path, monkeypatch):
     seed = get_or_create_seed(tmp_path / "2")
 
     assert seed == 54321
+
+
+def test_copied_profile_gets_a_different_seed(tmp_path):
+    import shutil
+
+    source = tmp_path / "1"
+    source.mkdir()
+    original = get_or_create_seed(source)
+
+    copy = tmp_path / "2"
+    shutil.copytree(source, copy)
+
+    assert get_or_create_seed(copy) != original
