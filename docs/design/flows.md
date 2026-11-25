@@ -314,29 +314,71 @@
 }
 ```
 
+**documents 真实结构（2026-11-25 从页面源码解开，gaps API-07 已解决）**：
+
+```js
+documents: data.map(e => ({
+  documentID: e.trackNo || "",
+  standard: {
+    signature: e.sign || "",          // 签名
+    encryptedData: e.printData || "", // 加密数据原样放，组件自己解密
+    templateURL: e.templateUrl || "", // 面单模板 XML URL
+    params: e.OAuth || "",            // OAuth 参数
+  },
+  custom: e.customTemplateUrl
+    ? { data: e.customPrintData, templateURL: e.customTemplateUrl }
+    : undefined,
+}))
+```
+
+**关键结论**：`print_data` 不是 PDF、也不需要本地解密 —— 组件直接接收
+「签名 + 加密数据 + 模板 URL」，自己解密并渲染。之前在 A.2.4 里推测的
+「需要逆向 `mW()` 做数据转换」不成立，实际只是**字段映射**。
+
+**打印数据来源（两条路）**：
+
+| 场景 | 来源 |
+|---|---|
+| 首次打印（取号后） | 取号响应 `success_list[]` 的 `print_data` / `sign` / `template_url` / `custom_print_data` / `custom_template_url` |
+| 补打面单 | `POST /shopuser/olSend/batchGetPrintInfos`，body `{"trackInfos":["<运单号>"],"templateCode":"","appid":1}` |
+
+注意：取号响应无 `OAuth` 字段（`params` 可能为空），补打接口返回 `OAuth`。
+
 **验证结果（2026-11-25）**：
 
 - 组件接受消息并回 `{"cmd":"print","requestID":"...","status":"success"}`
-- 随后推 `notifyPrintResult`，其 `printStatus[].detail` 是 base64 编码的渲染错误
-- 解码后发现：**模板是 EJS（XML + 嵌入式 JS）**，组件会执行模板代码，
-  需要正确的 `_data`（订单数据）才能渲染
-- 传无效 PDF URL 时，模板在 `_data.receiverInfo` 处报 TypeError
+- 随后推 `notifyPrintResult`，`printStatus[].detail` 是 base64 编码的渲染结果（失败时含错误原因）
+- `env` 取值 `"prod"`（生产）/ `"boe"`（测试环境）
 
-**关键边界**：`print_data`（取号响应返回的 base64）不是 PDF，而是**加密的打印数据**。
-把它转换成 `documents` 结构的那段逻辑在前端 SDK 的 `mW()` 函数里，
-是打印链路唯一还没搞清的一环（⏳ gaps API-07）。「打单并发货」的响应是否带 `print_data` 也未确认（gaps API-13）。
+**print 消息完整结构**：
 
-**打印路径（按可行性排序）**：
+```js
+{
+  cmd: "print",
+  requestID: "<唯一ID>",
+  version: 2,
+  isOpen: false,
+  previewType: "pdf",
+  task: {
+    taskID: "<同 requestID>",
+    preview: false,
+    printConfig: "waybill",
+    printer: "<打印机名称>",
+    documents: [ /* 上述 standard/custom 结构 */ ]
+  }
+}
+```
 
-| 路径 | 做法 | 优点 | 风险 / 前提 |
-|---|---|---|---|
-| **P1 借页面打印** | 在该店的浏览器页面（打单发货页）里调用抖店前端自带的打印逻辑，把 `print_data` 交给页面完成转换与发送 | 不用逆向 `mW()`；模板与官方完全一致 | ⏳ 需验证页面打印函数能否从外部调用；依赖页面结构，改版需跟进 |
-| P2 直连打印组件 | 后端自行转换 `print_data` 后直接发 `wss://localhost:13999` | 不依赖浏览器页面 | 需要逆向 `mW()`，成本高；不做 |
-| P3 手动补打（保底） | 本工具只取号与发货，面单由用户在抖店后台「补打面单」 | 零风险，闭环不被阻塞 | 多一步人工操作 |
+**打印路径（已更新）**：
 
-**MVP 策略**：先以 P3 保底让闭环跑通，同时验证 P1；P1 验证通过后成为默认路径。
-启动时用 `getPrinters` 探测组件是否可用并缓存打印机列表；`print` 后等待 `notifyPrintResult`，超时视为失败。
-组件版本可能变化，需记录版本号，可在启动时做一次自检打印（可选）。
+| 路径 | 做法 | 状态 |
+|---|---|---|
+| **P1 直连组件**（默认） | 后端组装 documents → `wss://localhost:13999` | ✅ 结构已解开，可行 |
+| P2 借页面打印 | Playwright 调页面打印逻辑 | 备用（改版时保底） |
+| P3 手动补打 | 抖店后台「补打面单」 | 保底 |
+
+**MVP 策略**：P1 为主。启动时用 `getPrinters` 探测组件并缓存打印机列表；
+`print` 后等待 `notifyPrintResult`，超时视为失败；失败重试一次后转 P3 提示人工补打。
 
 **多店打印调度**：打印机是本机资源，所有店铺共享同一列表。
 建议做「店铺 × 默认打印机」配置，避免多店同时打单时抢占同一台打印机。

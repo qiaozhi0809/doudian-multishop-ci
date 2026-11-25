@@ -126,6 +126,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/labels/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Execute Obtain */
+        post: operations["execute_obtain_api_labels_execute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/labels/fetch-and-ship/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Execute Fetch And Ship */
+        post: operations["execute_fetch_and_ship_api_labels_fetch_and_ship_execute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/labels/fetch-and-ship/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Fetch And Ship */
+        post: operations["preview_fetch_and_ship_api_labels_fetch_and_ship_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/labels/pool": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pool */
+        get: operations["pool_api_labels_pool_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/labels/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Obtain */
+        post: operations["preview_obtain_api_labels_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/labels/void/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Execute Void */
+        post: operations["execute_void_api_labels_void_execute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/labels/void/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Void */
+        post: operations["preview_void_api_labels_void_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders": {
         parameters: {
             query?: never;
@@ -174,6 +293,26 @@ export interface paths {
          * @description 显式指定的店铺先同步预检（暂停 / 出口 / 会话不通即报错）；不指定则只跑可用店铺。
          */
         post: operations["sync_orders_api_orders_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{order_id}/receiver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decrypt Receiver
+         * @description 按需解密单个订单收件人；受额度、限速与冷却约束（flows 7.3、DEC-06）。
+         */
+        post: operations["decrypt_receiver_api_orders__order_id__receiver_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -469,10 +608,87 @@ export interface components {
         ErrorEnvelope: {
             error: components["schemas"]["ErrorBody"];
         };
+        /** ExecuteRequest */
+        ExecuteRequest: {
+            /** Preview Id */
+            preview_id: string;
+        };
+        /** ExecuteStarted */
+        ExecuteStarted: {
+            /** Mode */
+            mode: string;
+            /** Preview Id */
+            preview_id: string;
+            /** Shop Ids */
+            shop_ids: number[];
+        };
         /** Health */
         Health: {
             /** Status */
             status: string;
+        };
+        /** LabelOrderRow */
+        LabelOrderRow: {
+            /** Amount Cents */
+            amount_cents: number | null;
+            /** Blocked Reason */
+            blocked_reason: string | null;
+            /** Combine Id */
+            combine_id: string | null;
+            /** Exception Reason */
+            exception_reason: string | null;
+            /** Exp Ship Time */
+            exp_ship_time: string | null;
+            /** Id */
+            id: number;
+            /** Items */
+            items: components["schemas"]["OrderItem"][];
+            /** Order No */
+            order_no: string;
+            /** Pay Time */
+            pay_time: string | null;
+            /** Platform Status */
+            platform_status: number | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Status */
+            status: string;
+            waybill: components["schemas"]["WaybillRow"] | null;
+        };
+        /** LabelPoolPage */
+        LabelPoolPage: {
+            /** Items */
+            items: components["schemas"]["LabelOrderRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** LabelPreviewResponse */
+        LabelPreviewResponse: {
+            /** Blocked */
+            blocked: components["schemas"]["PreviewBlocked"][];
+            /** Dry Run */
+            dry_run: boolean;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "obtain" | "fetch_and_ship";
+            /** Preview Id */
+            preview_id: string;
+            /** Shop Errors */
+            shop_errors: components["schemas"]["PreviewShopError"][];
+            /** Shops */
+            shops: components["schemas"]["PreviewShop"][];
+            /** Total Blocked */
+            total_blocked: number;
+            /** Total Ready */
+            total_ready: number;
         };
         /** OrderCounts */
         OrderCounts: {
@@ -543,6 +759,76 @@ export interface components {
              * @enum {string}
              */
             status: "synced" | "pending_label" | "label_obtained" | "printed" | "shipped" | "exception" | "cancelled" | "closed";
+        };
+        /** PreviewBlocked */
+        PreviewBlocked: {
+            /** Order Id */
+            order_id: number;
+            /** Order No */
+            order_no: string;
+            /** Reason */
+            reason: string;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+        };
+        /** PreviewRequest */
+        PreviewRequest: {
+            /** Courier By Shop */
+            courier_by_shop?: {
+                [key: string]: string;
+            } | null;
+            /** Order Ids */
+            order_ids: number[];
+        };
+        /** PreviewShop */
+        PreviewShop: {
+            /** Account Balance */
+            account_balance: number | null;
+            /** Courier Code */
+            courier_code: string;
+            /** Courier Name */
+            courier_name: string | null;
+            /** Ebill Id */
+            ebill_id: string;
+            /** Net Code */
+            net_code: string;
+            /** Ready Order Ids */
+            ready_order_ids: number[];
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Template Code */
+            template_code: string;
+        };
+        /** PreviewShopError */
+        PreviewShopError: {
+            /** Reason */
+            reason: string;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+        };
+        /**
+         * ReceiverOut
+         * @description 按需解密的收件人：只返回给前端，不入库（flows 7.3）。
+         */
+        ReceiverOut: {
+            /** Cached */
+            cached: boolean;
+            /** Detail */
+            detail: string | null;
+            /** Expire At */
+            expire_at: string | null;
+            /** Name */
+            name: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Region */
+            region: string | null;
         };
         /** ShopCreate */
         ShopCreate: {
@@ -642,6 +928,72 @@ export interface components {
             name: string | null;
             /** Template Code */
             template_code: string;
+        };
+        /** VoidPreviewRequest */
+        VoidPreviewRequest: {
+            /** Order Ids */
+            order_ids: number[];
+        };
+        /** VoidPreviewResponse */
+        VoidPreviewResponse: {
+            /** Blocked */
+            blocked: components["schemas"]["PreviewBlocked"][];
+            /** Dry Run */
+            dry_run: boolean;
+            /**
+             * Mode
+             * @constant
+             */
+            mode: "void";
+            /** Preview Id */
+            preview_id: string;
+            /** Shop Errors */
+            shop_errors: components["schemas"]["PreviewShopError"][];
+            /** Shops */
+            shops: components["schemas"]["VoidShop"][];
+            /** Total Blocked */
+            total_blocked: number;
+            /** Total Ready */
+            total_ready: number;
+        };
+        /** VoidShop */
+        VoidShop: {
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Waybills */
+            waybills: components["schemas"]["VoidWaybill"][];
+        };
+        /** VoidWaybill */
+        VoidWaybill: {
+            /** Courier Code */
+            courier_code: string;
+            /** Order Id */
+            order_id: number;
+            /** Order No */
+            order_no: string;
+            /** Waybill Id */
+            waybill_id: number;
+            /** Waybill No */
+            waybill_no: string | null;
+        };
+        /** WaybillRow */
+        WaybillRow: {
+            /** Courier Code */
+            courier_code: string;
+            /** Id */
+            id: number;
+            /** Obtained At */
+            obtained_at: string | null;
+            /** Seq */
+            seq: number;
+            /** Status */
+            status: string;
+            /** Template Code */
+            template_code: string | null;
+            /** Waybill No */
+            waybill_no: string | null;
         };
     };
     responses: never;
@@ -871,6 +1223,238 @@ export interface operations {
             };
         };
     };
+    execute_obtain_api_labels_execute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecuteStarted"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    execute_fetch_and_ship_api_labels_fetch_and_ship_execute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecuteStarted"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    preview_fetch_and_ship_api_labels_fetch_and_ship_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelPreviewResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    pool_api_labels_pool_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                stage?: "pending" | "labeled";
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelPoolPage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    preview_obtain_api_labels_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelPreviewResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    execute_void_api_labels_void_execute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecuteStarted"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    preview_void_api_labels_void_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoidPreviewResponse"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     list_orders_api_orders_get: {
         parameters: {
             query?: {
@@ -954,6 +1538,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncStarted"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    decrypt_receiver_api_orders__order_id__receiver_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiverOut"];
                 };
             };
             /** @description 错误信封 */

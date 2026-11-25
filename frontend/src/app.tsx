@@ -5,6 +5,7 @@ import { AppShell } from "@/components/custom/app-shell";
 import AuthPage from "@/pages/auth";
 import { useUnauthorizedRedirect } from "@/pages/auth/hooks/use-unauthorized-redirect";
 import { RequireAuth } from "@/pages/auth/require-auth";
+import LabelingPage from "@/pages/labeling";
 import OrderPage from "@/pages/order";
 import ShopPage from "@/pages/shop";
 
@@ -21,6 +22,7 @@ function AppRoutes() {
         <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to="/orders" replace />} />
           <Route path="/orders" element={<OrderPage />} />
+          <Route path="/labeling" element={<LabelingPage />} />
           <Route path="/shops" element={<ShopPage />} />
         </Route>
       </Route>
