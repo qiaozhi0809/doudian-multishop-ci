@@ -1,3 +1,4 @@
+import { HOST_REASON, isValidHost, isValidPort, PORT_RANGE_REASON } from "./proxy-host";
 import type { PoolItem, PoolPatch } from "../hooks/use-proxy-pool";
 
 export interface EditForm {
@@ -8,7 +9,7 @@ export interface EditForm {
   expires_at: string;
 }
 
-/** `主机:端口`（取最后一个冒号，兼容 IPv6）。 */
+/** `主机:端口`（取最后一个冒号）。 */
 export function splitDisplay(display: string): { host: string; port: string } {
   const i = display.lastIndexOf(":");
   return i < 0 ? { host: display, port: "" } : { host: display.slice(0, i), port: display.slice(i + 1) };
@@ -24,9 +25,11 @@ export function buildPatch(item: PoolItem, form: EditForm): { ok: true; patch: P
   const patch: PoolPatch = {};
   const host = form.host.trim();
   if (!host) return { ok: false, error: "请输入主机" };
+  if (!isValidHost(host)) return { ok: false, error: HOST_REASON };
   if (host !== original.host) patch.host = host;
   const port = form.port.trim();
   if (!/^\d+$/.test(port)) return { ok: false, error: "端口必须是数字" };
+  if (!isValidPort(port)) return { ok: false, error: PORT_RANGE_REASON };
   if (port !== original.port) patch.port = Number(port);
   if (form.username.trim()) patch.username = form.username.trim();
   if (form.password) patch.password = form.password;

@@ -32,4 +32,21 @@ describe("previewImport", () => {
   it("空文本全为 0", () => {
     expect(previewImport("")).toEqual({ total: 0, valid: 0, errors: [] });
   });
+
+  it("主机含 @ 等字符、IPv6 或端口越界时报错", () => {
+    const r = previewImport([
+      "a@1.2.3.4|80|u|p|2026-12-31",
+      "[::1]|80|u|p|2026-12-31",
+      "1.2.3.4|0|u|p|2026-12-31",
+      "1.2.3.4|65536|u|p|2026-12-31",
+      "1.2.3.4|65535|u|p|2026-12-31",
+    ].join("\n"));
+    expect(r.errors).toEqual([
+      { line: 1, reason: "代理主机格式不正确" },
+      { line: 2, reason: "代理主机格式不正确" },
+      { line: 3, reason: "端口必须在 1-65535 之间" },
+      { line: 4, reason: "端口必须在 1-65535 之间" },
+    ]);
+    expect(r.valid).toBe(1);
+  });
 });
