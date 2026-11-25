@@ -75,4 +75,6 @@ export const queryKeys = {
     ["reconcile", "findings", shopIds, filters] as const,
   // ---- M7 备份 ----
   backupSnapshots: () => ["backup", "snapshots"] as const,
+  // ---- 代理池 ----
+  proxyPool: () => ["proxyPool"] as const,
 };

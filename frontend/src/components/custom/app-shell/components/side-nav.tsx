@@ -4,6 +4,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   LifeBuoy,
+  Network,
   Package,
   TriangleAlert,
   Store,
@@ -25,6 +26,7 @@ const ICONS = {
   stock: Boxes,
   fund: Wallet,
   shops: Store,
+  proxy: Network,
 } as const;
 
 function NavEntry({ item, shopIds }: { item: NavItem; shopIds: number[] }) {

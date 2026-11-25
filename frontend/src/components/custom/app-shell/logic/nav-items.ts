@@ -7,7 +7,8 @@ export type NavIcon =
   | "products"
   | "stock"
   | "fund"
-  | "shops";
+  | "shops"
+  | "proxy";
 
 export interface NavItem {
   path: string;
@@ -59,7 +60,10 @@ export const NAV_SECTIONS: NavSection[] = [
 ];
 
 /** 底部低频入口（侧栏里在「设置」组下）。 */
-export const FOOTER_NAV: NavItem[] = [{ path: "/shops", label: "店铺管理", icon: "shops" }];
+export const FOOTER_NAV: NavItem[] = [
+  { path: "/shops", label: "店铺管理", icon: "shops" },
+  { path: "/proxy-pool", label: "代理池", icon: "proxy" },
+];
 
 /** 全部可跳转项（含底部入口），按显示顺序。 */
 export const NAV_ITEMS: NavItem[] = [
