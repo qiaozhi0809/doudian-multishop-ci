@@ -91,3 +91,20 @@ async def test_bills_empty_for_new_shop(env):
     env.transport.responses[:] = [reply(fx("fund_bills_empty"))]
     (result,) = await service(env).bills([env.shop_id], "admin")
     assert (result.total, result.items, result.error) == (0, [], None)
+
+
+async def test_unsettled_paging_incomplete_keeps_old_snapshot(env):
+    """分页上限内没拉全时，待结算快照保持旧数据，不能写成半份。"""
+    body = fx("fund_unsettled")
+    template = json.loads(body["data"][0])
+    full_page = {
+        **body, "total": 50,
+        "data": [json.dumps({**template, "sku_order_no": f"{i}-1"}, ensure_ascii=False)
+                 for i in range(50)],
+    }
+    env.transport.responses[:] = [reply(full_page)]
+    svc = FundService(env.engine, env.runner, max_pages=1)
+    (outcome,) = await svc.sync([env.shop_id], "admin")
+    assert outcome.unsettled_count == 0
+    assert outcome.note and "未覆盖旧数据" in outcome.note
+    assert svc.list_unsettled([env.shop_id])[1] == 0

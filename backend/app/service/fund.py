@@ -65,11 +65,12 @@ class ShopBills:
 class FundService:
     def __init__(
         self, engine: Engine, runner: ShopRunner,
-        clock: Callable[[], datetime] = _utc_now,
+        clock: Callable[[], datetime] = _utc_now, max_pages: int = MAX_PAGES,
     ) -> None:
         self._engine = engine
         self._runner = runner
         self._clock = clock
+        self._max_pages = max_pages
 
     # ---- 同步（待结算 + 保证金）----
 
@@ -91,7 +92,10 @@ class FundService:
 
     async def _sync_shop(self, shop_id: int, client: FxgClient) -> _SyncData:
         now = self._stamp()
-        items = await self._fetch_unsettled(client)
+        items, complete = await self._fetch_unsettled(client)
+        if not complete:
+            # 待结算是快照（每店整体替换）：分页没拉全时不能覆盖旧数据
+            return _SyncData(0, False, note="待结算分页未拉全，本次未覆盖旧数据")
         with self._engine.begin() as conn:
             fund_store.replace_unsettled(conn, shop_id, items, now)
         with self._engine.connect() as conn:
@@ -106,19 +110,18 @@ class FundService:
             fund_store.upsert_margin(conn, shop_id, margin, now)
         return _SyncData(len(items), True)
 
-    @staticmethod
-    async def _fetch_unsettled(client: FxgClient):
+    async def _fetch_unsettled(self, client: FxgClient) -> tuple[list, bool]:
         collected = []
         base = ep.FUND_QUERY_ITEM.page_base or 0  # 资金 0-based
-        for page in range(base, base + MAX_PAGES):
+        for page in range(base, base + self._max_pages):
             resp = await client.call(
                 ep.FUND_QUERY_ITEM, body=ep.fund_unsettled_body(page, ep.FUND_PAGE_SIZE)
             )
             items, _total, _cents = parse_unsettled(resp)
             collected.extend(items)
             if len(items) < ep.FUND_PAGE_SIZE:
-                break
-        return collected
+                return collected, True
+        return collected, False
 
     # ---- 本地概览 ----
 
