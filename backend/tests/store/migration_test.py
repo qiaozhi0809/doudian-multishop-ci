@@ -7,6 +7,7 @@ from app.store.migrate import upgrade_to_head
 TABLES = {
     "shop", "session", "orders", "order_items", "shop_address",
     "ebill_account", "waybill_template", "courier", "audit_log",
+    "waybills", "tasks",
 }
 
 

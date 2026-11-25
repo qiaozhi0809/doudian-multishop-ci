@@ -222,3 +222,55 @@ admin_session = sa.Table(
     sa.Column("expires_at", _NOW, nullable=False),
 )
 sa.Index("idx_admin_session_user", admin_session.c.user_id)
+
+# ---- M2：面单与任务（data-model 6.2 ⑤⑥） ----
+
+waybills = sa.Table(
+    "waybills",
+    metadata,
+    _id(),
+    _shop_fk(),
+    sa.Column("order_id", sa.Integer, sa.ForeignKey("orders.id"), nullable=False),
+    sa.Column("seq", sa.Integer, nullable=False, server_default="1"),
+    sa.Column("courier_code", sa.Text, nullable=False),
+    sa.Column("waybill_no", sa.Text),
+    sa.Column("print_data", sa.Text),
+    sa.Column("sign", sa.Text),
+    sa.Column("logistics_template_code", sa.Text),
+    sa.Column("exp_type", sa.Text),
+    sa.Column("ebill_id", sa.Text),
+    sa.Column("net_code", sa.Text),
+    sa.Column("status", sa.Text, nullable=False),
+    sa.Column("obtained_at", _NOW),
+    sa.Column("printed_at", _NOW),
+    sa.Column("voided_at", _NOW),
+)
+sa.Index("idx_waybills_order", waybills.c.order_id, waybills.c.status)
+# 同一订单同时只能有一张有效面单；printed 也占名额，防「已打印未发货」重复取号
+sa.Index(
+    "uq_active_waybill", waybills.c.order_id, unique=True,
+    sqlite_where=sa.text("status IN ('active','printed')"),
+)
+# 运单号全局唯一：本地发货防重（ship 幂等键）的数据库兜底
+sa.Index(
+    "uq_waybill_no", waybills.c.courier_code, waybills.c.waybill_no, unique=True,
+    sqlite_where=sa.text("waybill_no IS NOT NULL"),
+)
+
+tasks = sa.Table(
+    "tasks",
+    metadata,
+    _id(),
+    sa.Column("shop_id", sa.Integer, sa.ForeignKey("shop.id")),
+    sa.Column("type", sa.Text, nullable=False),
+    sa.Column("payload", sa.Text),
+    sa.Column("idempotency_key", sa.Text, unique=True),
+    sa.Column("created_by", sa.Text),
+    sa.Column("status", sa.Text, nullable=False, server_default="queued"),
+    sa.Column("attempts", sa.Integer, nullable=False, server_default="0"),
+    sa.Column("last_error", sa.Text),
+    sa.Column("created_at", _NOW, nullable=False),
+    sa.Column("started_at", _NOW),
+    sa.Column("finished_at", _NOW),
+)
+sa.Index("idx_tasks_status", tasks.c.status, tasks.c.created_at)
