@@ -25,10 +25,10 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "店铺与设置" })).toBeInTheDocument();
   });
 
-  it("redirects_root_to_orders", async () => {
+  it("redirects_root_to_dashboard", async () => {
     mockFetch({ "GET /api/auth/status": jsonResponse(IN), "GET /api/shops": jsonResponse([]) });
     renderAt("/");
-    expect(await screen.findByRole("heading", { name: "订单" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "仪表盘" })).toBeInTheDocument();
   });
 
   it("未登录时进入登录页", async () => {

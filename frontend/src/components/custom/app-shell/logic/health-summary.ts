@@ -16,6 +16,8 @@ export interface AttentionRow {
   label: string;
   tone: "danger" | "warning";
   severity: "error" | "warn";
+  /** 可直接在顶栏处理的动作：会话失效 / 已过期的店可以一键重新扫码登录。 */
+  action: "login" | null;
 }
 
 const PROXY_WARN_DAYS = 7;
@@ -28,10 +30,15 @@ const PROXY_WARN_DAYS = 7;
  */
 function worstIssue(shop: ShopRow, now: Date): Omit<AttentionRow, "id" | "name"> | null {
   if (shop.status === "disabled") return null;
-  const error = (label: string, tone: AttentionRow["tone"] = "danger") => ({ label, tone, severity: "error" as const });
-  const warn = (label: string) => ({ label, tone: "warning" as const, severity: "warn" as const });
+  const error = (label: string, tone: AttentionRow["tone"] = "danger", action: AttentionRow["action"] = null) => ({
+    label,
+    tone,
+    severity: "error" as const,
+    action,
+  });
+  const warn = (label: string) => ({ label, tone: "warning" as const, severity: "warn" as const, action: null });
 
-  if (shop.status === "needs_login") return error("需重新登录");
+  if (shop.status === "needs_login") return error("需重新登录", "danger", "login");
   if (shop.paused_reason) return error("风控暂停");
   if (shop.egress_status === "unreachable") return error("出口不通");
   if (shop.egress_status === "duplicate") return error("出口 IP 与其他店重复");
@@ -41,7 +48,7 @@ function worstIssue(shop: ShopRow, now: Date): Omit<AttentionRow, "id" | "name">
   }
   const sessionDays = shop.health === "expiring" && shop.expires_at ? daysUntil(shop.expires_at, now) : null;
   const proxyDays = shop.proxy_expires_at ? daysUntil(shop.proxy_expires_at, now) : null;
-  if (sessionDays !== null && sessionDays <= 0) return error("已过期");
+  if (sessionDays !== null && sessionDays <= 0) return error("已过期", "danger", "login");
   if (proxyDays !== null && proxyDays <= 0) return error("代理已到期");
   if (shop.health === "expiring") return warn(sessionDays !== null ? `即将过期（剩 ${sessionDays} 天）` : "即将过期");
   if (proxyDays !== null && proxyDays <= PROXY_WARN_DAYS) return warn(`代理 ${proxyDays} 天后到期`);

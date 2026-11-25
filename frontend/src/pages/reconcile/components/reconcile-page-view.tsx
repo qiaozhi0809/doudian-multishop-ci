@@ -27,7 +27,9 @@ export function ReconcilePageView({ page }: { page: ReconcilePageState }) {
       </div>
     );
   }
-  if (page.shopsState === "empty") return <EmptyNoShops />;
+  if (page.shopsState === "empty") {
+    return <EmptyNoShops description="先在「店铺与设置」添加店铺并扫码登录，发货数据才会同步到这里供对账使用" />;
+  }
 
   const state = page.reconcile;
   const data = state.query.data;

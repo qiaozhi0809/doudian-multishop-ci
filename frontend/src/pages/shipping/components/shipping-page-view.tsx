@@ -25,7 +25,9 @@ export function ShippingPageView({ page }: { page: ShippingPage }) {
       </div>
     );
   }
-  if (page.shopsState === "empty") return <EmptyNoShops />;
+  if (page.shopsState === "empty") {
+    return <EmptyNoShops description="先在「店铺与设置」添加店铺并扫码登录，待发货订单才会同步到发货台" />;
+  }
 
   const data = pool.query.data;
   return (

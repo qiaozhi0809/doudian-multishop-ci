@@ -7,6 +7,7 @@ import AuthPage from "@/pages/auth";
 import { useUnauthorizedRedirect } from "@/pages/auth/hooks/use-unauthorized-redirect";
 import { RequireAuth } from "@/pages/auth/require-auth";
 import CatalogPage from "@/pages/catalog";
+import DashboardPage from "@/pages/dashboard";
 import FundPage from "@/pages/fund";
 import LabelingPage from "@/pages/labeling";
 import OrderPage from "@/pages/order";
@@ -26,7 +27,8 @@ function AppRoutes() {
       <Route path="/setup" element={<AuthPage mode="setup" />} />
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
-          <Route path="/" element={<Navigate to="/orders" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/orders" element={<OrderPage />} />
           <Route path="/labeling" element={<LabelingPage />} />
           <Route path="/shipping" element={<ShippingPage />} />

@@ -6,11 +6,19 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import type { AttentionRow, HealthSummary } from "../logic/health-summary";
 import styles from "../app-shell.module.css";
 
+export interface QuickLoginState {
+  pendingIds: number[];
+  waitingIds: number[];
+  errors: Record<number, string>;
+  onLogin: (id: number) => void;
+}
+
 interface HealthIndicatorProps {
   state: "loading" | "error" | "ready";
   summary: HealthSummary;
   attention: AttentionRow[];
   onRetry: () => void;
+  login: QuickLoginState;
 }
 
 function label(summary: HealthSummary): string {
@@ -22,8 +30,8 @@ function label(summary: HealthSummary): string {
 
 const TONE = { empty: "neutral", ok: "success", warn: "warning", error: "danger" } as const;
 
-/** 店铺状态指示：正常时只是状态标记；没有店铺时引导去店铺页；有店铺需要处理时可点开查看并前往店铺页。 */
-export function HealthIndicator({ state, summary, attention, onRetry }: HealthIndicatorProps) {
+/** 店铺状态指示：掉线 / 会话过期为红点，点开可查看原因并一键重新扫码登录。 */
+export function HealthIndicator({ state, summary, attention, onRetry, login }: HealthIndicatorProps) {
   if (state === "loading") {
     return (
       <div className={styles.healthSkeleton}>
@@ -60,12 +68,34 @@ export function HealthIndicator({ state, summary, attention, onRetry }: HealthIn
       </PopoverTrigger>
       <PopoverContent align="end" className={styles.attentionPanel}>
         <ul className={styles.attentionList}>
-          {attention.map((row) => (
-            <li key={row.id} className={styles.attentionRow}>
-              <span>{row.name}</span>
-              <Badge tone={row.tone}>{row.label}</Badge>
-            </li>
-          ))}
+          {attention.map((row) => {
+            const waiting = login.waitingIds.includes(row.id);
+            const pending = login.pendingIds.includes(row.id);
+            return (
+              <li key={row.id} className={styles.attentionItem}>
+                <div className={styles.attentionRow}>
+                  <span>{row.name}</span>
+                  <Badge tone={row.tone}>{row.label}</Badge>
+                </div>
+                {row.action === "login" &&
+                  (waiting ? (
+                    <Badge tone="warning">等待扫码</Badge>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => login.onLogin(row.id)}
+                    >
+                      重新登录
+                    </Button>
+                  ))}
+                {login.errors[row.id] && (
+                  <p className={styles.attentionError}>{login.errors[row.id]}</p>
+                )}
+              </li>
+            );
+          })}
         </ul>
         <Link to="/shops" className={styles.attentionLink}>
           前往店铺页

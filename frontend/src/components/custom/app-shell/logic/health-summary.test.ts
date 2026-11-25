@@ -134,4 +134,13 @@ describe("listAttention", () => {
       "代理已到期",
     );
   });
+
+  it("会话失效与已过期的店可以一键重登；其他问题不提供该动作", () => {
+    expect(rowFor({ status: "needs_login", health: null }).action).toBe("login");
+    expect(rowFor({ health: "expiring", expires_at: daysFromNow(-1) }).action).toBe("login");
+    expect(rowFor({ paused_reason: "risk_blocked:1" }).action).toBeNull();
+    expect(rowFor({ egress_status: "unreachable" }).action).toBeNull();
+    expect(rowFor({ health: "expiring", expires_at: daysFromNow(3) }).action).toBeNull();
+    expect(rowFor({ proxy_expires_at: daysFromNow(2) }).action).toBeNull();
+  });
 });

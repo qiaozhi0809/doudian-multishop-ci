@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
+import { TaskCenter } from "@/components/custom/task-center";
 import { useEvents } from "@/lib/use-events";
 import { useShops } from "@/lib/use-shops";
 import { useAuth } from "@/pages/auth/hooks/use-auth";
@@ -9,6 +10,8 @@ import { ShopFilterSelect } from "./components/shop-filter-select";
 import { SideNav } from "./components/side-nav";
 import { TopBar } from "./components/top-bar";
 import { useChangePassword } from "./hooks/use-change-password";
+import { useNavGroups } from "./hooks/use-nav-groups";
+import { useQuickLogin } from "./hooks/use-quick-login";
 import { useShopFilter } from "./hooks/use-shop-filter";
 import { useSideNavCollapsed } from "./hooks/use-side-nav-collapsed";
 import { listAttention, summarizeHealth } from "./logic/health-summary";
@@ -24,31 +27,35 @@ export function AppShell() {
   const shops = shopsQuery.data ?? [];
   const auth = useAuth();
   const nav = useSideNavCollapsed();
+  const groups = useNavGroups();
+  const login = useQuickLogin();
   const password = useChangePassword();
 
   const healthState = shopsQuery.isError ? "error" : shopsQuery.isLoading ? "loading" : "ready";
   return (
     <div className={styles.shell}>
-      <SideNav collapsed={nav.collapsed} onToggle={nav.toggle} shopIds={shopIds} />
+      <SideNav
+        collapsed={nav.collapsed}
+        onToggle={nav.toggle}
+        shopIds={shopIds}
+        collapsedGroups={groups.collapsedGroups}
+        onToggleGroup={groups.toggleGroup}
+      />
       <div className={styles.main}>
         <TopBar
           title={pageTitle(pathname)}
           filter={<ShopFilterSelect shops={shops} shopIds={shopIds} disabled={healthState !== "ready"} onChange={setShopIds} />}
+          tasks={<TaskCenter />}
           health={
             <HealthIndicator
               state={healthState}
               summary={summarizeHealth(shops)}
               attention={listAttention(shops)}
               onRetry={() => void shopsQuery.refetch()}
+              login={{ pendingIds: login.pendingIds, waitingIds: login.waitingIds, errors: login.errors, onLogin: (id) => void login.login(id) }}
             />
           }
-          admin={
-            <AdminMenu
-              username={auth.status?.username ?? "管理员"}
-              onChangePassword={() => password.setOpen(true)}
-              onLogout={() => void auth.logout()}
-            />
-          }
+          admin={<AdminMenu username={auth.status?.username ?? "管理员"} onChangePassword={() => password.setOpen(true)} onLogout={() => void auth.logout()} />}
         />
         <main className={styles.content}>
           <Outlet />

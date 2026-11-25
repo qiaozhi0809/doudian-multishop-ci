@@ -1,21 +1,12 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { RequireAuth } from "@/pages/auth/require-auth";
+import { FakeEventSource } from "@/test/fake-event-source";
 import { makeShop } from "@/test/fixtures";
 import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
 import { AppShell } from "./index";
-
-class FakeEventSource {
-  static instances: FakeEventSource[] = [];
-  constructor() {
-    FakeEventSource.instances.push(this);
-  }
-  addEventListener() {}
-  removeEventListener() {}
-  close() {}
-}
 
 const IN = { setup_required: false, logged_in: true, username: "admin" };
 
@@ -50,11 +41,15 @@ function renderShell(path: string, extraRoutes: Record<string, ReturnType<typeof
   return client;
 }
 
+let restoreEvents: () => void;
 beforeEach(() => {
-  FakeEventSource.instances = [];
-  vi.stubGlobal("EventSource", FakeEventSource);
+  localStorage.clear();
+  restoreEvents = FakeEventSource.install();
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  restoreEvents();
+  localStorage.clear();
+});
 
 describe("App Shell", () => {
   it("顶栏显示页面标题，侧边栏有订单与店铺与设置", async () => {
@@ -70,6 +65,65 @@ describe("App Shell", () => {
     renderShell("/orders");
     await screen.findByRole("heading", { name: "订单" });
     expect(FakeEventSource.instances).toHaveLength(1);
+  });
+
+  it("导航为分组结构，仪表盘 / 发货台 / 对账入口都在", async () => {
+    renderShell("/orders");
+    const nav = await screen.findByRole("navigation", { name: "主导航" });
+    expect(within(nav).getByRole("link", { name: "仪表盘" })).toHaveAttribute("href", "/dashboard");
+    expect(within(nav).getByRole("link", { name: "发货台" })).toHaveAttribute("href", "/shipping");
+    expect(within(nav).getByRole("link", { name: "对账" })).toHaveAttribute("href", "/reconcile");
+    const header = within(nav).getByRole("button", { name: "订单处理" });
+    expect(header).toHaveAttribute("aria-expanded", "true");
+    expect(header).toHaveAttribute("data-active", "true");
+    expect(within(nav).getByRole("link", { name: "订单" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("分组可折叠，折叠状态记在本地", async () => {
+    renderShell("/orders");
+    const user = userEvent.setup();
+    const nav = await screen.findByRole("navigation", { name: "主导航" });
+    const header = within(nav).getByRole("button", { name: "订单处理" });
+    await user.click(header);
+    expect(header).toHaveAttribute("aria-expanded", "false");
+    expect(within(nav).queryByRole("link", { name: "订单" })).not.toBeInTheDocument();
+    expect(localStorage.getItem("doudian.navCollapsedGroups")).toBe('["orders"]');
+    await user.click(header);
+    expect(within(nav).getByRole("link", { name: "订单" })).toBeInTheDocument();
+  });
+
+  it("顶栏常驻任务中心", async () => {
+    renderShell("/orders");
+    expect(await screen.findByRole("button", { name: "任务中心" })).toBeInTheDocument();
+  });
+
+  it("会话掉线时可在顶栏一键重登", async () => {
+    renderShell(
+      "/orders",
+      { "POST /api/shops/2/login": jsonResponse({ status: "started" }, 202) },
+      [makeShop(), makeShop({ id: 2, name: "店铺乙", status: "needs_login", health: "expired" })],
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /1 家店需处理/ }));
+    await user.click(await screen.findByRole("button", { name: "重新登录" }));
+    expect(await screen.findByText("等待扫码")).toBeInTheDocument();
+    act(() => FakeEventSource.latest().emit("shop_status_changed", { shop_id: 2, status: "active" }));
+    await waitFor(() => expect(screen.queryByText("等待扫码")).not.toBeInTheDocument());
+  });
+
+  it("重登失败的原因显示在店铺这一行", async () => {
+    renderShell(
+      "/orders",
+      { "POST /api/shops/2/login": jsonResponse({ status: "started" }, 202) },
+      [makeShop(), makeShop({ id: 2, name: "店铺乙", status: "needs_login", health: "expired" })],
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /1 家店需处理/ }));
+    await user.click(await screen.findByRole("button", { name: "重新登录" }));
+    act(() =>
+      FakeEventSource.latest().emit("shop_login_failed", { shop_id: 2, reason: "请先检查出口" }),
+    );
+    expect(await screen.findByText("请先检查出口")).toBeInTheDocument();
   });
 
   it("导航链接带着当前店铺筛选", async () => {
