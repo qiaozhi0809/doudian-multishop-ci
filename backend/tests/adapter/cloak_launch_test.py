@@ -43,3 +43,52 @@ def test_scan_login_reports_missing_package(monkeypatch, tmp_path):
 
     with pytest.raises(RuntimeError, match="cloakbrowser"):
         asyncio.run(login_mod.scan_login(tmp_path, "chrome", None, use_cloak=True))
+
+
+def test_scan_login_cloak_branch_passes_proxy_and_seed(monkeypatch, tmp_path):
+    """cloak 分支必须把代理 dict 与固定 seed 传进启动参数，且用完关闭上下文。"""
+    import asyncio
+    import sys
+    import types
+
+    import app.adapter.browser.login as login_mod
+
+    captured: dict = {}
+
+    class FakeCtx:
+        pages: list = []
+
+        async def new_page(self):
+            return object()
+
+        async def close(self):
+            captured["closed"] = True
+
+    async def fake_launch(**kwargs):
+        captured.update(kwargs)
+        return FakeCtx()
+
+    fake_module = types.ModuleType("cloakbrowser")
+    fake_module.launch_persistent_context_async = fake_launch
+    monkeypatch.setitem(sys.modules, "cloakbrowser", fake_module)
+
+    async def fake_await_login(ctx, page, timeout_s):
+        return "tok", {"User-Agent": "ua"}, [{"name": "sid_guard", "expires": 1893456000}]
+
+    monkeypatch.setattr(login_mod, "await_login", fake_await_login)
+
+    result = asyncio.run(
+        login_mod.scan_login(tmp_path, "chrome", "http://user:pass@1.2.3.4:8080", use_cloak=True)
+    )
+
+    assert captured["user_data_dir"] == str(tmp_path)
+    assert captured["proxy"] == {
+        "server": "http://1.2.3.4:8080",
+        "username": "user",
+        "password": "pass",
+    }
+    assert captured["args"][0].startswith("--fingerprint=")
+    assert captured["headless"] is False
+    assert captured.get("closed") is True
+    assert result.token == "tok"
+    assert result.expires_at == "2030-01-01T00:00:00Z"
