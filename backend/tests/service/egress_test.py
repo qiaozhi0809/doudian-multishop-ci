@@ -11,9 +11,11 @@ from app.shared.secret_box import DevKeyBox
 from app.store import shop_store
 
 T0 = datetime(2026, 12, 1, 0, 0, 0, tzinfo=UTC)
-PW = "secretpw"
-URL_A = f"http://u1:{PW}@203.0.113.5:8000"
-URL_B = f"http://u2:{PW}@203.0.113.6:8000"
+# 假账号密码要足够长：太短的子串（如 "u1"）可能偶然出现在随机 base64 密文里
+USER_A, USER_B = "user-a-not-in-ciphertext", "user-b-not-in-ciphertext"
+PW = "pw-not-in-ciphertext"
+URL_A = f"http://{USER_A}:{PW}@203.0.113.5:8000"
+URL_B = f"http://{USER_B}:{PW}@203.0.113.6:8000"
 
 
 class Env:
@@ -74,12 +76,12 @@ def test_set_egress_validates(env):
 
 def test_set_egress_paste(env):
     sid = env.shop()
-    env.svc.set_egress(sid, "proxy", paste=f"203.0.113.5|8000|u1|{PW}|2026-12-25")
+    env.svc.set_egress(sid, "proxy", paste=f"203.0.113.5|8000|{USER_A}|{PW}|2026-12-25")
     row = env.row(sid)
     assert row["proxy_expires_at"] == "2026-12-25"
     assert row["proxy_display"] == "203.0.113.5:8000"
     assert env.svc.proxy_for(sid) == URL_A
-    env.svc.set_egress(sid, "proxy", paste=f"203.0.113.5|8000|u1|{PW}|2026-12-25",
+    env.svc.set_egress(sid, "proxy", paste=f"203.0.113.5|8000|{USER_A}|{PW}|2026-12-25",
                        expires_at="2027-01-31")
     assert env.row(sid)["proxy_expires_at"] == "2027-01-31"
 
@@ -232,7 +234,9 @@ async def test_proxy_url_encrypted_and_not_logged(env, capsys):
     env.ips[URL_A] = None
     await env.svc.check(sid)
     blob = env.row(sid)["proxy_url"]
-    assert PW.encode() not in blob and b"u1" not in blob
+    for secret in (PW, USER_A, URL_A, "203.0.113.5:8000"):
+        assert secret.encode() not in blob
+    assert env.box.decrypt(blob).decode() == URL_A  # 解密后就是原 URL
     assert env.row(sid)["proxy_display"] == "203.0.113.5:8000"
     assert PW not in capsys.readouterr().out
     assert env.svc.proxy_for(sid) == URL_A
