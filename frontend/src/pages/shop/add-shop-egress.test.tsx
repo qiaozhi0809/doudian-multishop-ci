@@ -60,6 +60,19 @@ describe("添加店铺的出口区", () => {
     expect(postBody(fetchMock)).toEqual({ name: "新店", egress: { mode: "proxy", pool_id: 5 } });
   });
 
+  it("池为空时选从池选择并提交：显示请选择提示，不发请求", async () => {
+    const fetchMock = mockPageFetch({
+      "GET /api/shops": jsonResponse([]),
+      "GET /api/proxy-pool": jsonResponse([]),
+    });
+    const { user, dialog } = await openAdd();
+    await user.click(within(dialog).getByRole("button", { name: "从池选择" }));
+    expect(await within(dialog).findByText("池里没有可用代理")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "添加店铺" }));
+    expect(await within(dialog).findByText("请选择池里的代理")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
   it("出口区不填：POST 体没有 egress", async () => {
     const fetchMock = mockPageFetch({
       "GET /api/shops": jsonResponse([]),

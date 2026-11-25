@@ -19,7 +19,12 @@ export function PoolSelect({ value, onChange, error }: PoolSelectProps) {
   const available = availablePoolItems(pool.data ?? []);
 
   if (pool.isError) return <p role="alert">读取代理池失败，请稍后重试</p>;
-  if (pool.isSuccess && available.length === 0) return <p>池里没有可用代理</p>;
+  if (pool.isSuccess && available.length === 0) return (
+      <>
+        <p>池里没有可用代理</p>
+        {error && <p role="alert">{error}</p>}
+      </>
+    );
 
   return (
     <Select
