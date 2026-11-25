@@ -41,3 +41,28 @@ def test_cloak_defaults(tmp_path):
 
     assert s.use_cloak is True
     assert s.cloak_cache_dir == tmp_path / "browser"
+
+
+def test_explicit_cloak_cache_dir_not_overridden(tmp_path):
+    custom = tmp_path / "custom"
+
+    s = Settings(_platform="win32", data_dir=tmp_path, cloak_cache_dir=custom)
+
+    assert s.cloak_cache_dir == custom
+
+
+def test_cloak_cache_dir_derived_after_data_dir_resolved(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    s = Settings(_platform="linux", data_dir="relative/data")
+
+    assert s.data_dir.is_absolute()
+    assert s.cloak_cache_dir == s.data_dir / "browser"
+
+
+def test_use_cloak_can_be_disabled_by_env(monkeypatch):
+    monkeypatch.setenv("DD_USE_CLOAK", "false")
+
+    s = Settings(_platform="win32")
+
+    assert s.use_cloak is False
