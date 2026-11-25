@@ -63,6 +63,13 @@ async def test_obtain_success(engine, tmp_path, clock):
     assert waybill["waybill_no"] == "79200000000001"
     assert waybill["status"] == "active"
     assert waybill["seq"] == 1
+    # M3 打印需要：print_data / sign / 模板 / 账户 / 网点 / 产品类型
+    assert waybill["print_data"] == "PRINT_DATA_PLACEHOLDER"
+    assert waybill["sign"] == "SIGN_PLACEHOLDER"
+    assert waybill["logistics_template_code"] == "C1m77ow4c2qrrd"
+    assert waybill["ebill_id"] == "e1"
+    assert waybill["net_code"] == "n1"
+    assert waybill["exp_type"] == "defaultProductType"
     assert env.order(oid)["status"] == "label_obtained"
     assert env.task_by_key(f"label:1:{ORDER1}:1")["status"] == "success"
 

@@ -152,7 +152,7 @@ class RunContext:
 
     def record_success(
         self, record: PreviewRecord, plan: ShopPlan, row: dict, task: dict, seq: int,
-        success: FetchSuccess, counter: Counter,
+        success: FetchSuccess, counter: Counter, exp_type: str | None = None,
     ) -> None:
         now = self.now()
         target = (LocalOrderStatus.SHIPPED if record.mode == MODE_FETCH_AND_SHIP
@@ -170,7 +170,7 @@ class RunContext:
                         waybill_no=success.tracking_no,
                         print_data=success.print_data, sign=success.sign,
                         template_code=success.template_code or plan.template_code,
-                        exp_type=None, ebill_id=plan.ebill_id, net_code=plan.net_code,
+                        exp_type=exp_type, ebill_id=plan.ebill_id, net_code=plan.net_code,
                         status="active", now=now,
                     )
                 order_store.set_local_status(

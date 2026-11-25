@@ -92,17 +92,19 @@ class ObtainRunner:
                 resp = await client.call(ep.LABEL_FETCH, body=body)
                 result = parse_fetch_result(resp)
         except TransientError:
-            await self._recover(client, record, attempts, counter, FETCH_TIMEOUT_REASON)
+            await self._recover(
+                client, record, attempts, counter, FETCH_TIMEOUT_REASON, exp_type)
             return
         except BizRejected as e:
             for row, task, _ in attempts:
                 ctx.finish_failed(record, row, task, counter, str(e))
             return
-        await self._apply_result(client, record, plan, attempts, result, counter)
+        await self._apply_result(client, record, plan, attempts, result, counter, exp_type)
 
     async def _apply_result(
         self, client: FxgClient, record: PreviewRecord, plan: ShopPlan,
         attempts: list[tuple[dict, dict, int]], result, counter: Counter,
+        exp_type: str | None,
     ) -> None:
         ctx = self._ctx
         by_order = {no: s for s in result.success for no in s.order_nos}
@@ -118,7 +120,8 @@ class ObtainRunner:
         for row, task, seq in attempts:
             no = row["order_no"]
             if no in by_order:
-                ctx.record_success(record, plan, row, task, seq, by_order[no], counter)
+                ctx.record_success(
+                    record, plan, row, task, seq, by_order[no], counter, exp_type)
                 continue
             msg = failed.get(no) or (unref[0] if unref else PARTIAL_RESULT_REASON)
             if LABEL_NOT_FOUND_MSG in msg:
@@ -126,11 +129,13 @@ class ObtainRunner:
             else:
                 ctx.finish_failed(record, row, task, counter, msg)
         if needs_recovery:
-            await self._recover(client, record, needs_recovery, counter, LABEL_NOT_FOUND_MSG)
+            await self._recover(
+                client, record, needs_recovery, counter, LABEL_NOT_FOUND_MSG, exp_type)
 
     async def _recover(
         self, client: FxgClient, record: PreviewRecord,
         attempts: list[tuple[dict, dict, int]], counter: Counter, reason: str,
+        exp_type: str | None,
     ) -> None:
         """结果不明：查回运单号；查到补写面单，查不到保持待核实（backend 5.12）。"""
         ctx = self._ctx
@@ -145,7 +150,8 @@ class ObtainRunner:
                 success = FetchSuccess(
                     (row["order_no"],), plan.courier_code, tracking, plan.template_code,
                     None, None)
-                ctx.record_success(record, plan, row, task, seq, success, counter)
+                ctx.record_success(
+                    record, plan, row, task, seq, success, counter, exp_type)
             else:
                 ctx.finish_verifying(record, row, task, counter, reason)
 

@@ -468,6 +468,7 @@ Content-Type: application/json
 2. **`printer` 字段**：取自设置 `DD_PRINTER_NAME`；未配置时不传该字段。字段是否必填未验证——M3 接入打印组件后统一。
 3. **`transport.expType`**：取 `query_added_services_and_product_types` 返回的
    `logistics_product[0].selectedValue`；缺失时回退 `defaultProductType`（A.2.7 默认值）。
+   取号成功后 `waybills` 同时保存 `print_data` / `sign` / 模板 code / `ebill_id` / `net_code` / `exp_type`，供 M3 打印使用。
 4. **失败项结构**：`fail_orders_list` 可能不带订单引用（A.2.2 第 8 条样本只有一个 `fail_msg`）。
    解析按「带 `shop_order_list` 则按单处理，不带则把该消息应用到本批未成功的全部订单」容错；
    若消息含「不存在可取号商品」则**不转异常**，走 `getOrderLogistics` 查回（API-19），
