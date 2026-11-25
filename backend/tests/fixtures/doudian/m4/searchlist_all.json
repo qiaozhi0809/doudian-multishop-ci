@@ -1,0 +1,62 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": [
+    {
+      "shop_order_id": "6900000000000000001",
+      "order_id": "6900000000000000001",
+      "order_status": 3,
+      "user_id": "1001",
+      "create_time": 1795561505,
+      "pay_time": 1795561505,
+      "exp_ship_time": 1795734305,
+      "logistics_time": 1795600000,
+      "pay_amount": 12345,
+      "total_goods_amount": 12000,
+      "promotion_amount": 300,
+      "post_amount": 0,
+      "actual_receive_amount_int": 11900,
+      "latest_logistic_info": {
+        "tracking_no": "79200000000001",
+        "company_code": "zhongtong"
+      },
+      "receiver_info": {"post_receiver": "张*", "post_tel": "138****0000"}
+    },
+    {
+      "shop_order_id": "6900000000000000002",
+      "order_id": "6900000000000000002",
+      "order_status": 2,
+      "user_id": "1002",
+      "create_time": 1795561605,
+      "pay_time": 1795561605,
+      "exp_ship_time": 1795734405,
+      "pay_amount": 20000,
+      "total_goods_amount": 20000,
+      "promotion_amount": 0,
+      "post_amount": 0,
+      "actual_receive_amount_int": 19400,
+      "latest_logistic_info": {"tracking_no": "", "company_code": ""},
+      "receiver_info": {"post_receiver": "李*", "post_tel": "139****0000"}
+    },
+    {
+      "shop_order_id": "6900000000000000003",
+      "order_id": "6900000000000000003",
+      "order_status": 5,
+      "user_id": "1003",
+      "create_time": 1795561705,
+      "pay_time": 1795561705,
+      "exp_ship_time": 1795734505,
+      "logistics_time": 1795600000,
+      "pay_amount": 8000,
+      "total_goods_amount": 8000,
+      "promotion_amount": 0,
+      "post_amount": 0,
+      "actual_receive_amount_int": 7760,
+      "latest_logistic_info": {
+        "tracking_no": "79200000000003",
+        "company_code": "zhongtong"
+      },
+      "receiver_info": {"post_receiver": "王*", "post_tel": "137****0000"}
+    }
+  ]
+}

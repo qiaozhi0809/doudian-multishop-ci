@@ -3,6 +3,7 @@
 from typing import Any
 
 from app.adapter.doudian.errors import ParseError
+from app.adapter.doudian.parse_fields import order_nos
 from app.domain.models import (
     CancelFailure,
     CancelResult,
@@ -34,32 +35,18 @@ def _time(value: Any) -> str | None:
         raise ParseError(str(e)) from e
 
 
-def _order_nos(node: dict) -> tuple[str, ...]:
-    """容错提取订单号：`shop_order_list[]` / `shop_order_ids[]` / `shop_order_id`。"""
-    out: list[str] = []
-    for item in node.get("shop_order_list") or []:
-        if isinstance(item, dict) and item.get("shop_order_id"):
-            out.append(str(item["shop_order_id"]))
-    for key in ("shop_order_ids", "shop_order_id_list"):
-        for value in node.get(key) or []:
-            out.append(str(value))
-    if node.get("shop_order_id"):
-        out.append(str(node["shop_order_id"]))
-    return tuple(dict.fromkeys(out))
-
-
 def _successes(data: dict) -> tuple[list[FetchSuccess], list[FetchFailure]]:
     success: list[FetchSuccess] = []
     failures: list[FetchFailure] = []
     for item in data.get("success_list") or []:
-        order_nos = _order_nos(item)
+        nos = order_nos(item)
         tracking_no = item.get("tracking_no")
         if not tracking_no:
             # 解析残缺不能吞掉订单：转成失败项，让上层走查回而不是当成已成功
-            failures.append(FetchFailure(order_nos, "取号响应缺少运单号"))
+            failures.append(FetchFailure(nos, "取号响应缺少运单号"))
             continue
         success.append(FetchSuccess(
-            order_nos=order_nos,
+            order_nos=nos,
             courier_code=str(item.get("logistics_company_code") or ""),
             tracking_no=str(tracking_no),
             template_code=_opt_str(item.get("logistics_template_code")),
@@ -74,7 +61,7 @@ def _failures(data: dict, keys: tuple[str, ...]) -> list[FetchFailure]:
     for key in keys:
         for item in data.get(key) or []:
             if isinstance(item, dict):
-                out.append(FetchFailure(_order_nos(item), str(item.get("fail_msg") or "")))
+                out.append(FetchFailure(order_nos(item), str(item.get("fail_msg") or "")))
     return out
 
 
@@ -89,7 +76,7 @@ def parse_fetch_and_ship_result(resp: dict) -> FetchResult:
     data = _data(resp)
     success = [
         FetchSuccess(
-            order_nos=_order_nos(item),
+            order_nos=order_nos(item),
             courier_code=str(item.get("logistics_company_code") or ""),
             tracking_no=str(item["tracking_no"]),
             template_code=_opt_str(item.get("logistics_template_code")),

@@ -42,8 +42,10 @@
 | | `POST /api/print/jobs {waybill_ids, printer_name?}` | 提交打印批次（202）；每张面单一条 `print_job`；无打印数据的面单转手动补打提示 |
 | | `GET /api/print/jobs/{id}` | 单条打印回执：`queued` / `success` / `failed` + `result_code` / 尝试次数 / 回执详情 |
 | | `GET /api/print/waybills?waybill_ids=1,2` | 面单可打印信息（`has_print_data`）与最近一次打印任务（打单台状态显示） |
-| 发货 | `POST /api/shipping/precheck` | 发货前检查（`sendcheck`） |
-| | `POST /api/shipping/preview` · `POST /api/shipping/execute` | 两步提交发货 |
+| 发货 | `GET /api/shipping/pool?shop_ids=&page=&page_size=` | 发货台订单池：`label_obtained` / `printed` 且有有效面单的订单（本地库） |
+| | `POST /api/shipping/check {order_ids}` | 发货前检查（`sendcheck`）：按店返回 `total` / `double_check_num` / `double_check_detail` / `place_holder`，以及不可发货的 `blocked` 与整店 `shop_errors` |
+| | `POST /api/shipping/ship {order_ids, double_check_ack?}` | 提交发货（202）：提交前重新检查；有二次确认项但未确认时 422；逐店按运单号调用 `batchDeliverGoodsByEES`，幂等键 `ship:{shop_id}:{courier_code}:{tracking_no}` |
+| | `GET /api/shipping/batches/{batch_id}` | 批次逐单结果（`pending` / `success` / `failed` + `fail_msg`） |
 | 备注 | `POST /api/remarks/preview` · `POST /api/remarks/execute` | 两步提交批量备注 |
 | 任务与事件 | `GET /api/tasks` · `GET /api/tasks/{id}` | 任务列表与进度 |
 | | `POST /api/tasks/{id}/retry` · `POST /api/tasks/{id}/cancel` | 重试 / 取消 |
@@ -56,9 +58,9 @@
 | | `GET /api/dashboard/shops` | 店铺排行（GMV、订单数、客单价、售后率、待发货、超时未发） |
 | | `GET /api/dashboard/products` | 商品排行（按销量） |
 | | `GET /api/dashboard/heatmap` | 店铺 × 日期出单热力图 |
-| 对账 | `POST /api/reconcile/runs` · `GET /api/reconcile/runs` | 触发 / 查看对账批次 |
-| | `GET /api/reconcile/findings` · `PATCH /api/reconcile/findings/{id}` | 异常列表、标记已处理 |
-| | `GET /api/reconcile/findings/export` | 导出 |
+| 对账 | `POST /api/reconcile/run {window_days?}` | 手动触发（202）：`searchlist tab=all` 拉全状态订单，窗口默认 30 天（1~90）；单店失败隔离 |
+| | `GET /api/reconcile/findings?shop_ids=&run_id=&kind=&status=&page=&page_size=` | 异常列表（默认最近一次批次），附本次批次摘要与三类异常标题 |
+| | `PATCH /api/reconcile/findings/{id} {status: open\|handled}` | 标记处理状态 |
 | 系统 | `GET /api/audit` | 审计日志查询 |
 | | `GET /api/settings` · `PATCH /api/settings` | 限速、工作时段、演练模式、对账窗口等 |
 | | `GET /api/health` | 后端、数据库、打印组件、各店会话的总体健康 |
@@ -78,5 +80,19 @@ M5 只读聚合的读取口径（实现于 `service/aftersale.py` / `catalog.py`
 - `execute` 返回 202 并在后台逐店串行执行；演练模式返回 409 `DryRunBlocked`；预览类型与执行路径不一致返回 422。
 - 进度经 SSE 推送：`label_progress {preview_id, mode, shop_id, order_id, order_no, result: success|failed|verifying|skipped, tracking_no?, reason?}`、
   `label_done {preview_id, mode, ok, failed, verifying, skipped}`。
+
+**M4 已落地的发货 / 对账接口细节**（2026-11-25）：
+
+- `check` 只读（`sendcheck` 允许退避重试），按店串行；单店失败进 `shop_errors`，不影响其他店。
+- `ship` 在返回 202 前同步完成所有店的检查；有二次确认项时必须带 `double_check_ack: true`（前端按住确认按钮即代表已核对）。
+  检查通过后按「店 + 快递 + 运单号」分包，每店一次 `batchDeliverGoodsByEES`；服务端不阻止重复发货，
+  本地以 `tasks.idempotency_key = ship:{shop_id}:{courier_code}:{tracking_no}` 判重，`shipment` 的 success 唯一索引兜底。
+  整批瞬时错误退避重试 3 次；仍失败逐包裹标记失败（「结果不明，可重试」），订单状态不动。
+- 发货进度经 SSE 推送：`ship_progress {batch_id, shop_id, order_id, order_no, result: success|failed|skipped, tracking_no?, reason?}`、
+  `ship_done {batch_id, ok, failed, skipped}`。
+- 对账在同一事务内先读旧快照 → 判定三类异常 → 统一 upsert `order_fact`（附录 G.4）；
+  首次运行会给已发货订单建立基线并报 `platform_shipped_local_not`（G.6）；
+  结束推送 `reconcile_done {run_id, status, scanned, findings, errors}`。
+- 对账窗口按 `create_time` / `pay_time` 任一落在窗口内纳入；两类时间都缺的订单不纳入。
 - 取号结果不明（超时 / 「不存在可取号商品」）时进入待核实并通过 `getOrderLogistics` 查回；
   任务状态与进度为 `verifying`，订单保持 `pending_label`。

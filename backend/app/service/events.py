@@ -10,6 +10,9 @@ LABEL_PROGRESS = "label_progress"  # 逐单执行结果（成功 / 失败 / 待�
 LABEL_DONE = "label_done"  # 一个预览的执行结束汇总
 PRINT_PROGRESS = "print_progress"  # 逐单打印结果（成功 / 失败 / 转手动补打）
 PRINT_DONE = "print_done"  # 一个打印批次的结束汇总
+SHIP_PROGRESS = "ship_progress"  # 逐单发货结果（成功 / 失败 / 跳过）
+SHIP_DONE = "ship_done"  # 一个发货批次的结束汇总
+RECONCILE_DONE = "reconcile_done"  # 一次对账的结束汇总
 
 DEFAULT_QUEUE_SIZE = 100
 

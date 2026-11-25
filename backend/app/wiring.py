@@ -26,8 +26,10 @@ from app.service.order_query import OrderQueryService
 from app.service.order_sync import OrderSyncService
 from app.service.printing import PrintingService
 from app.service.receiver import ReceiverService
+from app.service.reconcile import ReconcileService
 from app.service.scheduler import ShopScheduler
 from app.service.session_manager import SessionManager
+from app.service.shipping import ShippingService
 from app.service.shop_admin import ShopAdminService
 from app.service.shop_login import ScanFn, ShopLoginFlow
 from app.service.shop_runner import ClientFactory, ShopRunner, default_client_factory
@@ -87,6 +89,11 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
             dry_run=settings.dry_run, default_printer=settings.printer_name,
             tasks=tasks, **clock_kw,
         ),
+        # M4 发货 + 对账
+        "shipping": ShippingService(
+            engine, runner, events, dry_run=settings.dry_run, tasks=tasks, **clock_kw,
+        ),
+        "reconcile": ReconcileService(engine, runner, events, tasks=tasks, **clock_kw),
         "shop_admin": ShopAdminService(engine, events, **clock_kw),
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,

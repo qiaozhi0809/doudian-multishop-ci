@@ -96,6 +96,20 @@ def int_fields(node: dict) -> dict[str, int]:
     return out
 
 
+def order_nos(node: dict) -> tuple[str, ...]:
+    """容错提取订单号：`shop_order_list[]` / `shop_order_ids[]` / `shop_order_id`。"""
+    out: list[str] = []
+    for item in node.get("shop_order_list") or []:
+        if isinstance(item, dict) and item.get("shop_order_id"):
+            out.append(str(item["shop_order_id"]))
+    for key in ("shop_order_ids", "shop_order_id_list"):
+        for value in node.get(key) or []:
+            out.append(str(value))
+    if node.get("shop_order_id"):
+        out.append(str(node["shop_order_id"]))
+    return tuple(dict.fromkeys(out))
+
+
 def json_object(value: Any, what: str) -> dict:
     """`data` 里以 JSON 字符串传递的子对象（附录 F.1b）。"""
     if isinstance(value, dict):

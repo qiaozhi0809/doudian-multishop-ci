@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "total": 1,
+    "doubleCheckNum": 0,
+    "doubleCheckDetail": [],
+    "withOutAftersalShopOrders": [],
+    "placeHolder": {"text": "", "url": ""}
+  }
+}

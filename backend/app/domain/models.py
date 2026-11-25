@@ -161,3 +161,62 @@ class PrintInfo:
     params: str | None
     custom_print_data: str | None
     custom_template_url: str | None
+
+
+# ---- M4 发货 / 对账 ----
+
+
+@dataclass(frozen=True)
+class SendCheckResult:
+    """发货前检查（write.md A.2.3）：`double_check_detail` 非空表示有二次确认项。"""
+
+    total: int
+    double_check_num: int
+    double_check_detail: tuple[dict, ...]
+    without_aftersale: tuple[str, ...]
+    place_holder: dict | None
+
+
+@dataclass(frozen=True)
+class PackageSuccess:
+    courier_code: str
+    tracking_no: str
+    order_nos: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PackageFailure:
+    """按包裹维度的失败；平台可能不带快递 / 运单号引用（应用到本批其余包裹）。"""
+
+    courier_code: str | None
+    tracking_no: str | None
+    fail_msg: str
+    order_nos: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DeliverResult:
+    success: tuple[PackageSuccess, ...]
+    failures: tuple[PackageFailure, ...]
+
+
+@dataclass(frozen=True)
+class OrderFactDTO:
+    """订单事实（searchlist tab=all 归一化；仪表盘与对账共用，dashboard.md 3.1）。"""
+
+    order_no: str
+    platform_status: int | None
+    user_id: str | None
+    create_time: str | None
+    pay_time: str | None
+    biz_date: str | None
+    pay_amount_cents: int | None
+    goods_amount_cents: int | None
+    promotion_cents: int | None
+    post_cents: int | None
+    receive_amount_cents: int | None
+    exp_ship_time: str | None
+    ship_time: str | None
+    tracking_no: str | None
+    company_code: str | None
+    raw: dict
