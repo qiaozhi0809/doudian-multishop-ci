@@ -47,9 +47,9 @@
 | 任务与事件 | `GET /api/tasks` · `GET /api/tasks/{id}` | 任务列表与进度 |
 | | `POST /api/tasks/{id}/retry` · `POST /api/tasks/{id}/cancel` | 重试 / 取消 |
 | | `GET /api/events` | SSE 推送 |
-| 售后（只读） | `GET /api/aftersale` · `GET /api/aftersale/counts` · `GET /api/aftersale/{id}` | 跨店待办队列、计数、详情 |
-| 商品 / 库存（只读） | `GET /api/catalog/products` · `GET /api/catalog/products/counts` · `GET /api/catalog/stock` | 列表、计数、库存概览 |
-| 资金（只读） | `GET /api/fund/summary` · `GET /api/fund/unsettled` · `GET /api/fund/margin` | 多店概览、待结算、保证金 |
+| 售后（只读） | `GET /api/aftersale` · `GET /api/aftersale/todo` · `GET /api/aftersale/counts` · `GET /api/aftersale/statuses` · `GET /api/aftersale/{after_sale_id}?shop_id=` · `POST /api/aftersale/sync` | 快照列表 / 待办队列（按处理截止时间）、平台计数、状态筛选项、按需详情、同步 |
+| 商品 / 库存（只读） | `GET /api/catalog/products` · `GET /api/catalog/products/counts` · `GET /api/catalog/products/groups` · `GET /api/catalog/stock` · `GET /api/catalog/stock/summary` · `GET /api/catalog/stock/warehouses` · `POST /api/catalog/products/sync` · `POST /api/catalog/stock/sync` | 商品快照、状态计数、分组、库存快照、本地预警汇总、仓库列表、同步 |
+| 资金（只读） | `GET /api/fund/summary` · `GET /api/fund/unsettled` · `GET /api/fund/margin` · `GET /api/fund/bills?days=&page=` · `POST /api/fund/sync` | 多店概览、待结算快照、保证金、近 N 天账单（上游、不落库）、同步 |
 | 仪表盘（草案，[dashboard.md](dashboard.md)） | `GET /api/dashboard/summary` | KPI 卡片：按日期范围与店铺筛选汇总，附环比 |
 | | `GET /api/dashboard/trend?granularity=day\|week\|month` | GMV / 订单量趋势，可按店铺拆分 |
 | | `GET /api/dashboard/shops` | 店铺排行（GMV、订单数、客单价、售后率、待发货、超时未发） |
@@ -62,6 +62,12 @@
 | | `GET /api/settings` · `PATCH /api/settings` | 限速、工作时段、演练模式、对账窗口等 |
 | | `GET /api/health` | 后端、数据库、打印组件、各店会话的总体健康 |
 
+M5 只读聚合的读取口径（实现于 `service/aftersale.py` / `catalog.py` / `fund.py`）：
+
+- 列表接口读**本地快照**（带 `synced_at`），`POST .../sync` 才请求上游并按店落库；上游同步在指定 `shop_ids` 时才做暂停 / 出口 / 会话预检，省略则只跑可用店铺。
+- `counts` / `groups` / `warehouses` / `bills` 直接请求上游，逐店返回 `source: upstream | error` 与失败原因，单店失败不影响其他店。
+- 账单不落库；金额字段尚未校准（[api/fund.md](../api/fund.md) F.4），命中候选字段时 `amount_status=confirmed`，否则金额记 0 且 `amount_status=pending`，界面标注「待探明」。
+- 库存的 `spot_stock_num` 与 `future_stock_num` 分列返回，前端不提供相加。
 详细 schema 待补（[gaps.md](../gaps.md) ENG-01）。
 
 **M2 已落地的取号接口细节**（2026-11-25）：

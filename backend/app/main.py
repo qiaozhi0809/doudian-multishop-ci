@@ -14,8 +14,11 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api import aftersale as aftersale_api
 from app.api import auth as auth_api
+from app.api import catalog as catalog_api
 from app.api import event as event_api
+from app.api import fund as fund_api
 from app.api import label as label_api
 from app.api import order as order_api
 from app.api import shop as shop_api
@@ -88,7 +91,10 @@ def create_app(
     async def health() -> Health:
         return Health(status="ok")
 
-    for module in (auth_api, shop_api, order_api, label_api, event_api):
+    for module in (
+        auth_api, shop_api, order_api, label_api, event_api,
+        aftersale_api, catalog_api, fund_api,
+    ):
         app.include_router(module.router)
     _mount_frontend(app, settings)
     return app

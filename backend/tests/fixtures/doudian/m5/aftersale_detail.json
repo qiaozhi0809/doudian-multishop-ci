@@ -1,0 +1,52 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "title_info": {
+      "title": "退货退款",
+      "countdown": 599400
+    },
+    "progress_node": [
+      {
+        "text": "用户申请退货",
+        "time": 1764000000,
+        "status": 2
+      },
+      {
+        "text": "商家退款",
+        "time": 0,
+        "status": 0
+      }
+    ],
+    "actions": [
+      {
+        "id": "im_contact_user",
+        "text": "联系买家",
+        "server_url": "https://im.example"
+      }
+    ],
+    "after_sale_info": {
+      "after_sale_id": "140000000000000001",
+      "related_id": "6900000000000000001",
+      "shop_id": "62000070001",
+      "after_sale_type": 1,
+      "after_sale_status": 13,
+      "refund_amount": 12800,
+      "after_sale_quantity": 1,
+      "apply_time": 1764000000,
+      "create_time": 1764000000,
+      "update_time": 1764003600,
+      "status_deadline": 1764600000,
+      "left_node_time": 599400,
+      "arbitrate_status": 0,
+      "encrypted_buyer_info": "测*",
+      "detail_link": "https://fxg.jinritemai.com/ffa/maftersale/aftersale/detail-v3?aftersale_id=140000000000000001",
+      "return_logistics_code": null,
+      "after_sale_tags": [],
+      "reason_second_labels": []
+    },
+    "refund_records": {
+      "remaining_refund_amount": 12800
+    }
+  }
+}

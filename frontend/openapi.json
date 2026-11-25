@@ -107,6 +107,354 @@
         "title": "AddressOut",
         "type": "object"
       },
+      "AftersaleButton": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "disabled": {
+            "default": false,
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "AftersaleButton",
+        "type": "object"
+      },
+      "AftersaleCountsResponse": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopAftersaleCounts"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shops"
+        ],
+        "title": "AftersaleCountsResponse",
+        "type": "object"
+      },
+      "AftersaleDetail": {
+        "properties": {
+          "after_sale_id": {
+            "title": "After Sale Id",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "shop_id",
+          "after_sale_id",
+          "detail"
+        ],
+        "title": "AftersaleDetail",
+        "type": "object"
+      },
+      "AftersaleDisplay": {
+        "properties": {
+          "buttons": {
+            "items": {
+              "$ref": "#/components/schemas/AftersaleButton"
+            },
+            "title": "Buttons",
+            "type": "array"
+          },
+          "buyer_nick": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buyer Nick"
+          },
+          "detail_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail Link"
+          },
+          "left_node_time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Node Time"
+          },
+          "order_info": {
+            "additionalProperties": true,
+            "title": "Order Info",
+            "type": "object"
+          },
+          "platform_intervene": {
+            "default": false,
+            "title": "Platform Intervene",
+            "type": "boolean"
+          },
+          "reason_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Text"
+          },
+          "status_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Text"
+          },
+          "type_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type Text"
+          }
+        },
+        "title": "AftersaleDisplay",
+        "type": "object"
+      },
+      "AftersalePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AftersaleRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "AftersalePage",
+        "type": "object"
+      },
+      "AftersaleRow": {
+        "properties": {
+          "after_sale_id": {
+            "title": "After Sale Id",
+            "type": "string"
+          },
+          "apply_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apply Time"
+          },
+          "display": {
+            "$ref": "#/components/schemas/AftersaleDisplay"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "order_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order No"
+          },
+          "refund_amount_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Amount Cents"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "status_deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Deadline"
+          },
+          "synced_at": {
+            "title": "Synced At",
+            "type": "string"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "required": [
+          "id",
+          "shop_id",
+          "shop_name",
+          "after_sale_id",
+          "order_no",
+          "type",
+          "status",
+          "refund_amount_cents",
+          "status_deadline",
+          "apply_time",
+          "synced_at",
+          "display"
+        ],
+        "title": "AftersaleRow",
+        "type": "object"
+      },
+      "AftersaleStatusOption": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "label"
+        ],
+        "title": "AftersaleStatusOption",
+        "type": "object"
+      },
+      "AftersaleStatusesResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AftersaleStatusOption"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AftersaleStatusesResponse",
+        "type": "object"
+      },
+      "AftersaleSyncResponse": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopAftersaleSync"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shops"
+        ],
+        "title": "AftersaleSyncResponse",
+        "type": "object"
+      },
       "AuthStatus": {
         "properties": {
           "logged_in": {
@@ -216,6 +564,66 @@
           "not_ready_reasons"
         ],
         "title": "BaseSummary",
+        "type": "object"
+      },
+      "BillItem": {
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "amount_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Field"
+          },
+          "amount_status": {
+            "enum": [
+              "confirmed",
+              "pending"
+            ],
+            "title": "Amount Status",
+            "type": "string"
+          },
+          "raw": {
+            "additionalProperties": true,
+            "title": "Raw",
+            "type": "object"
+          }
+        },
+        "required": [
+          "amount_cents",
+          "amount_status",
+          "raw"
+        ],
+        "title": "BillItem",
+        "type": "object"
+      },
+      "BillsResponse": {
+        "properties": {
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopBills"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "days",
+          "shops"
+        ],
+        "title": "BillsResponse",
         "type": "object"
       },
       "ChangePassword": {
@@ -458,6 +866,72 @@
         "title": "ExecuteStarted",
         "type": "object"
       },
+      "FundSummary": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopFundSummary"
+            },
+            "title": "Shops",
+            "type": "array"
+          },
+          "total_unsettled_amount_cents": {
+            "title": "Total Unsettled Amount Cents",
+            "type": "integer"
+          },
+          "total_unsettled_count": {
+            "title": "Total Unsettled Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "shops",
+          "total_unsettled_amount_cents",
+          "total_unsettled_count"
+        ],
+        "title": "FundSummary",
+        "type": "object"
+      },
+      "FundSyncResponse": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopFundSync"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shops"
+        ],
+        "title": "FundSyncResponse",
+        "type": "object"
+      },
+      "GroupItem": {
+        "properties": {
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "group_id"
+        ],
+        "title": "GroupItem",
+        "type": "object"
+      },
       "Health": {
         "properties": {
           "status": {
@@ -697,6 +1171,122 @@
           "dry_run"
         ],
         "title": "LabelPreviewResponse",
+        "type": "object"
+      },
+      "MarginResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MarginRow"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "MarginResponse",
+        "type": "object"
+      },
+      "MarginRow": {
+        "properties": {
+          "balance_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Cents"
+          },
+          "basic_balance_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basic Balance Cents"
+          },
+          "basic_payable_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basic Payable Cents"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "payable_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payable Cents"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "synced_at": {
+            "title": "Synced At",
+            "type": "string"
+          },
+          "withdrawable_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withdrawable Cents"
+          }
+        },
+        "required": [
+          "id",
+          "shop_id",
+          "shop_name",
+          "payable_cents",
+          "balance_cents",
+          "basic_payable_cents",
+          "basic_balance_cents",
+          "withdrawable_cents",
+          "level",
+          "synced_at"
+        ],
+        "title": "MarginRow",
         "type": "object"
       },
       "OrderCounts": {
@@ -1116,6 +1706,267 @@
         "title": "PreviewShopError",
         "type": "object"
       },
+      "ProductCountsResponse": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopProductCounts"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shops"
+        ],
+        "title": "ProductCountsResponse",
+        "type": "object"
+      },
+      "ProductDisplay": {
+        "properties": {
+          "category_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Name"
+          },
+          "img": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Img"
+          },
+          "product_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Url"
+          },
+          "quality_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Score"
+          },
+          "sell_num_30d": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Num 30D"
+          }
+        },
+        "title": "ProductDisplay",
+        "type": "object"
+      },
+      "ProductGroupsResponse": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopGroups"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shops"
+        ],
+        "title": "ProductGroupsResponse",
+        "type": "object"
+      },
+      "ProductPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "ProductPage",
+        "type": "object"
+      },
+      "ProductRow": {
+        "properties": {
+          "display": {
+            "$ref": "#/components/schemas/ProductDisplay"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "price_higher_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Higher Cents"
+          },
+          "price_lower_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Lower Cents"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "sell_num": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Num"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "stock_num": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock Num"
+          },
+          "synced_at": {
+            "title": "Synced At",
+            "type": "string"
+          },
+          "tab": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tab"
+          }
+        },
+        "required": [
+          "id",
+          "shop_id",
+          "shop_name",
+          "product_id",
+          "name",
+          "status",
+          "tab",
+          "price_lower_cents",
+          "price_higher_cents",
+          "stock_num",
+          "sell_num",
+          "synced_at",
+          "display"
+        ],
+        "title": "ProductRow",
+        "type": "object"
+      },
+      "ProductSyncResponse": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopProductSync"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shops"
+        ],
+        "title": "ProductSyncResponse",
+        "type": "object"
+      },
       "ReceiverOut": {
         "description": "按需解密的收件人：只返回给前端，不入库（flows 7.3）。",
         "properties": {
@@ -1190,6 +2041,169 @@
         "title": "ReceiverOut",
         "type": "object"
       },
+      "ShopAftersaleCounts": {
+        "properties": {
+          "counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fetched_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "pending_total": {
+            "default": 0,
+            "title": "Pending Total",
+            "type": "integer"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "source"
+        ],
+        "title": "ShopAftersaleCounts",
+        "type": "object"
+      },
+      "ShopAftersaleSync": {
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fetched": {
+            "title": "Fetched",
+            "type": "integer"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          }
+        },
+        "required": [
+          "shop_id",
+          "fetched",
+          "complete"
+        ],
+        "title": "ShopAftersaleSync",
+        "type": "object"
+      },
+      "ShopBills": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fetched_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BillItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "shop_id",
+          "source"
+        ],
+        "title": "ShopBills",
+        "type": "object"
+      },
       "ShopCreate": {
         "properties": {
           "entity": {
@@ -1223,6 +2237,199 @@
           "name"
         ],
         "title": "ShopCreate",
+        "type": "object"
+      },
+      "ShopFundSummary": {
+        "properties": {
+          "margin_balance_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Balance Cents"
+          },
+          "margin_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Level"
+          },
+          "margin_payable_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Payable Cents"
+          },
+          "margin_synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Synced At"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "unsettled_amount_cents": {
+            "title": "Unsettled Amount Cents",
+            "type": "integer"
+          },
+          "unsettled_count": {
+            "title": "Unsettled Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "unsettled_amount_cents",
+          "unsettled_count"
+        ],
+        "title": "ShopFundSummary",
+        "type": "object"
+      },
+      "ShopFundSync": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "margin_synced": {
+            "title": "Margin Synced",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "unsettled_count": {
+            "title": "Unsettled Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "shop_id",
+          "unsettled_count",
+          "margin_synced"
+        ],
+        "title": "ShopFundSync",
+        "type": "object"
+      },
+      "ShopGroups": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fetched_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/GroupItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "source"
+        ],
+        "title": "ShopGroups",
         "type": "object"
       },
       "ShopOrderCounts": {
@@ -1331,6 +2538,105 @@
           }
         },
         "title": "ShopPatch",
+        "type": "object"
+      },
+      "ShopProductCounts": {
+        "properties": {
+          "counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fetched_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "source"
+        ],
+        "title": "ShopProductCounts",
+        "type": "object"
+      },
+      "ShopProductSync": {
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fetched": {
+            "title": "Fetched",
+            "type": "integer"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          }
+        },
+        "required": [
+          "shop_id",
+          "fetched",
+          "complete"
+        ],
+        "title": "ShopProductSync",
         "type": "object"
       },
       "ShopRow": {
@@ -1491,6 +2797,115 @@
         "title": "ShopRow",
         "type": "object"
       },
+      "ShopStockSync": {
+        "properties": {
+          "alarm_count": {
+            "default": 0,
+            "title": "Alarm Count",
+            "type": "integer"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fetched": {
+            "title": "Fetched",
+            "type": "integer"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "sold_out_count": {
+            "default": 0,
+            "title": "Sold Out Count",
+            "type": "integer"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          }
+        },
+        "required": [
+          "shop_id",
+          "fetched",
+          "complete"
+        ],
+        "title": "ShopStockSync",
+        "type": "object"
+      },
+      "ShopWarehouses": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fetched_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WarehouseItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "source"
+        ],
+        "title": "ShopWarehouses",
+        "type": "object"
+      },
       "Started": {
         "properties": {
           "status": {
@@ -1501,6 +2916,185 @@
           }
         },
         "title": "Started",
+        "type": "object"
+      },
+      "StockPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "StockPage",
+        "type": "object"
+      },
+      "StockRow": {
+        "properties": {
+          "future_stock_num": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Future Stock Num"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_alarming": {
+            "title": "Is Alarming",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "spot_stock_num": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spot Stock Num"
+          },
+          "synced_at": {
+            "title": "Synced At",
+            "type": "string"
+          },
+          "total_occupied_stock_num": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Occupied Stock Num"
+          },
+          "total_stock_num": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Stock Num"
+          },
+          "total_unoccupied_stock_num": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Unoccupied Stock Num"
+          }
+        },
+        "required": [
+          "id",
+          "shop_id",
+          "shop_name",
+          "product_id",
+          "total_stock_num",
+          "spot_stock_num",
+          "future_stock_num",
+          "total_occupied_stock_num",
+          "total_unoccupied_stock_num",
+          "is_alarming",
+          "synced_at"
+        ],
+        "title": "StockRow",
+        "type": "object"
+      },
+      "StockSummary": {
+        "properties": {
+          "alarm_count": {
+            "title": "Alarm Count",
+            "type": "integer"
+          },
+          "sold_out_count": {
+            "title": "Sold Out Count",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "alarm_count",
+          "sold_out_count"
+        ],
+        "title": "StockSummary",
+        "type": "object"
+      },
+      "StockSyncResponse": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopStockSync"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shops"
+        ],
+        "title": "StockSyncResponse",
         "type": "object"
       },
       "SyncStarted": {
@@ -1567,6 +3161,213 @@
           "is_custom"
         ],
         "title": "TemplateOut",
+        "type": "object"
+      },
+      "UnsettledDisplay": {
+        "properties": {
+          "collection_subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Subject Name"
+          },
+          "product_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Name"
+          },
+          "settlement_delay_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Delay Days"
+          },
+          "sku_detail_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku Detail Text"
+          }
+        },
+        "title": "UnsettledDisplay",
+        "type": "object"
+      },
+      "UnsettledPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnsettledRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "UnsettledPage",
+        "type": "object"
+      },
+      "UnsettledRow": {
+        "properties": {
+          "display": {
+            "$ref": "#/components/schemas/UnsettledDisplay"
+          },
+          "ecom_order_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ecom Order Status"
+          },
+          "expected_settle_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Settle Time"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "income_amount_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Income Amount Cents"
+          },
+          "platform_service_fee_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Service Fee Cents"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "settle_period_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settle Period Detail"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "shop_order_no": {
+            "title": "Shop Order No",
+            "type": "string"
+          },
+          "sku_order_no": {
+            "title": "Sku Order No",
+            "type": "string"
+          },
+          "synced_at": {
+            "title": "Synced At",
+            "type": "string"
+          },
+          "unsettled_amount_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unsettled Amount Cents"
+          }
+        },
+        "required": [
+          "id",
+          "shop_id",
+          "shop_name",
+          "shop_order_no",
+          "sku_order_no",
+          "product_id",
+          "income_amount_cents",
+          "unsettled_amount_cents",
+          "platform_service_fee_cents",
+          "ecom_order_status",
+          "expected_settle_time",
+          "settle_period_detail",
+          "synced_at",
+          "display"
+        ],
+        "title": "UnsettledRow",
         "type": "object"
       },
       "VoidPreviewRequest": {
@@ -1711,6 +3512,46 @@
         "title": "VoidWaybill",
         "type": "object"
       },
+      "WarehouseItem": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "warehouse_id": {
+            "title": "Warehouse Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "warehouse_id"
+        ],
+        "title": "WarehouseItem",
+        "type": "object"
+      },
+      "WarehousesResponse": {
+        "properties": {
+          "shops": {
+            "items": {
+              "$ref": "#/components/schemas/ShopWarehouses"
+            },
+            "title": "Shops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shops"
+        ],
+        "title": "WarehousesResponse",
+        "type": "object"
+      },
       "WaybillRow": {
         "properties": {
           "courier_code": {
@@ -1783,6 +3624,393 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/aftersale": {
+      "get": {
+        "operationId": "list_aftersale_api_aftersale_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pending",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Pending",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Keyword"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AftersalePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Aftersale",
+        "tags": [
+          "aftersale"
+        ]
+      }
+    },
+    "/api/aftersale/counts": {
+      "get": {
+        "operationId": "aftersale_counts_api_aftersale_counts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AftersaleCountsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Aftersale Counts",
+        "tags": [
+          "aftersale"
+        ]
+      }
+    },
+    "/api/aftersale/statuses": {
+      "get": {
+        "description": "筛选下拉用：本地出现过的状态 + 平台文案。",
+        "operationId": "list_statuses_api_aftersale_statuses_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AftersaleStatusesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Statuses",
+        "tags": [
+          "aftersale"
+        ]
+      }
+    },
+    "/api/aftersale/sync": {
+      "post": {
+        "description": "显式指定的店铺先预检（暂停 / 出口 / 会话不通即报错）；不指定则只跑可用店铺。",
+        "operationId": "sync_aftersale_api_aftersale_sync_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AftersaleSyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Sync Aftersale",
+        "tags": [
+          "aftersale"
+        ]
+      }
+    },
+    "/api/aftersale/todo": {
+      "get": {
+        "description": "跨店待办队列：仍在流转（有处理截止时间）的售后单，按截止时间升序。",
+        "operationId": "list_todo_api_aftersale_todo_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AftersalePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Todo",
+        "tags": [
+          "aftersale"
+        ]
+      }
+    },
+    "/api/aftersale/{after_sale_id}": {
+      "get": {
+        "operationId": "aftersale_detail_api_aftersale__after_sale_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "after_sale_id",
+            "required": true,
+            "schema": {
+              "title": "After Sale Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AftersaleDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Aftersale Detail",
+        "tags": [
+          "aftersale"
+        ]
+      }
+    },
     "/api/auth/login": {
       "post": {
         "operationId": "login_api_auth_login_post",
@@ -1977,6 +4205,486 @@
         ]
       }
     },
+    "/api/catalog/products": {
+      "get": {
+        "operationId": "list_products_api_catalog_products_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tab"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Keyword"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Products",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/catalog/products/counts": {
+      "get": {
+        "operationId": "product_counts_api_catalog_products_counts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductCountsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Product Counts",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/catalog/products/groups": {
+      "get": {
+        "operationId": "product_groups_api_catalog_products_groups_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductGroupsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Product Groups",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/catalog/products/sync": {
+      "post": {
+        "operationId": "sync_products_api_catalog_products_sync_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductSyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Sync Products",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/catalog/stock": {
+      "get": {
+        "operationId": "list_stock_api_catalog_stock_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "alarm_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Alarm Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Stock",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/catalog/stock/summary": {
+      "get": {
+        "operationId": "stock_summary_api_catalog_stock_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Stock Summary",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/catalog/stock/sync": {
+      "post": {
+        "operationId": "sync_stock_api_catalog_stock_sync_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockSyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Sync Stock",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/catalog/stock/warehouses": {
+      "get": {
+        "operationId": "warehouses_api_catalog_stock_warehouses_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WarehousesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Warehouses",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
     "/api/events": {
       "get": {
         "operationId": "events_api_events_get",
@@ -2003,6 +4711,298 @@
         "summary": "Events",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/api/fund/bills": {
+      "get": {
+        "description": "上游账单（不落库）；新店通常为空。金额字段未校准时 amount_status=pending。",
+        "operationId": "list_bills_api_fund_bills_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Page",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Bills",
+        "tags": [
+          "fund"
+        ]
+      }
+    },
+    "/api/fund/margin": {
+      "get": {
+        "operationId": "list_margin_api_fund_margin_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarginResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Margin",
+        "tags": [
+          "fund"
+        ]
+      }
+    },
+    "/api/fund/summary": {
+      "get": {
+        "operationId": "fund_summary_api_fund_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Fund Summary",
+        "tags": [
+          "fund"
+        ]
+      }
+    },
+    "/api/fund/sync": {
+      "post": {
+        "operationId": "sync_fund_api_fund_sync_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundSyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Sync Fund",
+        "tags": [
+          "fund"
+        ]
+      }
+    },
+    "/api/fund/unsettled": {
+      "get": {
+        "operationId": "list_unsettled_api_fund_unsettled_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnsettledPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Unsettled",
+        "tags": [
+          "fund"
         ]
       }
     },

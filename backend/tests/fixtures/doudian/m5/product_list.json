@@ -1,0 +1,34 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "total": 2,
+    "list": [
+      {
+        "product_id": "3811109459833520578",
+        "name": "测试商品 A",
+        "status": 1,
+        "tab": "onSale",
+        "price_lower": 12800,
+        "price_higher": 12800,
+        "stock_num": 12,
+        "sell_num": 3,
+        "img": "https://p9-aio.ecombdimg.com/obj/demo",
+        "product_url": "https://fxg.jinritemai.com/ffa/g/list",
+        "category_name": "测试类目",
+        "quality_score": 4.8,
+        "sell_num_30d": 2
+      },
+      {
+        "product_id": "3811109459833520579",
+        "name": "测试商品 B",
+        "status": 1,
+        "tab": "onSale",
+        "price_lower": 9900,
+        "price_higher": 9900,
+        "stock_num": 0,
+        "sell_num": 0
+      }
+    ]
+  }
+}

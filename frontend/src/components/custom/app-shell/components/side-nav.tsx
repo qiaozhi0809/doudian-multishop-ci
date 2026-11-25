@@ -1,4 +1,4 @@
-import { ClipboardList, PanelLeftClose, PanelLeftOpen, Store, Truck } from "lucide-react";
+import { Boxes, ClipboardList, LifeBuoy, Package, PanelLeftClose, PanelLeftOpen, Store, Truck, Wallet } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Button } from "@/components/arc/button/button";
 import { Tooltip } from "@/components/arc/tooltip/tooltip";
@@ -6,7 +6,10 @@ import { NAV_ITEMS, type NavItem } from "../logic/nav-items";
 import { withShopFilter } from "../logic/shop-filter";
 import styles from "../app-shell.module.css";
 
-const ICONS = { orders: ClipboardList, labeling: Truck, shops: Store } as const;
+const ICONS = {
+  orders: ClipboardList, labeling: Truck, aftersale: LifeBuoy,
+  products: Package, stock: Boxes, fund: Wallet, shops: Store,
+} as const;
 
 interface SideNavProps {
   collapsed: boolean;

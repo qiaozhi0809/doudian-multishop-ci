@@ -1,0 +1,12 @@
+{
+  "code": "100000",
+  "msg": "success",
+  "total": 2,
+  "aggregation_res": {
+    "total_unsettled_amount": "50568"
+  },
+  "data": [
+    "{\"income_amount\": 25800, \"platform_service_fee\": -516, \"unsettled_amount\": 25284, \"outcome_amount\": -516, \"ecom_order_status\": \"已发货\", \"expected_settle_time\": \"订单确认收货或核销21天后结算\", \"settle_period_detail\": \"{\\\"delay_day\\\": 21}\", \"product_id\": \"3811109459833520578\", \"product_name\": \"测试商品 A\", \"sku_detail_text\": \"白色x1\", \"shop_order_no\": \"6900000000000000001\", \"sku_order_no\": \"6900000000000000001-1\", \"collection_subject_name\": \"测试营业执照\"}",
+    "{\"income_amount\": 25800, \"platform_service_fee\": -516, \"unsettled_amount\": 25284, \"outcome_amount\": -516, \"ecom_order_status\": \"已发货\", \"expected_settle_time\": \"订单确认收货或核销21天后结算\", \"settle_period_detail\": \"{\\\"delay_day\\\": 21}\", \"product_id\": \"3811109459833520579\", \"product_name\": \"测试商品 B\", \"sku_detail_text\": \"黑色x1\", \"shop_order_no\": \"6900000000000000002\", \"sku_order_no\": \"6900000000000000002-1\", \"collection_subject_name\": \"测试营业执照\"}"
+  ]
+}

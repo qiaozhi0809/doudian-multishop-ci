@@ -1,0 +1,17 @@
+{
+  "code": "100000",
+  "msg": "success",
+  "total": 2,
+  "data": [
+    {
+      "bill_no": "B0001",
+      "bill_type_text": "技术服务费",
+      "settle_amount": 1234
+    },
+    {
+      "bill_no": "B0002",
+      "bill_type_text": "达人佣金",
+      "status": "已结算"
+    }
+  ]
+}

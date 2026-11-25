@@ -1,6 +1,6 @@
 import sqlalchemy as sa
 
-from app.store import schema
+from app.store import aggregate_schema, schema  # noqa: F401  M5 表注册到同一 metadata
 from app.store.db import make_engine
 from app.store.migrate import upgrade_to_head
 
@@ -8,6 +8,7 @@ TABLES = {
     "shop", "session", "orders", "order_items", "shop_address",
     "ebill_account", "waybill_template", "courier", "audit_log",
     "waybills", "tasks",
+    "aftersale", "product_snapshot", "stock_snapshot", "fund_unsettled", "margin_account",
 }
 
 
