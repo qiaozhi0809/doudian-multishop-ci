@@ -6,6 +6,7 @@ from app.adapter.doudian.errors import TransientError
 from app.adapter.print.protocol import PrintOutcome
 from app.domain.errors import DryRunBlocked, InvalidRequest, NotFound
 from app.domain.print_status import PrintJobStatus
+from app.service.background import TaskAlreadyRunning
 from app.service.events import PRINT_DONE, PRINT_PROGRESS
 from app.service.printing import PrintSummary
 from app.store import shop_store
@@ -221,6 +222,25 @@ async def test_explicit_printer_name_wins(engine, tmp_path, clock):
     await env.service.run_inline([wid], "admin", printer_name="XP-58")
     assert env.component.print_calls[0][0] == "XP-58"
     assert env.latest_jobs([wid])[wid]["printer_name"] == "XP-58"
+
+
+async def test_second_submit_is_rejected_while_batch_running(engine, tmp_path, clock):
+    import asyncio
+
+    from app.service.background import TaskRegistry
+
+    tasks = TaskRegistry()
+    env = PrintEnv(engine, tmp_path, clock, [infos(info(W1))], tasks=tasks)
+    wid = env.add_waybill(env.add_order())
+    gate = asyncio.Event()
+    tasks.spawn("print-jobs", gate.wait())
+    try:
+        with pytest.raises(TaskAlreadyRunning):
+            await env.service.submit([wid], "admin")
+        assert env.latest_jobs([wid]) == {}
+    finally:
+        gate.set()
+        await tasks.shutdown()
 
 
 async def test_status_reports_component_state(engine, tmp_path, clock):

@@ -56,7 +56,7 @@ class FakeComponent:
 
 class PrintEnv:
     def __init__(self, engine, tmp_path, clock, responses=None, *, component=None,
-                 dry_run=False, default_printer="", events=None):
+                 dry_run=False, default_printer="", events=None, tasks=None):
         self.engine = engine
         self.clock = clock
         self.events = events or EventBus()
@@ -68,7 +68,7 @@ class PrintEnv:
         self.component = component or FakeComponent()
         self.service = PrintingService(
             engine, self.runner, self.component, self.events, dry_run=dry_run,
-            default_printer=default_printer, clock=clock)
+            default_printer=default_printer, clock=clock, tasks=tasks)
         with engine.begin() as conn:
             self.shop_id = shop_store.create(conn, "店A", NOW)
         self.sessions.save_login(self.shop_id, LoginResult(

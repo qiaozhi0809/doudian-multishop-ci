@@ -24,7 +24,7 @@ from app.domain.errors import DryRunBlocked, InvalidRequest, NotFound
 from app.domain.models import PrintInfo
 from app.domain.order_status import LocalOrderStatus
 from app.domain.print_status import RESULT_NO_PRINT_DATA, PrintJobStatus
-from app.service.background import TaskRegistry
+from app.service.background import TaskAlreadyRunning, TaskRegistry
 from app.service.events import PRINT_DONE, PRINT_PROGRESS, EventBus
 from app.service.shop_runner import ShopRunner
 from app.store import order_store, print_job_store, waybill_store
@@ -125,6 +125,9 @@ class PrintingService:
     async def submit(
         self, waybill_ids: Sequence[int], actor: str, printer_name: str | None = None
     ) -> PrintStarted:
+        # 打印机是本机资源：同一时刻只跑一个批次，避免多店同时打单抢占（flows 10）
+        if self._tasks.is_running(_TASK_NAME):
+            raise TaskAlreadyRunning("已有打印任务进行中，请稍候")
         targets = self._load(waybill_ids)
         printer = await self._resolve_printer(printer_name)
         jobs = self._create_jobs(targets, printer)
