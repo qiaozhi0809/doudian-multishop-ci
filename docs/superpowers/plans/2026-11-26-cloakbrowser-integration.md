@@ -16,6 +16,7 @@
 - 文件 `*.py` ≤ 400 行；测试文件命名为 `<name>_test.py`。
 - 秘密材料不入库：指纹种子是本地随机数，不进 git（`profiles/` 已在数据目录下，不随仓库分发）。
 - 版本钉死：`pyproject.toml` 中写 `cloakbrowser==0.3.30`，**禁止**使用 `>=`，否则升级到 0.7.x 会变成需要 license key 的 Pro 版且下载 Chromium 156。
+- **禁用一切自动更新**：启动时设 `CLOAKBROWSER_AUTO_UPDATE=false`（库只认小写字面量 `"false"`，`False`/`0`/`no` 均无效），且在 `import cloakbrowser` 之前设置；不得调用 `check_for_update()`；不得让 `uv sync --upgrade` 影响该依赖版本。
 - 每店固定出口：CloakBrowser 启动时必须继续传该店代理，**不得**因为换浏览器而改变出口语义。
 - 不伪造会话级身份：同一店铺的 seed 永远不变；不同店铺的 seed 必须不同。
 
@@ -26,6 +27,7 @@
 - **cloakbrowser 未安装**——导入失败时应落到系统浏览器或给出明确提示，不能让整个登录流程不可用。
 - **代理参数格式**——`playwright_proxy()` 返回 dict，CloakBrowser 的 `proxy` 参数同时接受字符串与 dict，需确保 dict 形式被正确透传。
 - **headless 与窗口尺寸**——CloakBrowser 文档指出有头模式下不要叠 viewport，否则 outerWidth/innerWidth 不自洽。
+- **自动更新被无意开启**——环境变量若写成 `False` / `0` / `no`，库只认小写字面量 `"false"`，两个后台更新线程会照常启动，可能在用户不知情时换掉二进制或包装版本。
 
 ---
 
@@ -390,8 +392,10 @@ git commit -m "feat(browser): 登录通道支持 CloakBrowser"
 **Files:**
 - Modify: `backend/app/service/shop_login.py:28-60`（构造与 `profile` 生成）
 - Modify: `backend/app/wiring.py:112-116`（`login_flow` 构造）
-- Modify: `backend/app/main.py:70-82`（启动时设 `CLOAKBROWSER_CACHE_DIR`）
-- Test: `backend/tests/service/shop_login_flow_test.py`（若已存在则追加）
+- Modify: `backend/app/main.py:70-82`（启动时设 CloakBrowser 环境变量）
+- Modify: `backend/app/shared/cloak.py`（追加 `apply_env`）
+- Test: `backend/tests/service/shop_login_flow_test.py`（新建）
+- Test: `backend/tests/shared/cloak_test.py`（追加 `apply_env` 测试）
 
 **Interfaces:**
 - Consumes: `scan_login(..., use_cloak=...)`（Task 3）、`Settings.use_cloak` / `Settings.cloak_cache_dir`（Task 2）
@@ -416,6 +420,31 @@ def test_flow_accepts_use_cloak_flag():
     assert params["use_cloak"].default is False
 ```
 
+在 `backend/tests/shared/cloak_test.py` 末尾追加（并把 `apply_env` 加入该文件顶部的 import）：
+
+```python
+def test_apply_env_pins_cache_dir_and_disables_auto_update(monkeypatch, tmp_path):
+    import os
+
+    monkeypatch.delenv("CLOAKBROWSER_CACHE_DIR", raising=False)
+    monkeypatch.delenv("CLOAKBROWSER_AUTO_UPDATE", raising=False)
+
+    apply_env(tmp_path)
+
+    assert os.environ["CLOAKBROWSER_CACHE_DIR"] == str(tmp_path)
+    assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "false"
+
+
+def test_apply_env_does_not_override_explicit_values(monkeypatch, tmp_path):
+    import os
+
+    monkeypatch.setenv("CLOAKBROWSER_AUTO_UPDATE", "true")
+
+    apply_env(tmp_path)
+
+    assert os.environ["CLOAKBROWSER_AUTO_UPDATE"] == "true"
+```
+
 - [ ] **Step 2: 跑测试确认失败**
 
 Run: `cd backend && .venv/Scripts/python.exe -m pytest tests/service/shop_login_flow_test.py -q`
@@ -434,13 +463,27 @@ Expected: FAIL — `assert 'use_cloak' in params`
         ),
 ```
 
+`backend/app/shared/cloak.py` 追加：
+
+```python
+def apply_env(cache_dir: Path) -> None:
+    """把 CloakBrowser 的缓存目录锁到项目内，并关闭全部自动更新。
+
+    CLOAKBROWSER_AUTO_UPDATE 必须是小写字面量 "false"：库只在值为 false 时
+    才跳过「二进制更新」和「PyPI 包更新」两个后台检查。必须在 import
+    cloakbrowser 之前调用，否则 import 触发的后台线程已经发出去了。
+    """
+    os.environ.setdefault("CLOAKBROWSER_CACHE_DIR", str(cache_dir))
+    os.environ.setdefault("CLOAKBROWSER_AUTO_UPDATE", "false")
+```
+
 `backend/app/main.py` 的 `lifespan` 开头（`settings.data_dir.mkdir` 之后）加：
 
 ```python
-        os.environ.setdefault("CLOAKBROWSER_CACHE_DIR", str(settings.cloak_cache_dir))
+        apply_env(settings.cloak_cache_dir)
 ```
 
-并在文件顶部补 `import os`（若无）。
+并在 imports 区补 `from app.shared.cloak import apply_env`。
 
 - [ ] **Step 4: 跑全量后端测试**
 
