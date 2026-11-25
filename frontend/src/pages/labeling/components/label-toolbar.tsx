@@ -10,15 +10,23 @@ interface LabelToolbarProps {
   selectedCount: number;
   busy: boolean;
   onPreview: (mode: ExecMode) => void;
+  onPrint: () => void;
+  printDisabled: boolean;
+  printReason: string | null;
+  printing: boolean;
 }
 
-/** 阶段切换 + 三个写操作入口；没有勾选时按钮禁用并保持可见（ui-guidelines 第 7 节）。 */
+/** 阶段切换 + 写操作入口；没有勾选 / 组件未启动时按钮禁用并保持可见（ui-guidelines 第 7 节）。 */
 export function LabelToolbar({
   stage,
   onStageChange,
   selectedCount,
   busy,
   onPreview,
+  onPrint,
+  printDisabled,
+  printReason,
+  printing,
 }: LabelToolbarProps) {
   const none = selectedCount === 0 || busy;
   return (
@@ -40,6 +48,15 @@ export function LabelToolbar({
           disabled={none}
         >
           打单并发货
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={onPrint}
+          disabled={printDisabled}
+          loading={printing}
+          title={printReason ?? undefined}
+        >
+          打印面单
         </Button>
         <Button
           variant="secondary"

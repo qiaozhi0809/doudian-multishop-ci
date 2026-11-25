@@ -57,4 +57,8 @@ export const queryKeys = {
     ["fund", "unsettled", shopIds, page] as const,
   fundMargin: (shopIds: number[]) => ["fund", "margin", shopIds] as const,
   fundBills: (shopIds: number[], days: number) => ["fund", "bills", shopIds, days] as const,
+  // ---- M3 打印 ----
+  printStatus: () => ["printStatus"] as const,
+  printWaybillsRoot: () => ["printWaybills"] as const,
+  printWaybills: (waybillIds: number[]) => ["printWaybills", waybillIds] as const,
 };

@@ -184,6 +184,8 @@ CREATE TABLE print_job (
   finished_at   TEXT
 );
 CREATE INDEX idx_print_job_waybill ON print_job(waybill_id, created_at DESC);
+-- M3 语义：attempts = 组件尝试次数（失败重试一次，最多 2）；
+-- result_code 取值见 domain/print_status.py（no_print_data / component_failed / component_unavailable …）
 
 -- ⑥ 任务队列
 CREATE TABLE tasks (

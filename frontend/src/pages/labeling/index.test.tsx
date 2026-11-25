@@ -31,6 +31,56 @@ const row = (id: number, over: Record<string, unknown> = {}) => ({
 const page = (items: unknown[], total = items.length) =>
   jsonResponse({ items, total, page: 1, page_size: 50 });
 
+const printStatus = (available = true) => ({
+  available,
+  printers: available ? ["Printer A"] : [],
+  default_printer: available ? "Printer A" : null,
+  error: available ? null : "请先启动抖店官方打印组件",
+  checked_at: "2026-11-25T00:00:00Z",
+});
+
+/** 打印组件状态在每个打单台页面都会探测一次，所有用例都要登记。 */
+const printRoutes = (available = true) => ({
+  "GET /api/print/status": jsonResponse(printStatus(available)),
+});
+
+const labeledRow = (id: number, over: Record<string, unknown> = {}) =>
+  row(id, {
+    status: "label_obtained",
+    waybill: {
+      id: id * 10,
+      courier_code: "zhongtong",
+      waybill_no: `7920000000000${id}`,
+      status: "active",
+      seq: 1,
+      obtained_at: "2026-11-20T02:00:00Z",
+      template_code: "T1",
+    },
+    ...over,
+  });
+
+const printRow = (waybillId: number, job: Record<string, unknown> | null) => ({
+  waybill_id: waybillId,
+  waybill_no: `7920000000000${waybillId / 10}`,
+  waybill_status: "active",
+  has_print_data: true,
+  job:
+    job === null
+      ? null
+      : {
+          id: 100,
+          waybill_id: waybillId,
+          printer_name: "Printer A",
+          status: "queued",
+          result_code: null,
+          result_detail: null,
+          attempts: 0,
+          created_at: "2026-11-25T00:00:00Z",
+          finished_at: null,
+          ...job,
+        },
+});
+
 const preview = (over: Record<string, unknown> = {}) => ({
   preview_id: "p1",
   mode: "obtain",
@@ -80,13 +130,14 @@ afterEach(() => {
 
 describe("打单台", () => {
   it("还没有店铺时引导去店铺页", async () => {
-    mockFetch({ "GET /api/shops": jsonResponse([]) });
+    mockFetch({ ...printRoutes(), "GET /api/shops": jsonResponse([]) });
     renderPage();
     expect(await screen.findByText("还没有店铺")).toBeInTheDocument();
   });
 
   it("显示订单行；阻断行不可勾选并显示原因", async () => {
     mockFetch({
+      ...printRoutes(),
       "GET /api/shops": jsonResponse(shops),
       "GET /api/labels/pool": page([
         row(1),
@@ -103,6 +154,7 @@ describe("打单台", () => {
 
   it("勾选后打开预览：按店列出快递与账户，确认按钮需要按住", async () => {
     const fetchMock = mockFetch({
+      ...printRoutes(),
       "GET /api/shops": jsonResponse(shops),
       "GET /api/labels/pool": page([row(1)]),
       "POST /api/labels/preview": jsonResponse(preview()),
@@ -121,6 +173,7 @@ describe("打单台", () => {
 
   it("预览列出被跳过的订单与整店错误", async () => {
     mockFetch({
+      ...printRoutes(),
       "GET /api/shops": jsonResponse(shops),
       "GET /api/labels/pool": page([row(1), row(2, { blocked_reason: "缺少合单 ID（combine_id）" })]),
       "POST /api/labels/preview": jsonResponse(
@@ -143,6 +196,7 @@ describe("打单台", () => {
 
   it("演练模式：确认按钮禁用并标注", async () => {
     mockFetch({
+      ...printRoutes(),
       "GET /api/shops": jsonResponse(shops),
       "GET /api/labels/pool": page([row(1)]),
       "POST /api/labels/preview": jsonResponse(preview({ dry_run: true })),
@@ -157,6 +211,7 @@ describe("打单台", () => {
 
   it("阶段切换写入 URL 并请求对应阶段", async () => {
     const fetchMock = mockFetch({
+      ...printRoutes(),
       "GET /api/shops": jsonResponse(shops),
       "GET /api/labels/pool": page([]),
     });
@@ -168,5 +223,53 @@ describe("打单台", () => {
         "/api/labels/pool?stage=labeled&page=1&page_size=50",
       ),
     );
+  });
+
+  it("已取号阶段：勾选后按面单提交打印任务", async () => {
+    const fetchMock = mockFetch({
+      ...printRoutes(),
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/labels/pool": page([labeledRow(1)]),
+      "GET /api/print/waybills": jsonResponse({ items: [printRow(10, null)] }),
+      "POST /api/print/jobs": jsonResponse({ job_ids: [100], waybill_ids: [10] }, 202),
+    });
+    renderPage("/labeling?stage=labeled");
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText("选择订单 69000001"));
+    const button = screen.getByRole("button", { name: "打印面单" });
+    await waitFor(() => expect(button).toBeEnabled());
+    await user.click(button);
+    const call = fetchMock.mock.calls.find(([u]) => String(u) === "/api/print/jobs");
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ waybill_ids: [10] });
+  });
+
+  it("组件未启动：打印按钮置灰并提示先启动组件", async () => {
+    mockFetch({
+      ...printRoutes(false),
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/labels/pool": page([labeledRow(1)]),
+      "GET /api/print/waybills": jsonResponse({ items: [printRow(10, null)] }),
+    });
+    renderPage("/labeling?stage=labeled");
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText("选择订单 69000001"));
+    const button = screen.getByRole("button", { name: "打印面单" });
+    await waitFor(() => expect(button).toHaveAttribute("title", "请先启动抖店官方打印组件"));
+    expect(button).toBeDisabled();
+    expect(await screen.findByText(/打印组件未启动/)).toBeInTheDocument();
+  });
+
+  it("打印任务状态显示在面单列与汇总里", async () => {
+    mockFetch({
+      ...printRoutes(),
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/labels/pool": page([labeledRow(1)]),
+      "GET /api/print/waybills": jsonResponse({
+        items: [printRow(10, { status: "queued", attempts: 0 })],
+      }),
+    });
+    renderPage("/labeling?stage=labeled");
+    expect(await screen.findByText("打印中")).toBeInTheDocument();
+    expect(await screen.findByText("打印中：剩余 1 张面单")).toBeInTheDocument();
   });
 });

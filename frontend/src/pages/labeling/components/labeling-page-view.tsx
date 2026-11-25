@@ -4,17 +4,19 @@ import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
 import { PAGE_SIZE, pageCount } from "../logic/label-columns";
+import { componentNotice, printGate, selectedWaybillIds } from "../logic/print-status";
 import styles from "../labeling-page.module.css";
 import type { LabelPage } from "../hooks/use-label-page";
 import { LabelProgress } from "./label-progress";
 import { LabelTable } from "./label-table";
 import { LabelToolbar } from "./label-toolbar";
 import { PreviewDialog } from "./preview-dialog";
+import { PrintNotice } from "./print-notice";
 import { ReceiverDrawer } from "./receiver-drawer";
 
-/** 打单台：店铺就绪判断 → 工具栏 → 进度 → 表格 / 分页 → 预览与收件人。 */
+/** 打单台：店铺就绪判断 → 工具栏 → 打印状态 → 进度 → 表格 / 分页 → 预览与收件人。 */
 export function LabelingPageView({ page }: { page: LabelPage }) {
-  const { pool, actions, receiver } = page;
+  const { pool, actions, receiver, print } = page;
   if (page.shopsState === "loading") return <Skeleton label="正在读取店铺" lines={4} />;
   if (page.shopsState === "error") {
     return (
@@ -29,6 +31,13 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
   if (page.shopsState === "empty") return <EmptyNoShops />;
 
   const data = pool.query.data;
+  const gate = printGate({
+    stage: pool.stage,
+    selectedCount: pool.selected.size,
+    componentAvailable: print.status ? print.status.available : null,
+    busy: actions.previewBusy || actions.executeBusy || print.printing,
+  });
+  const waybillIds = selectedWaybillIds(pool.selected, pool.rows);
   return (
     <div className={styles.page}>
       <LabelToolbar
@@ -37,6 +46,16 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
         selectedCount={pool.selected.size}
         busy={actions.previewBusy || actions.executeBusy}
         onPreview={(mode) => actions.openPreview(mode, [...pool.selected])}
+        onPrint={() => print.print(waybillIds)}
+        printDisabled={gate.disabled}
+        printReason={gate.reason}
+        printing={print.printing}
+      />
+      <PrintNotice
+        notice={componentNotice(print.status)}
+        summary={print.summary}
+        error={print.error}
+        onDismissError={print.clearError}
       />
       {actions.error && (
         <Alert tone="danger" title={actions.error} onDismiss={actions.clearError} />
@@ -63,6 +82,7 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
             onToggle={pool.toggle}
             onToggleAll={pool.toggleAll}
             onReceiver={(id) => void receiver.open(id)}
+            printRows={print.rowsByWaybill}
           />
           <div className={styles.pager}>
             <span>共 {data.total} 单，每页 {PAGE_SIZE} 单</span>

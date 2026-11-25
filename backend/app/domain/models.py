@@ -145,3 +145,19 @@ class ReceiverInfo:
     detail: str | None
     expire_at: str | None
     verify_type: str | None
+
+
+@dataclass(frozen=True)
+class PrintInfo:
+    """一张面单的打印数据（取号响应或 batchGetPrintInfos 补打，flows 10 节）。
+
+    `params` 对应组件 documents.standard.params（取自 OAuth）；取号响应没有 OAuth。
+    """
+
+    tracking_no: str
+    print_data: str | None
+    sign: str | None
+    template_url: str | None
+    params: str | None
+    custom_print_data: str | None
+    custom_template_url: str | None

@@ -8,6 +8,8 @@ SHOP_LOGIN_FAILED = "shop_login_failed"
 SYNC_PROGRESS = "sync_progress"
 LABEL_PROGRESS = "label_progress"  # 逐单执行结果（成功 / 失败 / 待核实 / 跳过）
 LABEL_DONE = "label_done"  # 一个预览的执行结束汇总
+PRINT_PROGRESS = "print_progress"  # 逐单打印结果（成功 / 失败 / 转手动补打）
+PRINT_DONE = "print_done"  # 一个打印批次的结束汇总
 
 DEFAULT_QUEUE_SIZE = 100
 

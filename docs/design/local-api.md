@@ -38,9 +38,10 @@
 | | `POST /api/labels/preview` · `POST /api/labels/execute` | 两步提交取号（打面单）；预览响应按店列出 `courier_code` / `template_code` / `ebill_id` / `net_code` / `ready_order_ids`，以及逐单 `blocked` 与整店 `shop_errors` |
 | | `POST /api/labels/fetch-and-ship/preview` · `POST /api/labels/fetch-and-ship/execute` | 两步提交「打单并发货」（一体接口） |
 | | `POST /api/labels/void/preview` · `POST /api/labels/void/execute` | 两步提交作废；预览列出待作废面单 |
-| 打印 | `GET /api/print/status` | 打印组件是否在线 + 打印机列表 |
-| | `POST /api/print/jobs` | 提交打印批次 |
-| | `GET /api/print/jobs/{id}` | 打印回执 |
+| 打印 | `GET /api/print/status` | 打印组件探测（`getPrinters`，2 秒超时）+ 打印机列表；组件未启动时前端打印按钮置灰 |
+| | `POST /api/print/jobs {waybill_ids, printer_name?}` | 提交打印批次（202）；每张面单一条 `print_job`；无打印数据的面单转手动补打提示 |
+| | `GET /api/print/jobs/{id}` | 单条打印回执：`queued` / `success` / `failed` + `result_code` / 尝试次数 / 回执详情 |
+| | `GET /api/print/waybills?waybill_ids=1,2` | 面单可打印信息（`has_print_data`）与最近一次打印任务（打单台状态显示） |
 | 发货 | `POST /api/shipping/precheck` | 发货前检查（`sendcheck`） |
 | | `POST /api/shipping/preview` · `POST /api/shipping/execute` | 两步提交发货 |
 | 备注 | `POST /api/remarks/preview` · `POST /api/remarks/execute` | 两步提交批量备注 |

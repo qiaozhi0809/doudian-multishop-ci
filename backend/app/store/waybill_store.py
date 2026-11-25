@@ -76,5 +76,22 @@ def mark_void(conn: sa.Connection, waybill_id: int, now: str) -> None:
     )
 
 
+def mark_printed(conn: sa.Connection, waybill_id: int, now: str) -> None:
+    conn.execute(
+        sa.update(waybills).where(waybills.c.id == waybill_id)
+        .values(status="printed", printed_at=now)
+    )
+
+
+def set_print_data(
+    conn: sa.Connection, waybill_id: int, print_data: str, sign: str | None
+) -> None:
+    """补打接口取回的打印数据落库：恢复面单从此可本地打印（M3）。"""
+    conn.execute(
+        sa.update(waybills).where(waybills.c.id == waybill_id)
+        .values(print_data=print_data, sign=sign)
+    )
+
+
 def payload_json(data: Mapping[str, Any]) -> str:
     return json.dumps(data, ensure_ascii=False)

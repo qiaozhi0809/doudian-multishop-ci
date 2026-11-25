@@ -49,6 +49,7 @@
 | API-26 | P2 | 商品金额与流量字段 | 按金额的商品排行、曝光 / 点击 | 订单商品行的单价 / 分摊金额字段；`listTractionItems` 返回字段 | | ⏳ |
 | API-27 | P2 | 抖店罗盘经营概览（待抓取） | 平台官方 GMV / 退款 / 访客，作为仪表盘参考值（dashboard.md 第 5 节） | 抓取 `compass.jinritemai.com` 经营概览接口；确认现有会话能否访问、是否需签名 | | ⏳ |
 | API-28 | P1 | 识别商家不能自行发货的订单 | 「源头好货」等供应商代发订单在「待发货」tab 里，但商家不能取号 / 发货（按钮禁用，提示「供应商发货后自动更新订单状态」）。混进取号批次会被平台拒绝 | 确认判别字段：样本中该单 `operation_actions` 为空数组（自发订单含发货类动作），或订单 / 商品行的「源头好货」「由供应商发货」标记；写入 `docs/api/read.md`，订单同步时标记为不可取号（backend 5.4 / 5.5 预检） | | ⏳ |
+| API-29 | P1 | 补打接口 `batchGetPrintInfos` 的响应结构 | M3 打印用它在打印前补齐 `templateURL` / `OAuth`，并给恢复面单补 `print_data`（flows 10、write.md A.2.10）；目前只有请求体，响应结构靠容错解析 | 在出单机用一张已取号面单调一次，记录完整响应；确认 `print_data` / `sign` / `templateURL` / `OAuth` 的字段名与包裹层级，以及模板为自定义时是否在 `custom_*` 字段 | | 🔶 M3 已按常见包裹形态容错（`adapter/doudian/print_parsers.py`），解析为空时走手动补打，不猜测成功 |
 
 ---
 
@@ -96,7 +97,7 @@
 |---|---|---|---|---|---|
 | ENG-01 | P0 | 本地 API 详细契约 | 在 [design/local-api.md](design/local-api.md) 草案基础上，给每个接口写 pydantic 请求/响应 schema 与错误码 | | 🔶 打单台与解密接口 schema 已落地（`api/label_schemas.py` / `api/order_schemas.py`，OpenAPI 随代码生成）；其余分组待补 |
 | ENG-02 | P0 | 抖店错误码分类表 | 把已见过的 `code` 归入「会话失效 / 业务拒绝 / 风控拦截 / 瞬时故障 / 程序错误」五类，落到 `adapter/doudian/error_codes.py` 的设计说明 | | 🔶 第 8 节已有错误码表（10008 / 10001010A / 310011 / 602500705 / 100000）；待按五类异常补全并落到 `error_codes.py` 设计 |
-| ENG-03 | P1 | 打印路径决策 | 依据 API-07 的结论，在 design/flows.md 第 10 节的路径中定下 MVP 默认路径 | | ⏳ |
+| ENG-03 | P1 | 打印路径决策 | 依据 API-07 的结论，在 design/flows.md 第 10 节的路径中定下 MVP 默认路径 | | ✅ P1 直连组件为默认路径，M3 已实现（`adapter/print` + `service/printing` + `api/print`）；P3 手动补打为保底 |
 | ENG-04 | P1 | 出单机部署与打包 | 打包方式、首次安装步骤、Edge / 打印组件依赖检查、升级方式；对应验收标准第 7 条 | | ⏳ |
 | ENG-05 | P1 | CI 守门脚本 | engineering-rules 第十节 7 个脚本全部「待建」，按其列出的顺序落地 | | ⏳ |
 | ENG-06 | P2 | 备份与恢复 | SQLite 每日快照的保留策略、恢复演练步骤 | | ⏳ |
