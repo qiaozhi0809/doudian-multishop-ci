@@ -54,9 +54,10 @@ export function ShopPageView({ page }: { page: ShopPage }) {
         open={dialogs.addOpen}
         onOpenChange={dialogs.setAddOpen}
         pending={actions.pending.includes("add")}
+        shops={page.allShops}
         onSubmit={async (input) => {
           const r = await actions.addShop(input);
-          if (r.ok) dialogs.setEgressShopId(r.shop.id);
+          if (r.ok && !input.egress) dialogs.setEgressShopId(r.shop.id);
           return r.ok ? { ok: true } : r;
         }}
       />

@@ -3,12 +3,14 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.adapter.doudian.errors import EgressUnavailable
+from app.domain.egress_rules import proxy_identity
 from app.domain.errors import NotFound
-from app.service.egress import EgressConflict, EgressNotReady, EgressService
+from app.service.egress import EgressConflict, EgressNotReady, EgressService, ProxyPoolInUse
 from app.service.events import EventBus
+from app.service.shop_admin import REENABLE_CONFLICT, ShopAdminService
 from app.shared.logging_setup import configure_logging
 from app.shared.secret_box import DevKeyBox
-from app.store import shop_store
+from app.store import proxy_pool_store, shop_store
 
 T0 = datetime(2026, 12, 1, 0, 0, 0, tzinfo=UTC)
 # 假账号密码要足够长：太短的子串（如 "u1"）可能偶然出现在随机 base64 密文里
@@ -114,6 +116,103 @@ async def test_change_proxy_resets_and_requires_relogin(env):
     event, data = await anext(sub)
     assert event == "shop_status_changed"
     assert data["shop_id"] == sid and data["status"] == "needs_login"
+
+
+# ---- 从池选代理 ----
+
+def _pool_item(env, url=URL_A, expires_at=None) -> int:
+    with env.engine.begin() as conn:
+        return proxy_pool_store.upsert(
+            conn, identity=proxy_identity(url), proxy_url=env.box.encrypt(url.encode()),
+            proxy_display="203.0.113.5:8000", expires_at=expires_at,
+            now="2026-11-25T00:00:00Z")
+
+
+def test_bind_pool_item(env):
+    sid, pid = env.shop(), _pool_item(env)
+    env.svc.set_egress(sid, "proxy", pool_id=pid)
+    row = env.row(sid)
+    assert row["proxy_pool_id"] == pid and row["egress_status"] == "unchecked"
+    assert env.svc.proxy_for(sid) == URL_A
+
+
+def test_bind_item_used_by_enabled_shop_conflicts(env):
+    a, b, pid = env.shop("店A"), env.shop("店B"), _pool_item(env)
+    env.svc.set_egress(a, "proxy", pool_id=pid)
+    with pytest.raises(ProxyPoolInUse, match="店A"):
+        env.svc.set_egress(b, "proxy", pool_id=pid)
+    assert env.row(b)["proxy_pool_id"] is None
+    env.svc.set_egress(a, "proxy", pool_id=pid)  # 自己重绑不算冲突
+
+
+def test_bind_item_used_only_by_disabled_shop_ok(env):
+    a, b, pid = env.shop("店A"), env.shop("店B"), _pool_item(env)
+    env.svc.set_egress(a, "proxy", pool_id=pid)
+    with env.engine.begin() as conn:
+        shop_store.set_status(conn, a, "disabled", "2026-11-25T00:00:00Z")
+    env.svc.set_egress(b, "proxy", pool_id=pid)
+    assert env.row(b)["proxy_pool_id"] == pid
+
+
+def test_bind_expired_item_rejected(env):
+    sid, pid = env.shop(), _pool_item(env, expires_at="2026-11-30")
+    with pytest.raises(ValueError, match="代理已到期，请续费或更换"):
+        env.svc.set_egress(sid, "proxy", pool_id=pid)
+    assert env.row(sid)["proxy_pool_id"] is None
+
+
+def test_bind_missing_item_not_found(env):
+    with pytest.raises(NotFound):
+        env.svc.set_egress(env.shop(), "proxy", pool_id=999)
+
+
+def test_more_than_one_entry_rejected(env):
+    sid, pid = env.shop(), _pool_item(env)
+    with pytest.raises(ValueError):
+        env.svc.set_egress(sid, "proxy", pool_id=pid, paste=f"203.0.113.5|8000|{USER_A}|{PW}")
+    with pytest.raises(ValueError):
+        env.svc.set_egress(sid, "proxy", pool_id=pid, proxy_url=URL_A)
+    with pytest.raises(ValueError):
+        env.svc.set_egress(sid, "direct", pool_id=pid)
+
+
+def test_paste_existing_proxy_reuses_item_and_updates_expiry(env):
+    sid, pid = env.shop(), _pool_item(env, expires_at="2027-01-01")
+    env.svc.set_egress(sid, "proxy", paste=f"203.0.113.5|8000|{USER_A}|{PW}|2027-02-02")
+    row = env.row(sid)
+    assert row["proxy_pool_id"] == pid and row["proxy_expires_at"] == "2027-02-02"
+    with env.engine.connect() as conn:
+        assert len(proxy_pool_store.list_with_usage(conn)) == 1
+
+
+def test_paste_proxy_used_by_other_shop_conflicts(env):
+    a, b = env.shop("店A"), env.shop("店B")
+    env.svc.set_egress(a, "proxy", proxy_url=URL_A)
+    with pytest.raises(ProxyPoolInUse, match="店A"):
+        env.svc.set_egress(b, "proxy", proxy_url=URL_A)
+
+
+def test_race_on_same_item_maps_to_conflict(env, monkeypatch):
+    a, b, pid = env.shop("店A"), env.shop("店B"), _pool_item(env)
+    env.svc.set_egress(a, "proxy", pool_id=pid)
+    # 模拟「预检之后才被抢先绑定」：让预检看不到占用，写入时撞 uq_shop_pool
+    monkeypatch.setattr(EgressService, "_ensure_pool_free", staticmethod(lambda *a: None))
+    with pytest.raises(ProxyPoolInUse):
+        env.svc.set_egress(b, "proxy", pool_id=pid)
+    assert env.row(b)["proxy_pool_id"] is None
+
+
+def test_reenable_when_item_taken_says_proxy_in_use(env):
+    a, b, pid = env.shop("店A"), env.shop("店B"), _pool_item(env)
+    env.svc.set_egress(a, "proxy", pool_id=pid)
+    with env.engine.begin() as conn:
+        shop_store.set_status(conn, a, "disabled", "2026-11-25T00:00:00Z")
+    env.svc.set_egress(b, "proxy", pool_id=pid)
+    admin = ShopAdminService(env.engine, env.events, env.svc, clock=lambda: env.now)
+    with pytest.raises(EgressConflict, match="代理已被占用") as ei:
+        admin.update(a, enabled=True)
+    assert str(ei.value) == REENABLE_CONFLICT
+    assert env.row(a)["status"] == "disabled"
 
 
 # ---- 出口检查 ----
@@ -246,7 +345,7 @@ async def test_proxy_mode_without_url_never_probes_direct(env):
     sid = await _ready_shop(env)
     env.fetch_calls.clear()
     with env.engine.begin() as conn:  # 模拟数据异常或手工改库
-        shop_store.set_egress(conn, sid, "2026-12-01T00:00:00Z", proxy_url=None)
+        shop_store.set_egress(conn, sid, "2026-12-01T00:00:00Z", proxy_pool_id=None)
     env.now += timedelta(minutes=11)
     for call in (env.svc.check(sid), env.svc.ensure_ready(sid)):
         with pytest.raises(EgressNotReady, match="代理地址缺失"):

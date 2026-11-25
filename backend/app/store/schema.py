@@ -26,17 +26,16 @@ shop = sa.Table(
     sa.Column("channel", sa.Text, nullable=False, server_default="protocol"),
     sa.Column("status", sa.Text, nullable=False, server_default="needs_login"),
     sa.Column("egress_mode", sa.Text),
-    sa.Column("proxy_url", sa.LargeBinary),
-    sa.Column("proxy_display", sa.Text),
     sa.Column("egress_ip", sa.Text),
     sa.Column("egress_status", sa.Text, nullable=False, server_default="unchecked"),
     sa.Column("egress_checked_at", _NOW),
     sa.Column("egress_ip_pending", sa.Text),
-    sa.Column("proxy_expires_at", _NOW),
     sa.Column("paused_reason", sa.Text),
     sa.Column("paused_at", _NOW),
     sa.Column("created_at", _NOW, nullable=False),
     sa.Column("updated_at", _NOW, nullable=False),
+    # 迁移 0008：代理信息只存在 proxy_pool，shop 只记引用
+    sa.Column("proxy_pool_id", sa.Integer, sa.ForeignKey("proxy_pool.id")),
 )
 sa.Index(
     "uq_shop_direct",
@@ -49,6 +48,29 @@ sa.Index(
     shop.c.egress_ip,
     unique=True,
     sqlite_where=sa.text("egress_ip IS NOT NULL AND status != 'disabled'"),
+)
+# 一个池项同时只给一家启用店铺用；停用店铺不占位
+sa.Index(
+    "uq_shop_pool",
+    shop.c.proxy_pool_id,
+    unique=True,
+    sqlite_where=sa.text("proxy_pool_id IS NOT NULL AND status != 'disabled'"),
+)
+
+# ---- 代理池（proxy-pool 设计 1.1）：账号密码只以 SecretBox 密文存在 proxy_url ----
+
+proxy_pool = sa.Table(
+    "proxy_pool",
+    metadata,
+    _id(),
+    sa.Column("identity", sa.Text, nullable=False, unique=True),
+    sa.Column("proxy_url", sa.LargeBinary, nullable=False),
+    sa.Column("proxy_display", sa.Text, nullable=False),
+    sa.Column("expires_at", sa.Text),  # YYYY-MM-DD，空表示不限
+    sa.Column("last_checked_at", _NOW),
+    sa.Column("last_check_ip", sa.Text),
+    sa.Column("created_at", _NOW, nullable=False),
+    sa.Column("updated_at", _NOW, nullable=False),
 )
 
 session = sa.Table(

@@ -11,6 +11,7 @@ import DashboardPage from "@/pages/dashboard";
 import FundPage from "@/pages/fund";
 import LabelingPage from "@/pages/labeling";
 import OrderPage from "@/pages/order";
+import ProxyPoolPage from "@/pages/proxy-pool";
 import ReconcilePage from "@/pages/reconcile";
 import ShopPage from "@/pages/shop";
 import StockPage from "@/pages/stock";
@@ -46,6 +47,7 @@ function AppRoutes() {
           <Route path="/stock" element={<StockPage />} />
           <Route path="/fund" element={<FundPage />} />
           <Route path="/shops" element={<ShopPage />} />
+          <Route path="/proxy-pool" element={<ProxyPoolPage />} />
         </Route>
       </Route>
     </Routes>

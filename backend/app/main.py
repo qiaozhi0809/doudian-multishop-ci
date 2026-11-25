@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 
+import structlog
 from argon2 import PasswordHasher
 from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
@@ -24,6 +25,7 @@ from app.api import fund as fund_api
 from app.api import label as label_api
 from app.api import order as order_api
 from app.api import print as print_api
+from app.api import proxy_pool as proxy_pool_api
 from app.api import reconcile as reconcile_api
 from app.api import shipping as shipping_api
 from app.api import shop as shop_api
@@ -33,7 +35,7 @@ from app.api.deps import require_admin
 from app.api.errors import envelope, install_error_handlers
 from app.api.host_guard import HostGuard, allowed_hosts
 from app.config import Settings
-from app.service.egress_probe import FetchIp
+from app.service.egress_probe import FetchIp, Probe
 from app.service.periodic import (
     ORDER_SYNC_INTERVAL_S,
     PROBE_INTERVAL_S,
@@ -48,9 +50,10 @@ from app.service.shop_runner import ClientFactory
 from app.shared.version import APP_VERSION
 from app.store import task_store
 from app.store.db import DB_FILE_NAME, make_engine
-from app.store.migrate import upgrade_to_head
+from app.store.migrate import backup_before_upgrade, upgrade_to_head
 from app.wiring import Overrides, build_services
 
+log = structlog.get_logger()
 ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -62,15 +65,19 @@ def create_app(
     settings: Settings | None = None, *, clock: Callable[[], datetime] | None = None,
     hasher: PasswordHasher | None = None, client_factory: ClientFactory | None = None,
     fetch_ip: FetchIp | None = None, scan: ScanFn | None = None,
-    print_component: PrintComponent | None = None,
+    print_component: PrintComponent | None = None, probe: Probe | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
-    overrides = Overrides(clock, hasher, client_factory, fetch_ip, scan, print_component)
+    overrides = Overrides(clock, hasher, client_factory, fetch_ip, scan, print_component, probe)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.data_dir.mkdir(parents=True, exist_ok=True)
         db_path = settings.data_dir / DB_FILE_NAME
+        backup = backup_before_upgrade(
+            db_path, settings.backups_dir, (overrides.clock or _utc_now)())
+        if backup is not None:
+            log.info("db.pre_upgrade_backup", file=backup.name)
         upgrade_to_head(db_path)
         engine = make_engine(db_path)
         now_iso = (overrides.clock or _utc_now)().strftime(ISO_FMT)
@@ -78,6 +85,7 @@ def create_app(
             task_store.recover_after_restart(conn, now_iso)
         for name, service in build_services(settings, engine, overrides).items():
             setattr(app.state, name, service)
+        app.state.proxy_pool.rehash_legacy()  # 补算迁移留下的 legacy: identity
 
         stop = asyncio.Event()
         runner, order_sync = app.state.runner, app.state.order_sync
@@ -120,7 +128,7 @@ def create_app(
         return Health(status="ok")
 
     for module in (
-        auth_api, shop_api, order_api, label_api, print_api, event_api,
+        auth_api, shop_api, proxy_pool_api, order_api, label_api, print_api, event_api,
         aftersale_api, catalog_api, fund_api, shipping_api, reconcile_api,
         backup_api, system_api,
     ):

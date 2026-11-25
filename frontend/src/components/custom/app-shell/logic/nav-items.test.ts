@@ -5,7 +5,7 @@ describe("导航分组（frontend.md 1.1）", () => {
     expect(
       NAV_SECTIONS.map((section) => (section.kind === "link" ? section.item.label : section.label)),
     ).toEqual(["概览", "订单", "商品", "资金"]);
-    expect(FOOTER_NAV.map((item) => item.label)).toEqual(["店铺管理"]);
+    expect(FOOTER_NAV.map((item) => item.label)).toEqual(["店铺管理", "代理池"]);
   });
 
   it("订单组按流水线排列：全部订单 → 打单发货 → 售后处理 → 发货异常", () => {
@@ -35,6 +35,7 @@ describe("导航分组（frontend.md 1.1）", () => {
     expect(pageTitle("/fund")).toBe("结算与保证金");
     expect(pageTitle("/shops")).toBe("店铺管理");
     expect(pageTitle("/shops/1")).toBe("店铺管理");
+    expect(pageTitle("/proxy-pool")).toBe("代理池");
     expect(pageTitle("/unknown")).toBe("");
   });
 });

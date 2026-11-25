@@ -14,6 +14,7 @@ from app.adapter.doudian.pacer import ShopPacer
 from app.adapter.doudian.transport import TransportResponse
 from app.config import Settings
 from app.main import create_app
+from app.service.egress_probe import ProbeResult
 from tests.conftest import ADMIN_PASSWORD, ADMIN_USER, FAST_HASHER
 from tests.fakes import ok
 from tests.service.print_support import FakeComponent
@@ -112,6 +113,10 @@ def api(tmp_path, clock):
     async def fetch_ip(proxy):
         return env.ips.get(proxy)
 
+    async def probe(proxy):
+        ip = env.ips.get(proxy)
+        return ProbeResult(ip, None if ip else "network")
+
     async def scan(profile_dir, channel, proxy, timeout_s):
         env.scan_calls.append((profile_dir, channel, proxy, timeout_s))
         return await env.scan_impl(profile_dir, channel, proxy, timeout_s)
@@ -121,7 +126,7 @@ def api(tmp_path, clock):
         Settings(data_dir=tmp_path / "data", frontend_dist=tmp_path / "no-dist"),
         clock=clock, hasher=FAST_HASHER,
         client_factory=factory, fetch_ip=fetch_ip, scan=scan,
-        print_component=print_component,
+        print_component=print_component, probe=probe,
     )
     with TestClient(app, base_url="http://127.0.0.1:8787") as client:
         client.post("/api/auth/setup", json={"username": ADMIN_USER, "password": ADMIN_PASSWORD})

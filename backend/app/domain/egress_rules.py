@@ -1,8 +1,13 @@
-"""每店固定出口的纯规则（backend 5.17）：代理 URL 校验、代理商格式解析、出口判定、到期状态。"""
+"""每店固定出口的纯规则（backend 5.17）。
 
+代理 URL 校验、代理商格式解析、归一化（代理池去重键）、出口判定、到期状态。
+"""
+
+import hashlib
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Literal
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 from app.shared.time_bj import BEIJING
 
@@ -31,12 +36,25 @@ def validate_proxy_url(url: str) -> list[str]:
     return errors
 
 
+_HOST_FORBIDDEN = frozenset("@/?#:[]")
+
+
+def validate_proxy_host(host: str) -> None:
+    """主机只允许域名或 IPv4：含 `@ / ? # : [ ]` 或空白即拒绝（IPv6 暂不支持）。
+
+    否则 urlparse 会按最后一个 `@` 切分，把主机里的片段并进账号密码。
+    """
+    if not host or any(c in _HOST_FORBIDDEN or c.isspace() for c in host):
+        raise ValueError("代理主机格式不正确")
+
+
 def parse_provider_line(line: str) -> tuple[str, str]:
     """`IP|端口|账号|密码|到期日` → (`http://账号:密码@IP:端口`, 到期日 ISO 日期)。"""
     parts = [p.strip() for p in line.strip().split("|")]
     if len(parts) != _PROVIDER_FIELDS or not all(parts):
         raise ValueError("代理商格式应为 IP|端口|账号|密码|到期日")
     host, port, user, password, expires = parts
+    validate_proxy_host(host)
     if not port.isdigit():
         raise ValueError("端口必须是数字")
     try:
@@ -54,6 +72,42 @@ def display_proxy(url: str) -> str:
     """只显示 主机:端口，用于界面与日志。"""
     u = urlparse(url)
     return f"{u.hostname}:{u.port}"
+
+
+@dataclass(frozen=True)
+class ProxyParts:
+    """拆开的代理地址；账号密码为解码后的原文。"""
+
+    scheme: str
+    host: str
+    port: int
+    username: str
+    password: str
+
+
+def split_proxy_url(url: str) -> ProxyParts:
+    """URL → 各部分（账号密码已 unquote）。调用方应先用 validate_proxy_url 校验。"""
+    u = urlparse(url)
+    return ProxyParts(
+        scheme=u.scheme, host=u.hostname or "", port=u.port or 0,
+        username=unquote(u.username or ""), password=unquote(u.password or ""),
+    )
+
+
+def join_proxy_url(parts: ProxyParts) -> str:
+    """各部分 → URL；账号密码按 quote(safe='') 编码，无账号时不带 @。"""
+    netloc = f"{parts.host}:{parts.port}"
+    if parts.username or parts.password:
+        cred = f"{quote(parts.username, safe='')}:{quote(parts.password, safe='')}"
+        netloc = f"{cred}@{netloc}"
+    return f"{parts.scheme}://{netloc}"
+
+
+def proxy_identity(url: str) -> str:
+    """代理池去重键：先拆解再拼接后取 sha256，粘贴格式与手填 URL 一致，且不可还原凭证。"""
+    p = split_proxy_url(url)
+    raw = f"{p.scheme}://{p.username}:{p.password}@{p.host.lower()}:{p.port}"
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def judge_egress(current_ip: str | None, new_ip: str | None, other_ips: set[str]) -> EgressVerdict:

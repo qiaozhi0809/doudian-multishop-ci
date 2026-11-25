@@ -25,7 +25,7 @@ from app.service.auth import (
     PasswordRejected,
 )
 from app.service.background import TaskAlreadyRunning
-from app.service.egress import EgressConflict, EgressNotReady
+from app.service.egress import EgressConflict, EgressNotReady, ProxyPoolInUse
 from app.service.shop_runner import ShopPaused
 
 log = structlog.get_logger()
@@ -39,6 +39,7 @@ STATUS_BY_ERROR: list[tuple[type[Exception], int]] = [
     (PasswordRejected, 422),
     (SessionExpired, 409),
     (EgressNotReady, 409),
+    (ProxyPoolInUse, 409),  # 先于父类 EgressConflict，保留具体类型名
     (EgressConflict, 409),
     (ShopPaused, 409),
     (RiskBlocked, 429),

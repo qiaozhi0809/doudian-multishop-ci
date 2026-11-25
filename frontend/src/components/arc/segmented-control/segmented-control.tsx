@@ -4,7 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, type KeyboardEvent, type Rea
 import { useReducedMotion } from "motion/react";
 import styles from "./segmented-control.module.css";
 
-export interface Segment { value: string; label: string; /** Optional content after the label, such as a badge. */ accessory?: ReactNode; /** 有值时在文字后面显示一个小绿点，读屏念这句（如「使用中」）。 */ dotLabel?: string; }
+export interface Segment { value: string; label: string; /** 禁用该项：不可点选，方向键也会跳过。 */ disabled?: boolean; /** Optional content after the label, such as a badge. */ accessory?: ReactNode; /** 有值时在文字后面显示一个小绿点，读屏念这句（如「使用中」）。 */ dotLabel?: string; }
 export interface SegmentedControlProps {
   options: Segment[];
   value: string;
@@ -59,7 +59,7 @@ export default function SegmentedControl({ options, value, onValueChange, label,
     const target = event.key === "ArrowRight" || event.key === "ArrowDown" ? (selectedIndex === last ? 0 : selectedIndex + 1)
       : event.key === "ArrowLeft" || event.key === "ArrowUp" ? (selectedIndex === 0 ? last : selectedIndex - 1)
         : event.key === "Home" ? 0 : event.key === "End" ? last : -1;
-    if (target < 0 || !options[target]) return;
+    if (target < 0 || !options[target] || options[target].disabled) return;
     event.preventDefault();
     onValueChange(options[target].value);
     track.current?.querySelector<HTMLElement>(`[data-value="${CSS.escape(options[target].value)}"]`)?.focus({ preventScroll: true });
@@ -68,7 +68,7 @@ export default function SegmentedControl({ options, value, onValueChange, label,
   const field = showLabel && !!label;
   const control = <div className={`${styles.root} ${className ?? ""}`} role="group" aria-label={label}>
     <div ref={track} className={styles.track}>
-      {options.map((option, index) => <button key={option.value} id={`${id}-${option.value}`} className={styles.button} type="button" data-value={option.value} aria-pressed={value === option.value} tabIndex={index === selectedIndex ? 0 : -1} onClick={() => onValueChange(option.value)} onKeyDown={onKeyDown} onPointerEnter={onOptionIntent ? () => onOptionIntent(option.value) : undefined} onFocus={onOptionIntent ? () => onOptionIntent(option.value) : undefined}>
+      {options.map((option, index) => <button key={option.value} id={`${id}-${option.value}`} className={styles.button} type="button" disabled={option.disabled} data-value={option.value} aria-pressed={value === option.value} tabIndex={index === selectedIndex ? 0 : -1} onClick={() => onValueChange(option.value)} onKeyDown={onKeyDown} onPointerEnter={onOptionIntent ? () => onOptionIntent(option.value) : undefined} onFocus={onOptionIntent ? () => onOptionIntent(option.value) : undefined}>
         <span className={styles.label}>{option.label}{option.dotLabel ? <><span className={styles.dot} aria-hidden="true" /><span className={styles.srOnly}>{option.dotLabel}</span></> : null}{option.accessory}</span>
       </button>)}
     </div>

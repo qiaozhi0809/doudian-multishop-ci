@@ -84,6 +84,26 @@ def test_second_direct_is_conflict(api):
     assert r.status_code == 409 and r.json()["error"]["type"] == "EgressConflict"
 
 
+def test_put_egress_pool_id_and_in_use_conflict(api):
+    from app.domain.egress_rules import proxy_identity
+    from app.store import proxy_pool_store
+    url = proxy_url(7)
+    with api.app.state.engine.begin() as conn:
+        pid = proxy_pool_store.upsert(
+            conn, identity=proxy_identity(url), proxy_url=api.app.state.egress._box.encrypt(
+                url.encode()),
+            proxy_display="203.0.113.7:8000", expires_at=None, now="2026-11-25T00:00:00Z")
+    a = api.client.post("/api/shops", json={"name": "A"}).json()["id"]
+    b = api.client.post("/api/shops", json={"name": "B"}).json()["id"]
+    r = api.client.put(f"/api/shops/{a}/egress", json={"mode": "proxy", "pool_id": pid})
+    assert r.status_code == 200 and r.json()["proxy_display"] == "203.0.113.7:8000"
+    r = api.client.put(f"/api/shops/{b}/egress", json={"mode": "proxy", "pool_id": pid})
+    assert r.status_code == 409 and r.json()["error"]["type"] == "ProxyPoolInUse"
+    assert "A" in r.json()["error"]["message"] and "pw7secret" not in r.text
+    assert api.client.put(f"/api/shops/{b}/egress", json={
+        "mode": "proxy", "pool_id": 999}).status_code == 404
+
+
 def test_login_requires_ready_egress(api):
     first = api.new_shop("先建", ip_n=5)
     second = api.new_shop("后建", ip_n=9, checked=False)
@@ -186,3 +206,25 @@ def test_requires_admin(api):
                          ("GET", "/api/events"), ("POST", "/api/shops/1/login")]:
         r = api.client.request(method, path, json={} if method == "POST" else None)
         assert r.status_code == 401, (method, path)
+
+
+def test_create_shop_with_pool_egress(api):
+    from app.domain.egress_rules import proxy_identity
+    from app.store import proxy_pool_store
+    url = proxy_url(8)
+    with api.app.state.engine.begin() as conn:
+        pid = proxy_pool_store.upsert(
+            conn, identity=proxy_identity(url), proxy_url=api.app.state.egress._box.encrypt(
+                url.encode()),
+            proxy_display="203.0.113.8:8000", expires_at=None, now="2026-11-25T00:00:00Z")
+    r = api.client.post("/api/shops", json={
+        "name": "店B", "egress": {"mode": "proxy", "pool_id": pid}})
+    assert r.status_code == 201 and r.json()["proxy_display"] == "203.0.113.8:8000"
+    r = api.client.post("/api/shops", json={
+        "name": "店C", "egress": {"mode": "proxy", "pool_id": pid}})
+    assert r.status_code == 409 and r.json()["error"]["type"] == "ProxyPoolInUse"
+    r = api.client.post("/api/shops", json={
+        "name": "店D", "egress": {"mode": "proxy", "paste": "bad"}})
+    assert r.status_code == 422
+    names = [s["name"] for s in api.client.get("/api/shops").json()]
+    assert "店C" not in names and "店D" not in names

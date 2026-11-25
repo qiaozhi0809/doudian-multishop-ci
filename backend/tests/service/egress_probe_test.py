@@ -1,6 +1,8 @@
-from app.adapter.doudian.errors import EgressUnavailable
+import pytest
+
+from app.adapter.doudian.errors import EgressUnavailable, TransientError
 from app.adapter.doudian.transport import TransportResponse
-from app.service.egress_probe import make_fetch_ip
+from app.service.egress_probe import ProbeResult, make_fetch_ip, make_probe
 from tests.fakes import FakeTransport
 
 PROXY = "http://u1:p1@203.0.113.5:8000"
@@ -41,3 +43,25 @@ async def test_fetch_ip_failures_return_none():
             "https://echo.example/ip", transport_factory=_factory(FakeTransport([case]), [])
         )
         assert await fetch(PROXY) is None
+
+
+@pytest.mark.parametrize("outcome,reason", [
+    (TimeoutError(), "timeout"),
+    (EgressUnavailable("x"), "proxy_unavailable"),
+    (TransientError("x"), "network"),
+    (TransportResponse(500, b"203.0.113.5"), "bad_echo"),
+    (TransportResponse(200, b"<html>"), "bad_echo"),
+])
+async def test_probe_reasons(outcome, reason):
+    probe = make_probe(
+        "https://echo.example/ip", transport_factory=_factory(FakeTransport([outcome]), [])
+    )
+    assert await probe(PROXY) == ProbeResult(None, reason)
+
+
+async def test_probe_success():
+    probe = make_probe(
+        "https://echo.example/ip",
+        transport_factory=_factory(FakeTransport([TransportResponse(200, b"203.0.113.5\n")]), []),
+    )
+    assert await probe(PROXY) == ProbeResult("203.0.113.5", None)
