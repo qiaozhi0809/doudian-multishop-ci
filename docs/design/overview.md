@@ -210,7 +210,7 @@ doudian-multishop-admin/
 │   │   │   ├── ui/              # shadcn 基础件
 │   │   │   ├── arc/             # Arc Free / Pro 源码（安装进去，不外部 import）
 │   │   │   └── custom/          # 项目组合层（跨模块拼装写这里）
-│   │   ├── pages/               # 概览 / 全部订单 / 打单发货 / 售后处理 / 商品列表 / 库存 / 结算与保证金 / 发货对账 / 店铺管理
+│   │   ├── pages/               # 概览 / 全部订单 / 打单发货 / 售后处理 / 商品列表 / 库存 / 结算与保证金 / 发货异常 / 店铺管理
 │   │   ├── lib/                 # api client、格式化、hooks
 │   │   └── main.tsx
 │   ├── tailwind.config.ts

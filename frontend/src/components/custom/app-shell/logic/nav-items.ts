@@ -34,6 +34,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { path: "/orders", label: "全部订单", icon: "orders" },
       { path: "/labeling", label: "打单发货", icon: "labeling" },
       { path: "/aftersale", label: "售后处理", icon: "aftersale" },
+      { path: "/reconcile", label: "发货异常", icon: "reconcile" },
     ],
   },
   {
@@ -53,7 +54,6 @@ export const NAV_SECTIONS: NavSection[] = [
     icon: "fund",
     items: [
       { path: "/fund", label: "结算与保证金", icon: "fund" },
-      { path: "/reconcile", label: "发货对账", icon: "reconcile" },
     ],
   },
 ];

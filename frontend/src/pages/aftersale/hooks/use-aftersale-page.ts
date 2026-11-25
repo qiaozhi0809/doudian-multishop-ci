@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
 import { api } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
+import { metricQueries } from "@/lib/metric-queries";
 import { queryKeys } from "@/lib/query-keys";
 import { useShops } from "@/lib/use-shops";
 import { PAGE_SIZE, isView, parseStatus, type View } from "../logic/aftersale-page";
@@ -11,7 +12,6 @@ import { useAftersaleSync } from "./use-aftersale-sync";
 
 type PageData = components["schemas"]["AftersalePage"];
 type StatusesResponse = components["schemas"]["AftersaleStatusesResponse"];
-type CountsResponse = components["schemas"]["AftersaleCountsResponse"];
 
 /** 售后页的全部数据：视图（待办 / 全部）、状态筛选、页码都在 URL 里。 */
 export function useAftersalePage() {
@@ -84,10 +84,7 @@ export function useAftersalePage() {
     queryFn: () => api.get<StatusesResponse>("/api/aftersale/statuses", { shop_ids: shopIds }),
   });
 
-  const counts = useQuery({
-    queryKey: queryKeys.aftersaleCounts(shopIds),
-    queryFn: () => api.get<CountsResponse>("/api/aftersale/counts", { shop_ids: shopIds }),
-  });
+  const counts = useQuery(metricQueries.aftersaleCounts(shopIds));
 
   const sync = useAftersaleSync();
   const names = useMemo(

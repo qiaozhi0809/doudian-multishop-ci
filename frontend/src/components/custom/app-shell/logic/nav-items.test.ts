@@ -8,12 +8,13 @@ describe("导航分组（frontend.md 1.1）", () => {
     expect(FOOTER_NAV.map((item) => item.label)).toEqual(["店铺管理"]);
   });
 
-  it("订单组按流水线排列：全部订单 → 打单发货 → 售后处理", () => {
+  it("订单组按流水线排列：全部订单 → 打单发货 → 售后处理 → 发货异常", () => {
     const group = NAV_SECTIONS.find((section) => section.kind === "group" && section.id === "orders");
     expect(group && group.kind === "group" ? group.items.map((item) => item.label) : []).toEqual([
       "全部订单",
       "打单发货",
       "售后处理",
+      "发货异常",
     ]);
   });
 
@@ -27,7 +28,7 @@ describe("导航分组（frontend.md 1.1）", () => {
     expect(pageTitle("/dashboard")).toBe("概览");
     expect(pageTitle("/orders")).toBe("全部订单");
     expect(pageTitle("/labeling")).toBe("打单发货");
-    expect(pageTitle("/reconcile")).toBe("发货对账");
+    expect(pageTitle("/reconcile")).toBe("发货异常");
     expect(pageTitle("/aftersale")).toBe("售后处理");
     expect(pageTitle("/catalog")).toBe("商品列表");
     expect(pageTitle("/stock")).toBe("库存");

@@ -45,16 +45,16 @@ export function ReconcilePageView({ page }: { page: ReconcilePageState }) {
       />
       <Alert tone={runTone(state.run)} title={runSummary(state.run)} />
       <p className={styles.muted}>
-        首次对账会给已发货订单建立基线，全部报「平台已发本地无」属正常（附录 G.6）。
+        首次检查会给已发货订单建立基线，全部报「平台已发本地无」属正常（附录 G.6）。
       </p>
       {state.error && (
         <Alert tone="danger" title={state.error} onDismiss={state.clearError} />
       )}
 
-      {state.query.isLoading && <Skeleton label="正在读取对账结果" lines={6} />}
+      {state.query.isLoading && <Skeleton label="正在读取发货异常" lines={6} />}
       {state.query.isError && (
         <div className={styles.page}>
-          <Alert tone="danger" title="读取对账结果失败，请确认本地服务正常后重试" />
+          <Alert tone="danger" title="读取发货异常失败，请确认本地服务正常后重试" />
           <div>
             <Button variant="secondary" onClick={() => void state.query.refetch()}>
               重新读取
@@ -75,7 +75,7 @@ export function ReconcilePageView({ page }: { page: ReconcilePageState }) {
               page={state.page}
               pageCount={pageCount(data.total)}
               onPageChange={state.setPage}
-              label="对账异常分页"
+              label="发货异常分页"
             />
           </div>
         </>

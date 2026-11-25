@@ -67,14 +67,31 @@ describe("App Shell", () => {
     expect(FakeEventSource.instances).toHaveLength(1);
   });
 
-  it("导航为分组结构，概览 / 打单发货 / 发货对账入口都在", async () => {
+  it("导航为分组结构，概览 / 打单发货 / 发货异常入口都在", async () => {
     renderShell("/orders");
     const nav = await screen.findByRole("navigation", { name: "主导航" });
     expect(within(nav).getByRole("link", { name: "概览" })).toHaveAttribute("href", "/dashboard");
     expect(within(nav).getByRole("link", { name: "打单发货" })).toHaveAttribute("href", "/labeling");
-    expect(within(nav).getByRole("link", { name: "发货对账" })).toHaveAttribute("href", "/reconcile");
+    expect(within(nav).getByRole("link", { name: "发货异常" })).toHaveAttribute("href", "/reconcile");
     const group = within(nav).getByRole("group", { name: "订单" });
     expect(within(group).getByRole("link", { name: "全部订单" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("进外壳就预取各页指标卡的数（订单 / 售后 / 商品计数、库存与资金汇总）", async () => {
+    renderShell("/orders");
+    await screen.findByRole("heading", { level: 1, name: "全部订单" });
+    const called = () => (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.map(([u]) => String(u).split("?")[0]);
+    await waitFor(() =>
+      expect(called()).toEqual(
+        expect.arrayContaining([
+          "/api/orders/counts",
+          "/api/aftersale/counts",
+          "/api/catalog/products/counts",
+          "/api/catalog/stock/summary",
+          "/api/fund/summary",
+        ]),
+      ),
+    );
   });
 
   it("侧栏常驻任务中心", async () => {

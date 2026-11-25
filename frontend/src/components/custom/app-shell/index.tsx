@@ -13,6 +13,7 @@ import { ShopFilterSelect } from "./components/shop-filter-select";
 import { SideNav } from "./components/side-nav";
 import { PageHead } from "./components/page-head";
 import { useChangePassword } from "./hooks/use-change-password";
+import { usePrefetchMetrics } from "./hooks/use-prefetch-metrics";
 import { useQuickLogin } from "./hooks/use-quick-login";
 import { useShopFilter } from "./hooks/use-shop-filter";
 import { listAttention, summarizeHealth } from "./logic/health-summary";
@@ -30,6 +31,7 @@ export function AppShell() {
   const login = useQuickLogin();
   const password = useChangePassword();
   const system = useSystemInfo();
+  usePrefetchMetrics(shopIds, (shopsQuery.data ?? []).length > 0);
 
   const healthState = shopsQuery.isError ? "error" : shopsQuery.isLoading ? "loading" : "ready";
   return (

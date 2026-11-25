@@ -15,7 +15,7 @@ export function FindingsTable({ rows, marking, onMarkHandled }: FindingsTablePro
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
-        <caption className={styles.srOnly}>对账异常</caption>
+        <caption className={styles.srOnly}>发货异常</caption>
         <thead>
           <tr>
             <th>店铺</th>
@@ -31,7 +31,7 @@ export function FindingsTable({ rows, marking, onMarkHandled }: FindingsTablePro
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={8} className={styles.emptyCell}>没有符合条件的对账异常</td>
+              <td colSpan={8} className={styles.emptyCell}>没有符合条件的发货异常</td>
             </tr>
           ) : (
             rows.map((row) => (

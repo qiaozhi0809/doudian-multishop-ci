@@ -1,18 +1,9 @@
 import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
-import { api } from "@/lib/api-client";
-import { queryKeys } from "@/lib/query-keys";
+import { metricQueries } from "@/lib/metric-queries";
 import { useShops, type ShopRow } from "@/lib/use-shops";
-import {
-  buildDashboard,
-  type AftersaleCountsResponse,
-  type DashboardModel,
-  type FundSummary,
-  type OrderCountsResponse,
-  type ProductCountsResponse,
-  type StockSummary,
-} from "../logic/dashboard";
+import { buildDashboard, type DashboardModel } from "../logic/dashboard";
 
 export interface SectionState {
   state: "loading" | "error" | "ready";
@@ -41,31 +32,12 @@ export function useDashboardPage(): DashboardPage {
   const shopsQuery = useShops();
   const shops = shopsQuery.data ?? NO_SHOPS;
 
-  const orderCounts = useQuery({
-    queryKey: queryKeys.orderCounts(shopIds),
-    queryFn: () => api.get<OrderCountsResponse>("/api/orders/counts", { shop_ids: shopIds }),
-    enabled: shops.length > 0,
-  });
-  const aftersale = useQuery({
-    queryKey: queryKeys.aftersaleCounts(shopIds),
-    queryFn: () => api.get<AftersaleCountsResponse>("/api/aftersale/counts", { shop_ids: shopIds }),
-    enabled: shops.length > 0,
-  });
-  const fund = useQuery({
-    queryKey: queryKeys.fundSummary(shopIds),
-    queryFn: () => api.get<FundSummary>("/api/fund/summary", { shop_ids: shopIds }),
-    enabled: shops.length > 0,
-  });
-  const stock = useQuery({
-    queryKey: queryKeys.stockSummary(shopIds),
-    queryFn: () => api.get<StockSummary>("/api/catalog/stock/summary", { shop_ids: shopIds }),
-    enabled: shops.length > 0,
-  });
-  const products = useQuery({
-    queryKey: queryKeys.productCounts(shopIds),
-    queryFn: () => api.get<ProductCountsResponse>("/api/catalog/products/counts", { shop_ids: shopIds }),
-    enabled: shops.length > 0,
-  });
+  const enabled = shops.length > 0;
+  const orderCounts = useQuery({ ...metricQueries.orderCounts(shopIds), enabled });
+  const aftersale = useQuery({ ...metricQueries.aftersaleCounts(shopIds), enabled });
+  const fund = useQuery({ ...metricQueries.fundSummary(shopIds), enabled });
+  const stock = useQuery({ ...metricQueries.stockSummary(shopIds), enabled });
+  const products = useQuery({ ...metricQueries.productCounts(shopIds), enabled });
 
   const model = useMemo(
     () =>
