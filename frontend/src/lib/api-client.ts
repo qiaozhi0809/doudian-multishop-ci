@@ -82,7 +82,7 @@ async function request<T>(method: string, path: string, query?: Query, body?: un
 
 export const api = {
   get: <T>(path: string, query?: Query) => request<T>("GET", path, query),
-  post: <T>(path: string, body?: unknown) => request<T>("POST", path, undefined, body),
+  post: <T>(path: string, body?: unknown, query?: Query) => request<T>("POST", path, query, body),
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, undefined, body),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, undefined, body),
 };

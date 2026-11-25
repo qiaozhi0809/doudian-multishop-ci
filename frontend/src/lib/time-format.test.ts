@@ -1,4 +1,4 @@
-import { formatBjTime } from "./time-format";
+import { daysUntil, formatBjTime, formatRemaining, parseExpiry } from "./time-format";
 
 describe("formatBjTime", () => {
   const originalTz = process.env.TZ;
@@ -31,5 +31,32 @@ describe("formatBjTime", () => {
   it("空值与无效值显示「暂无」", () => {
     expect(formatBjTime(null)).toBe("暂无");
     expect(formatBjTime("not-a-date")).toBe("暂无");
+  });
+});
+
+describe("到期时间", () => {
+  const NOW = new Date("2026-11-25T00:00:00Z");
+  const at = (ms: number) => new Date(NOW.getTime() + ms).toISOString();
+  const HOUR = 3_600_000;
+  const DAY = 24 * HOUR;
+
+  it("parseExpiry: 只有日期时，当天整天有效（北京时间当天结束）", () => {
+    expect(parseExpiry("2026-11-28").toISOString()).toBe("2026-11-28T16:00:00.000Z");
+    expect(parseExpiry("2026-11-28T00:00:00Z").toISOString()).toBe("2026-11-28T00:00:00.000Z");
+  });
+
+  it("daysUntil: 向上取整，过期为 0 或负数", () => {
+    expect(daysUntil(at(3 * DAY), NOW)).toBe(3);
+    expect(daysUntil(at(3 * DAY + HOUR), NOW)).toBe(4);
+    expect(daysUntil(at(-DAY), NOW)).toBeLessThanOrEqual(0);
+  });
+
+  it("formatRemaining: 剩 N 天 / 剩 N 小时 / 已过期 / 暂无", () => {
+    expect(formatRemaining(at(3 * DAY), NOW)).toBe("剩 3 天");
+    expect(formatRemaining(at(5 * HOUR), NOW)).toBe("剩 5 小时");
+    expect(formatRemaining(at(10 * 60_000), NOW)).toBe("剩 1 小时");
+    expect(formatRemaining(at(-1), NOW)).toBe("已过期");
+    expect(formatRemaining(null, NOW)).toBe("暂无");
+    expect(formatRemaining("bad", NOW)).toBe("暂无");
   });
 });

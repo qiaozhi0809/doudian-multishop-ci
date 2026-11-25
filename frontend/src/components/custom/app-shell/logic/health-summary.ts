@@ -1,3 +1,4 @@
+import { daysUntil } from "@/lib/time-format";
 import type { ShopRow } from "@/lib/use-shops";
 
 export interface HealthSummary {
@@ -17,10 +18,7 @@ export interface AttentionRow {
   severity: "error" | "warn";
 }
 
-const DAY_MS = 86_400_000;
 const PROXY_WARN_DAYS = 7;
-
-const daysLeft = (iso: string, now: Date) => Math.ceil((new Date(iso).getTime() - now.getTime()) / DAY_MS);
 
 /**
  * 一家店当前最严重的问题（没有问题为 null）。
@@ -41,8 +39,8 @@ function worstIssue(shop: ShopRow, now: Date): Omit<AttentionRow, "id" | "name">
     const ip = shop.egress_ip_pending;
     return error(ip ? `出口 IP 已变为 ${ip}，需确认` : "出口 IP 已变化，需确认", "warning");
   }
-  const sessionDays = shop.health === "expiring" && shop.expires_at ? daysLeft(shop.expires_at, now) : null;
-  const proxyDays = shop.proxy_expires_at ? daysLeft(shop.proxy_expires_at, now) : null;
+  const sessionDays = shop.health === "expiring" && shop.expires_at ? daysUntil(shop.expires_at, now) : null;
+  const proxyDays = shop.proxy_expires_at ? daysUntil(shop.proxy_expires_at, now) : null;
   if (sessionDays !== null && sessionDays <= 0) return error("已过期");
   if (proxyDays !== null && proxyDays <= 0) return error("代理已到期");
   if (shop.health === "expiring") return warn(sessionDays !== null ? `即将过期（剩 ${sessionDays} 天）` : "即将过期");
