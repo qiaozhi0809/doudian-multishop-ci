@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "logistics": [
+      {
+        "logistics_name": "中通快递",
+        "logistics_code": "79200000000001",
+        "logistics_send_time": 1795561505,
+        "send_type": 3,
+        "send_method_name": "打单发货",
+        "items": [],
+        "trace": []
+      }
+    ],
+    "logistics_list": []
+  }
+}

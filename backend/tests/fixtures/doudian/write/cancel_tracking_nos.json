@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "success_list": [
+      {
+        "logistics_company_code": "zhongtong",
+        "tracking_no": "79200000000001",
+        "fail_msg": ""
+      }
+    ],
+    "fail_list": [],
+    "fail_msg": ""
+  }
+}

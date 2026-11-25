@@ -57,6 +57,27 @@ EBILL_ACCOUNTS = Endpoint(
     "ebill_accounts", "GET", "/shopuser/power/getEbillAccountListByExpress", bid.ORDER
 )
 
+# ---- M2 取号 / 作废 / 解密（docs/api/write.md A.2.2 / A.2.5 / A.2.6、read.md A.1）----
+# 写接口 write=True：客户端不自动重试；结果不明时由 service 走「待核实 → 查回」。
+LABEL_FETCH = Endpoint(
+    "label_fetch", "POST", "/api/order/batchFetchTrackingNos", bid.ORDER, body="json", write=True
+)
+LABEL_FETCH_AND_SHIP = Endpoint(
+    "label_fetch_and_ship", "POST", "/api/order/batchFetchTrackingNosAndDeliverGoods",
+    bid.ORDER, body="json", write=True,
+)
+CANCEL_TRACKING_NOS = Endpoint(
+    "cancel_tracking_nos", "POST", "/api/order/batchCancelTrackingNos",
+    bid.ORDER, body="json", write=True,
+)
+# 查询型 POST：只读语义，允许退避重试
+PRODUCT_TYPES = Endpoint(
+    "product_types", "POST", "/api/order/query_added_services_and_product_types",
+    bid.ORDER, body="json",
+)
+RECEIVE_INFO = Endpoint("receive_info", "GET", "/api/order/receiveinfo", bid.ORDER)
+ORDER_LOGISTICS = Endpoint("order_logistics", "GET", "/api/order/getOrderLogistics", bid.ORDER)
+
 
 # ---- searchlist 的两种查询参数 ----
 # tab 与 order_status 必须同时传；全部订单时 order_status 为空串（docs/api/read.md）

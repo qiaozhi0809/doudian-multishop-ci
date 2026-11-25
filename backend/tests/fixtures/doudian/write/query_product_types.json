@@ -1,0 +1,21 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "added_services": [],
+    "logistics_product": [
+      {
+        "param": "expType",
+        "paramName": "产品类型",
+        "values": [
+          { "name": "普快", "value": "defaultProductType", "hover_text": "", "code": "" },
+          { "name": "中通标快(原尊享)", "value": "SVC-VIP", "hover_text": "", "code": "" }
+        ],
+        "selectedValue": "defaultProductType",
+        "isRequire": 0
+      }
+    ],
+    "tips": [],
+    "dynamic_fields": null
+  }
+}

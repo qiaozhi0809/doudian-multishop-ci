@@ -1,0 +1,20 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "verify_type": "",
+    "receive_info": {
+      "post_receiver": "张*",
+      "post_tel": "138****0000",
+      "post_addr": {
+        "province": { "name": "内蒙古自治区", "id": "15" },
+        "city": { "name": "通辽市", "id": "150500" },
+        "town": { "name": "科尔沁左翼后旗", "id": "150522" },
+        "street": { "name": "甘旗卡镇", "id": "150522100" },
+        "detail": "<详细地址>"
+      },
+      "can_view": 1,
+      "expire_time": 1796000000
+    }
+  }
+}

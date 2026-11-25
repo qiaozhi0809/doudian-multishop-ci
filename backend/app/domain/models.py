@@ -78,3 +78,70 @@ class CourierDTO:
     name: str | None
     enabled: bool
     raw: dict
+
+
+# ---- M2 取号 / 作废 / 解密 ----
+
+
+@dataclass(frozen=True)
+class FetchSuccess:
+    """一张新面单。`order_nos` 为平台响应里该面单覆盖的订单号（可能多单合包）。"""
+
+    order_nos: tuple[str, ...]
+    courier_code: str
+    tracking_no: str
+    template_code: str | None
+    print_data: str | None
+    sign: str | None
+
+
+@dataclass(frozen=True)
+class FetchFailure:
+    """失败项。平台可能只给 `fail_msg` 而不带订单引用（A.2.2 第 8 条）。"""
+
+    order_nos: tuple[str, ...]
+    fail_msg: str
+
+
+@dataclass(frozen=True)
+class FetchResult:
+    success: tuple[FetchSuccess, ...]
+    failures: tuple[FetchFailure, ...]
+
+
+@dataclass(frozen=True)
+class CancelSuccess:
+    courier_code: str
+    tracking_no: str
+
+
+@dataclass(frozen=True)
+class CancelFailure:
+    courier_code: str | None
+    tracking_no: str | None
+    fail_msg: str
+
+
+@dataclass(frozen=True)
+class CancelResult:
+    success: tuple[CancelSuccess, ...]
+    failures: tuple[CancelFailure, ...]
+    fail_msg: str | None
+
+
+@dataclass(frozen=True)
+class ProductTypes:
+    exp_type: str | None
+    added_services: tuple[dict, ...]
+
+
+@dataclass(frozen=True)
+class ReceiverInfo:
+    """收件人明文：只在内存中使用，不落库（flows 7.3）。"""
+
+    name: str | None
+    phone: str | None
+    region: str | None
+    detail: str | None
+    expire_at: str | None
+    verify_type: str | None

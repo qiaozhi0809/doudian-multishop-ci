@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "success_list": [],
+    "fail_orders_list": [
+      {
+        "fail_msg": "不存在可取号商品，请刷新后重试"
+      }
+    ]
+  }
+}

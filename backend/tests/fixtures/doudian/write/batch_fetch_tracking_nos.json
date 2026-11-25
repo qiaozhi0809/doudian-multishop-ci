@@ -1,0 +1,30 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "success_list": [
+      {
+        "logistics_company_code": "zhongtong",
+        "tracking_no": "79200000000001",
+        "logistics_template_code": "C1m77ow4c2qrrd",
+        "logistics_company_name": "中通快递(常用)",
+        "shop_order_list": [
+          {
+            "shop_order_id": "6900000000000000001",
+            "sku_orders": [
+              {
+                "sku_order_id": "6900000000000000001",
+                "sku_id": "3707788120163074",
+                "product_id": "3830193743160541308",
+                "product_cnt": 1
+              }
+            ]
+          }
+        ],
+        "print_data": "PRINT_DATA_PLACEHOLDER",
+        "sign": "SIGN_PLACEHOLDER"
+      }
+    ],
+    "fail_orders_list": []
+  }
+}
