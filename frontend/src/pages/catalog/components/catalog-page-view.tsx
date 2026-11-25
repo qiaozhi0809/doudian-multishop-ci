@@ -2,7 +2,7 @@ import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
-import { NoShopsEmpty } from "@/components/custom/no-shops-empty/no-shops-empty";
+import { EmptyNoShops } from "@/components/custom/empty-no-shops";
 import { SyncMessageBar } from "@/components/custom/sync-control/sync-control";
 import type { CatalogPageState } from "../hooks/use-catalog-page";
 import { PAGE_SIZE, mergeGroups, pageCount } from "../logic/catalog-page";
@@ -27,7 +27,7 @@ export function CatalogPageView({ page }: { page: CatalogPageState }) {
     );
   }
   if (page.shopsState === "empty") {
-    return <NoShopsEmpty description="先在「店铺与设置」添加店铺并登录，商品快照才会同步到这里" />;
+    return <EmptyNoShops description="先在「店铺与设置」添加店铺并登录，商品快照才会同步到这里" />;
   }
 
   const data = page.list.data;

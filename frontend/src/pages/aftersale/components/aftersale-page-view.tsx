@@ -2,7 +2,7 @@ import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
-import { NoShopsEmpty } from "@/components/custom/no-shops-empty/no-shops-empty";
+import { EmptyNoShops } from "@/components/custom/empty-no-shops";
 import { SyncMessageBar } from "@/components/custom/sync-control/sync-control";
 import type { AftersalePageState } from "../hooks/use-aftersale-page";
 import { PAGE_SIZE, aggregateAftersaleCounts, pageCount } from "../logic/aftersale-page";
@@ -27,7 +27,7 @@ export function AftersalePageView({ page }: { page: AftersalePageState }) {
     );
   }
   if (page.shopsState === "empty") {
-    return <NoShopsEmpty description="先在「店铺与设置」添加店铺并登录，售后单才会同步到这里" />;
+    return <EmptyNoShops description="先在「店铺与设置」添加店铺并登录，售后单才会同步到这里" />;
   }
 
   const data = page.list.data;

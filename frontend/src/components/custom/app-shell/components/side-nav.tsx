@@ -6,13 +6,10 @@ import { NAV_ITEMS, type NavItem } from "../logic/nav-items";
 import { withShopFilter } from "../logic/shop-filter";
 import styles from "../app-shell.module.css";
 
-<<<<<<< HEAD
-const ICONS = { orders: ClipboardList, labeling: Truck, shops: Store } as const;
-=======
 const ICONS = {
-  orders: ClipboardList, aftersale: LifeBuoy, products: Package, stock: Boxes, fund: Wallet, shops: Store,
+  orders: ClipboardList, labeling: Truck, aftersale: LifeBuoy,
+  products: Package, stock: Boxes, fund: Wallet, shops: Store,
 } as const;
->>>>>>> ac3d7cc (feat(frontend): 售后 / 商品 / 库存 / 资金四个聚合页)
 
 interface SideNavProps {
   collapsed: boolean;

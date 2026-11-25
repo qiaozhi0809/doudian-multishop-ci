@@ -2,7 +2,7 @@ import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
-import { NoShopsEmpty } from "@/components/custom/no-shops-empty/no-shops-empty";
+import { EmptyNoShops } from "@/components/custom/empty-no-shops";
 import { SyncMessageBar } from "@/components/custom/sync-control/sync-control";
 import type { FundPageState } from "../hooks/use-fund-page";
 import { UNSETTLED_PAGE_SIZE, unsettledPageCount } from "../logic/fund-page";
@@ -40,7 +40,7 @@ export function FundPageView({ page }: { page: FundPageState }) {
     );
   }
   if (page.shopsState === "empty") {
-    return <NoShopsEmpty description="先在「店铺与设置」添加店铺并登录，资金数据才会同步到这里" />;
+    return <EmptyNoShops description="先在「店铺与设置」添加店铺并登录，资金数据才会同步到这里" />;
   }
 
   return (
