@@ -13,8 +13,8 @@ def test_export_is_deterministic_and_complete(tmp_path):
     export_openapi(b)
     assert a.read_text(encoding="utf-8") == b.read_text(encoding="utf-8")
     spec = json.loads(a.read_text(encoding="utf-8"))
-    assert {"/api/shops", "/api/shops/{shop_id}/egress/check", "/api/orders", "/api/events",
-            "/api/auth/status", "/api/orders/sync"} <= set(spec["paths"])
+    assert {"/api/shops", "/api/proxy-pool", "/api/shops/{shop_id}/egress/check", "/api/orders",
+            "/api/events", "/api/auth/status", "/api/orders/sync"} <= set(spec["paths"])
     assert a.read_text(encoding="utf-8").endswith("}\n")
 
 

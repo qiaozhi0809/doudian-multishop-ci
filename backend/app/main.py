@@ -25,6 +25,7 @@ from app.api import fund as fund_api
 from app.api import label as label_api
 from app.api import order as order_api
 from app.api import print as print_api
+from app.api import proxy_pool as proxy_pool_api
 from app.api import reconcile as reconcile_api
 from app.api import shipping as shipping_api
 from app.api import shop as shop_api
@@ -34,7 +35,7 @@ from app.api.deps import require_admin
 from app.api.errors import envelope, install_error_handlers
 from app.api.host_guard import HostGuard, allowed_hosts
 from app.config import Settings
-from app.service.egress_probe import FetchIp
+from app.service.egress_probe import FetchIp, Probe
 from app.service.periodic import (
     ORDER_SYNC_INTERVAL_S,
     PROBE_INTERVAL_S,
@@ -64,10 +65,10 @@ def create_app(
     settings: Settings | None = None, *, clock: Callable[[], datetime] | None = None,
     hasher: PasswordHasher | None = None, client_factory: ClientFactory | None = None,
     fetch_ip: FetchIp | None = None, scan: ScanFn | None = None,
-    print_component: PrintComponent | None = None,
+    print_component: PrintComponent | None = None, probe: Probe | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
-    overrides = Overrides(clock, hasher, client_factory, fetch_ip, scan, print_component)
+    overrides = Overrides(clock, hasher, client_factory, fetch_ip, scan, print_component, probe)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -127,7 +128,7 @@ def create_app(
         return Health(status="ok")
 
     for module in (
-        auth_api, shop_api, order_api, label_api, print_api, event_api,
+        auth_api, shop_api, proxy_pool_api, order_api, label_api, print_api, event_api,
         aftersale_api, catalog_api, fund_api, shipping_api, reconcile_api,
         backup_api, system_api,
     ):

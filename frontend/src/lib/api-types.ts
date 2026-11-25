@@ -756,6 +756,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/proxy-pool": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pool */
+        get: operations["list_pool_api_proxy_pool_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proxy-pool/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Pool */
+        post: operations["import_pool_api_proxy_pool_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proxy-pool/{pool_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Pool */
+        delete: operations["delete_pool_api_proxy_pool__pool_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Pool */
+        patch: operations["patch_pool_api_proxy_pool__pool_id__patch"];
+        trace?: never;
+    };
+    "/api/proxy-pool/{pool_id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Pool */
+        post: operations["check_pool_api_proxy_pool__pool_id__check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reconcile/findings": {
         parameters: {
             query?: never;
@@ -1333,6 +1402,11 @@ export interface components {
              */
             paste?: string | null;
             /**
+             * Pool Id
+             * @description 从代理池选择的池项 id
+             */
+            pool_id?: number | null;
+            /**
              * Proxy Url
              * @description http(s)://账号:密码@主机:端口
              */
@@ -1570,6 +1644,71 @@ export interface components {
              * @enum {string}
              */
             status: "synced" | "pending_label" | "label_obtained" | "printed" | "shipped" | "exception" | "cancelled" | "closed";
+        };
+        /** PoolCheckOut */
+        PoolCheckOut: {
+            /** Elapsed Ms */
+            elapsed_ms: number;
+            /** Ip */
+            ip: string | null;
+            ip_in_use_by: components["schemas"]["ShopRef"] | null;
+            /** Reason */
+            reason: ("timeout" | "proxy_unavailable" | "network" | "bad_echo") | null;
+        };
+        /** PoolImportFailure */
+        PoolImportFailure: {
+            /** Line */
+            line: number;
+            /** Reason */
+            reason: string;
+        };
+        /** PoolImportIn */
+        PoolImportIn: {
+            /** Text */
+            text: string;
+        };
+        /** PoolImportOut */
+        PoolImportOut: {
+            /** Added */
+            added: number;
+            /** Failed */
+            failed: number;
+            /** Failures */
+            failures: components["schemas"]["PoolImportFailure"][];
+            /** Skipped */
+            skipped: number;
+        };
+        /** PoolItem */
+        PoolItem: {
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Expiry State
+             * @enum {string}
+             */
+            expiry_state: "ok" | "expiring" | "expired";
+            /** Id */
+            id: number;
+            in_use_by: components["schemas"]["ShopRef"] | null;
+            /** Last Check Ip */
+            last_check_ip: string | null;
+            /** Last Checked At */
+            last_checked_at: string | null;
+            /** Proxy Display */
+            proxy_display: string;
+        };
+        /** PoolPatch */
+        PoolPatch: {
+            /** Expires At */
+            expires_at?: string | null;
+            /** Host */
+            host?: string | null;
+            /** Password */
+            password?: string | null;
+            /** Port */
+            port?: number | null;
+            /** Username */
+            username?: string | null;
         };
         /** PreviewBlocked */
         PreviewBlocked: {
@@ -2068,6 +2207,7 @@ export interface components {
         };
         /** ShopCreate */
         ShopCreate: {
+            egress?: components["schemas"]["EgressRequest"] | null;
             /** Entity */
             entity?: string | null;
             /** Name */
@@ -2177,6 +2317,13 @@ export interface components {
             shop_id: number;
             /** Synced At */
             synced_at?: string | null;
+        };
+        /** ShopRef */
+        ShopRef: {
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
         };
         /** ShopRow */
         ShopRow: {
@@ -3859,6 +4006,163 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WaybillPrintList"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_pool_api_proxy_pool_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoolItem"][];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    import_pool_api_proxy_pool_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PoolImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoolImportOut"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    delete_pool_api_proxy_pool__pool_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pool_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    patch_pool_api_proxy_pool__pool_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pool_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PoolPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoolItem"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    check_pool_api_proxy_pool__pool_id__check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pool_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoolCheckOut"];
                 };
             };
             /** @description 错误信封 */
