@@ -580,43 +580,15 @@ git commit -m "docs: 浏览器改为 CloakBrowser 固定指纹（更新 DEC-11�
 
 ### Task 6: 端到端验证
 
-**Files:**
-- 无代码改动（人工验证）
+**Files:** 无代码改动（人工验证）
 
 **Interfaces:**
 - Consumes: 全部前序任务
-- Produces: 验证结论，记录到本计划的「验证结果」小节
+- Produces: 验证结论
 
-- [ ] **Step 1: 确认二进制会被下载到项目目录**
+详细步骤见 `.superpowers/sdd/2026-11-26-cloakbrowser-integration/task-6-checklist.md`，共 6 步：二进制下载到项目目录 → 重启服务 → 扫码登录 → 指纹稳定 → **出口 IP 验证** → 记录结果。
 
-Run: `cd backend && .venv/Scripts/python.exe -c "import os; os.environ['CLOAKBROWSER_CACHE_DIR']=r'%LOCALAPPDATA%\doudian-multishop\browser'; import cloakbrowser; print(cloakbrowser.ensure_binary())"`
-Expected: 输出路径以 `doudian-multishop\browser\chromium-146` 开头（首次运行会下载约 200MB）
-
-- [ ] **Step 2: 重启服务**
-
-Run: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop.ps1; powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start.ps1`
-Expected: `已启动（PID …）`
-
-- [ ] **Step 3: 触发扫码登录**
-
-在界面「店铺管理」点「扫码登录」，确认：
-- 弹出的是 CloakBrowser（窗口标题与图标非系统 Chrome）
-- `%LOCALAPPDATA%\doudian-multishop\profiles\1\.cloak-seed` 已生成
-- 登录成功后 `cookies` 表有记录
-
-- [ ] **Step 4: 验证指纹稳定**
-
-关闭后再次触发登录，确认 `.cloak-seed` **内容未变**，且浏览器指纹（`navigator.hardwareConcurrency`、WebGL renderer）与首次一致。
-
-- [ ] **Step 5: 记录结果**
-
-在本计划末尾追加「验证结果」小节，写明：二进制路径、seed 值是否稳定、指纹是否一致、遇到的偏差。
-
----
-
-## 验证结果
-
-（Task 6 完成后填写）
+（该清单原在本文档内，因本文件触发 `docs/*.md` 600 行硬上限而移出，要求与内容不变。）
 
 ---
 
