@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "warehouse_list": [
+      {
+        "warehouse_id": "w1",
+        "name": "主仓"
+      },
+      {
+        "warehouse_id": "w2",
+        "name": "备用仓"
+      }
+    ]
+  }
+}

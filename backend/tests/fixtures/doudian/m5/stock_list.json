@@ -1,0 +1,33 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "total": 2,
+    "stock_alarm_cnt": 1,
+    "sold_out_cnt": 1,
+    "stock_subscribe_cnt": 0,
+    "activity_stock_occupy_cnt": 0,
+    "channel_stock_occupy_cnt": 0,
+    "advised_increase_spot_cnt": 1,
+    "items": [
+      {
+        "product_id": "3811109459833520578",
+        "total_stock_num": 12,
+        "spot_stock_num": 10,
+        "future_stock_num": 2,
+        "total_occupied_stock_num": 3,
+        "total_unoccupied_stock_num": 9,
+        "is_alarming": 0
+      },
+      {
+        "product_id": "3811109459833520579",
+        "total_stock_num": 0,
+        "spot_stock_num": 0,
+        "future_stock_num": 0,
+        "total_occupied_stock_num": 0,
+        "total_unoccupied_stock_num": 0,
+        "is_alarming": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "total": 8,
+    "all_audit": 1,
+    "refund_audit": 1,
+    "return_audit": 1,
+    "exchange_audit": 0,
+    "resend_audit": 0,
+    "repair_audit": 0,
+    "return_for_receive": 1,
+    "exchange_for_receive": 0,
+    "arbitrate_pending": 0,
+    "urge_audit": 0,
+    "approaching_deadline_audit": 1,
+    "audit_ddl_in_one_day": 0,
+    "wait_user_delivery": 1,
+    "wait_user_sign": 0,
+    "all_wait_user_sign": 0,
+    "logistics_abnormal": 0,
+    "suspected_violation": 0,
+    "appeal_todo": 0
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "payable": 0,
+    "balance": 1000,
+    "level": "low",
+    "withdraw_detail": {
+      "withdrawable_amount": 0,
+      "end_time": 0,
+      "limit_day": 0
+    },
+    "risk_detail": {
+      "basic_payable": 0,
+      "basic_balance": 50000,
+      "limit": 50000,
+      "is_zero_out": false,
+      "basic_payable_ceiling": 0
+    },
+    "govern_detail": {
+      "govern_stage": "PayableEnough"
+    }
+  }
+}
