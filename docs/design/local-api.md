@@ -20,15 +20,20 @@
 | | `POST /api/auth/logout` | 删除当前会话 |
 | | `POST /api/auth/password {old_password, new_password}` | 改密，其他会话失效 |
 | 店铺与会话 | `GET /api/shops` | 店铺列表 + 会话健康 |
-| | `POST /api/shops` | 新增店铺（随后发起扫码） |
+| | `POST /api/shops {name, entity?, shop_no?, egress?}` | 新增店铺（随后发起扫码）；可带 `egress`（同 `PUT .../egress` 请求体），与建店在同一事务内完成，避免半成品 |
 | | `POST /api/shops/{id}/login` | 打开浏览器扫码 / 重登 |
 | | `POST /api/shops/{id}/probe` | 立即探测会话 |
 | | `POST /api/shops/{id}/sync-base` | 同步地址 / 模板 / 快递 / 面单账户 |
 | | `GET /api/shops/{id}/base` | 查看本店基础数据 |
 | | `PATCH /api/shops/{id}` | 改名、停用、切换通道、默认打印机 |
-| | `PUT /api/shops/{id}/egress {mode: direct\|proxy, proxy_url? \| paste?, expires_at?}` | 设置固定出口；`paste` 为代理商格式 `IP\|端口\|账号\|密码\|到期日`；只接受 `http(s)://`；修改已登录店铺的出口会使其转 `needs_login`（backend 5.17） |
+| | `PUT /api/shops/{id}/egress {mode: direct\|proxy, pool_id? \| proxy_url? \| paste?, expires_at?}` | 设置固定出口；`pool_id`（从代理池选）、`proxy_url`、`paste` 三者最多给一个，否则 422；`pool_id` 要求池项存在、未过期、未被别的启用店铺占用；`paste` / `proxy_url` 先按 `identity` 写入代理池再绑定；`paste` 为代理商格式 `IP\|端口\|账号\|密码\|到期日`；只接受 `http(s)://`；修改已登录店铺的出口会使其转 `needs_login`（backend 5.17） |
 | | `POST /api/shops/{id}/egress/check[?accept_change=true]` | 经该出口检查连通并取出口 IP → `{egress_ip, egress_ip_pending, egress_status}`；`accept_change` 用于人工确认 IP 变化 |
 | | `POST /api/shops/{id}/resume` | 解除风控暂停（`paused_reason` 置空） |
+| 代理池 | `GET /api/proxy-pool` | 池列表：`{id, proxy_display, expires_at, expiry_state, in_use_by, last_checked_at, last_check_ip}`；`in_use_by` 只看启用店铺；不回传账号密码 |
+| | `POST /api/proxy-pool/import {text}` | 批量导入多行代理商格式 → `{added, skipped, failed, failures[{line, reason}]}`；按 `identity` 去重，坏行不影响其余行 |
+| | `PATCH /api/proxy-pool/{id} {host?, port?, username?, password?, expires_at?}` | 编辑池项（密码留空表示不改）；被启用店铺占用时连锁清空该店出口 IP、复位为 `unchecked` 并转 `needs_login` |
+| | `DELETE /api/proxy-pool/{id}` | 删除池项；被启用店铺占用时 409 |
+| | `POST /api/proxy-pool/{id}/check` | 手动检测，经该代理取出口 IP → `{ip, reason, elapsed_ms, ip_in_use_by}`；`reason` 为 `timeout` / `proxy_unavailable` / `network` / `bad_echo` |
 | 订单 | `GET /api/orders` | 跨店列表（筛选、排序、分页） |
 | | `GET /api/orders/counts` | 跨店 tab 计数 |
 | | `GET /api/orders/{id}` | 详情（含商品行、面单历史） |

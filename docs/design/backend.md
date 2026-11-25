@@ -424,6 +424,16 @@ class Signer(Protocol):
 | 设备参数 | 不伪造。各店 profile 使用本机真实浏览器参数；扫码时记录该浏览器的 `User-Agent` 与 `sec-ch-ua*` 头，协议通道发请求时使用同一组值（参数前后不一致本身就是风控信号） |
 | 统一入口 | 凡是会请求抖店的操作（定时任务、手动同步 / 探测 / 计数、扫码），都经 `ShopRunner.run`：先出口检查，再进该店串行队列（5.7） |
 
+**代理池（配置来源，不是轮换）**：`proxy_pool` 表（`store/proxy_pool_store.py`、`service/proxy_pool.py`、`api/proxy_pool.py`）只是候选代理清单，
+支持批量导入代理商格式、手动检测、编辑与删除；每家店仍绑定**一个**固定代理（`shop.proxy_pool_id`），绑定后不会自动切换，上述规则全部不变。
+
+- 代理信息只存在池里：`shop_store.get/list` 以 `LEFT JOIN proxy_pool` 按原列名（`proxy_url` / `proxy_display` / `proxy_expires_at`）取出，只读这些键的代码无需改动；`proxy_url` 仍是密文，店铺侧只在 `EgressService.proxy_for` 解密，池侧只在 `ProxyPoolService`（检测、编辑）解密。
+- `identity = sha256("scheme://user:password@host:port")`（`domain/egress_rules.proxy_identity`，先拆解再拼接，粘贴格式与手填 URL 得到同一值），用于导入去重。
+- `set_egress` 三个入口：`direct`（清 `proxy_pool_id`）、`proxy` + `pool_id`（校验存在、未过期、未被其他启用店铺占用后绑定）、`proxy` + `paste` / `proxy_url`（先按 `identity` upsert 进池再绑定，已存在则复用，到期日以本次给出的为准）。校验、upsert、写 `proxy_pool_id`、清 IP / 转 `needs_login`、审计抽成 `EgressService.bind_in(conn, ...)`，`ShopAdminService.create` 在同一事务内调用，实现加店铺时一并配出口。
+- 编辑池项会连锁：被启用店铺占用时清空该店 `egress_ip`、状态复位 `unchecked`、转 `needs_login`；删除被启用店铺占用的池项返回 409；停用店铺不占池项（`uq_shop_pool` 排除停用店铺）。
+- 迁移 `0008` 把旧店铺代理密文原样搬进池（`identity = legacy:<shop_id>`），用原生 `DROP COLUMN` 删除 `shop` 三列；启动时 `ProxyPoolService.rehash_legacy()` 解密后补算真实 `identity`，撞车则保留 `legacy:` 并记警告。
+- 启动顺序：`lifespan` 在 `upgrade_to_head` 之前调用 `store/migrate.backup_before_upgrade`，库已存在且落后于 head 时用 sqlite `backup()` 整库备份到备份目录 `pre-upgrade-<旧版本>-<时间>.db`；迁移与服务构建完成后执行 `rehash_legacy`。
+
 **风控暂停**：任一请求遇到 `RiskBlocked`（[flows.md](flows.md) 第 8 节）→ 该店写入 `paused_reason`，`ShopRunner` 跳过该店，
 界面提示人工检查；人工点「恢复」（`POST /api/shops/{id}/resume`）后清除。出口异常与风控暂停都只影响该店。
 

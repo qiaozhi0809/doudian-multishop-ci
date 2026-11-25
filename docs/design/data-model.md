@@ -49,14 +49,12 @@ CREATE TABLE shop (
   status        TEXT NOT NULL DEFAULT 'needs_login',
                 -- active | needs_login | disabled
   egress_mode   TEXT,                       -- direct | proxy；NULL = 未配置（不允许扫码，backend 5.17）
-  proxy_url     BLOB,                       -- SecretBox 加密的代理 URL（含账号密码）
-  proxy_display TEXT,                       -- 仅主机:端口，用于界面与日志
+  proxy_pool_id INTEGER REFERENCES proxy_pool(id),  -- 绑定的代理池项；代理信息只存在池里（迁移 0008 删除了 shop 上的 proxy_url / proxy_display / proxy_expires_at）
   egress_ip     TEXT,                       -- 最近一次检查得到的出口 IP
   egress_status TEXT NOT NULL DEFAULT 'unchecked',
                 -- unchecked | ok | unreachable | changed | duplicate
   egress_checked_at TEXT,
   egress_ip_pending TEXT,                   -- changed / duplicate 时检查到的新 IP，人工确认后转正
-  proxy_expires_at TEXT,                    -- 代理到期日（粘贴导入或手填）
   paused_reason TEXT,                       -- 风控暂停原因（如 risk_blocked:602502151）；NULL = 未暂停
   paused_at     TEXT,
   created_at    TEXT NOT NULL,
@@ -65,6 +63,21 @@ CREATE TABLE shop (
 -- 最多一家店直连；启用店铺的出口 IP 两两不同（服务层同时校验，backend 5.17）
 CREATE UNIQUE INDEX uq_shop_direct ON shop(egress_mode) WHERE egress_mode = 'direct' AND status != 'disabled';
 CREATE UNIQUE INDEX uq_shop_egress_ip ON shop(egress_ip) WHERE egress_ip IS NOT NULL AND status != 'disabled';
+-- 一个池项同一时间只能绑一家启用店铺（停用店铺不占位）
+CREATE UNIQUE INDEX uq_shop_pool ON shop(proxy_pool_id) WHERE proxy_pool_id IS NOT NULL AND status != 'disabled';
+
+-- ①-a 代理池：出口代理的配置来源（不是轮换池，backend 5.17）
+CREATE TABLE proxy_pool (
+  id              INTEGER PRIMARY KEY,
+  identity        TEXT NOT NULL UNIQUE,     -- sha256(scheme://user:password@host:port)，导入去重；迁移搬来的旧数据暂为 legacy:<shop_id>，启动时补算
+  proxy_url       BLOB NOT NULL,            -- SecretBox 加密的代理 URL（含账号密码）
+  proxy_display   TEXT NOT NULL,            -- 仅主机:端口，用于界面与日志
+  expires_at      TEXT,                     -- 到期日 YYYY-MM-DD；NULL = 不限
+  last_checked_at TEXT,                     -- 上次手动检测时间
+  last_check_ip   TEXT,                     -- 上次检测到的出口 IP，失败为 NULL
+  created_at      TEXT NOT NULL,
+  updated_at      TEXT NOT NULL
+);
 
 -- ①-b 店铺画像（取自已验证的资质/管理员/绑定接口，随会话同步刷新）
 CREATE TABLE shop_profile (
@@ -448,6 +461,7 @@ CREATE TABLE margin_account (
 6. `raw_json` 保留完整平台报文，用于排障与重放解析。
 7. 地址、模板、快递均按 `(shop_id, code)` 唯一，**禁止跨店复用**。
 8. 取号与官方组件打印**不依赖**收货地址解密（DEC-06）。收件人明文**不写入数据库**，只在内存中短暂缓存。
+9. `uq_shop_pool` 保证一个代理池项同一时间只绑一家启用店铺；`proxy_pool.identity` 唯一，保证同一代理不会在池里重复。
 
 ### 6.4 只读聚合与存储说明（DM-06 ~ DM-09）
 
