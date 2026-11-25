@@ -17,6 +17,18 @@ describe("buildEgressRequest", () => {
     expect(buildEgressRequest({ ...emptyEgressForm(), mode: "direct" })).toEqual({ ok: true, request: { mode: "direct" } });
   });
 
+  it("默认入口是从池选择", () => {
+    expect(emptyEgressForm()).toMatchObject({ entry: "pool", poolId: null });
+  });
+
+  it("从池选择：选了提交 pool_id", () => {
+    expect(buildEgressRequest({ ...emptyEgressForm(), poolId: 7 })).toEqual({ ok: true, request: { mode: "proxy", pool_id: 7 } });
+  });
+
+  it("从池选择：没选时提示", () => {
+    expect(buildEgressRequest(emptyEgressForm())).toEqual({ ok: false, errors: { poolId: "请选择池里的代理" } });
+  });
+
   it("粘贴代理商一行：提交 paste 字段", () => {
     const line = "1.2.3.4|8000|user|pass|2026-12-01";
     expect(buildEgressRequest({ ...emptyEgressForm(), mode: "proxy", entry: "paste", paste: `  ${line}\n` })).toEqual({

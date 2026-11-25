@@ -4,7 +4,8 @@ type EgressRequest = components["schemas"]["EgressRequest"];
 
 export interface EgressForm {
   mode: "direct" | "proxy";
-  entry: "paste" | "fields";
+  entry: "pool" | "paste" | "fields";
+  poolId: number | null;
   paste: string;
   scheme: "http" | "https";
   host: string;
@@ -14,14 +15,15 @@ export interface EgressForm {
   expiresAt: string;
 }
 
-export type EgressField = "paste" | "host" | "port" | "username" | "password" | "expiresAt";
+export type EgressField = "poolId" | "paste" | "host" | "port" | "username" | "password" | "expiresAt";
 export type EgressBuild =
   | { ok: true; request: EgressRequest }
   | { ok: false; errors: Partial<Record<EgressField, string>> };
 
 export const emptyEgressForm = (): EgressForm => ({
   mode: "proxy",
-  entry: "paste",
+  entry: "pool",
+  poolId: null,
   paste: "",
   scheme: "http",
   host: "",
@@ -46,6 +48,11 @@ function isRealDate(value: string): boolean {
  */
 export function buildEgressRequest(form: EgressForm): EgressBuild {
   if (form.mode === "direct") return { ok: true, request: { mode: "direct" } };
+
+  if (form.entry === "pool") {
+    if (form.poolId === null) return { ok: false, errors: { poolId: "请选择池里的代理" } };
+    return { ok: true, request: { mode: "proxy", pool_id: form.poolId } };
+  }
 
   if (form.entry === "paste") {
     const line = form.paste.trim();

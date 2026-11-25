@@ -44,7 +44,12 @@ export function useShopActions(shops: ShopRow[]) {
 
   const dismissNotice = useCallback((id: number) => setNotices((prev) => prev.filter((n) => n.id !== id)), []);
 
-  const refreshShops = () => client.invalidateQueries({ queryKey: queryKeys.shops() });
+  /** 刷新店铺；出口占用的池项也随之变化，一并刷新池。 */
+  const refreshShops = () =>
+    Promise.all([
+      client.invalidateQueries({ queryKey: queryKeys.shops() }),
+      client.invalidateQueries({ queryKey: queryKeys.proxyPool() }),
+    ]);
 
   /** 记录进行中的操作，结束时移除；返回操作结果。 */
   const track = useCallback(async <T,>(key: string, fn: () => Promise<T>): Promise<T> => {

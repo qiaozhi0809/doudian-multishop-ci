@@ -21,6 +21,7 @@ export function useShopPage() {
     status: query.isLoading ? ("loading" as const) : query.isError ? ("error" as const) : all.length === 0 ? ("empty" as const) : ("ready" as const),
     retry: () => void query.refetch(),
     shops,
+    allShops: all,
     actions,
     dialogs,
     backup,

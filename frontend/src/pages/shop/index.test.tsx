@@ -174,6 +174,7 @@ describe("店铺与设置页", () => {
       await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
       await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
       const dialog = await screen.findByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "粘贴" }));
       await user.type(within(dialog).getByLabelText("代理商格式"), "1.2.3.4|8000|user|pass|2026-12-31");
       await user.click(within(dialog).getByRole("button", { name: "保存出口" }));
       await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -188,6 +189,7 @@ describe("店铺与设置页", () => {
       await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
       await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
       const dialog = await screen.findByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "粘贴" }));
       await user.type(within(dialog).getByLabelText("代理商格式"), "1.2.3.4|8000");
       await user.click(within(dialog).getByRole("button", { name: "保存出口" }));
       expect(await within(dialog).findByText("代理商格式应为 IP|端口|账号|密码|到期日")).toBeInTheDocument();
