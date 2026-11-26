@@ -5,6 +5,7 @@ import { Button } from "@/components/arc/button/button";
 import type { DataColumn } from "@/components/arc/sortable-data-table/sortable-data-table";
 import { Tooltip } from "@/components/arc/tooltip/tooltip";
 import { DataTable } from "@/components/custom/data-table/data-table";
+import { OrderNoCell } from "@/components/custom/order-no-cell/order-no-cell";
 import type { ListSort } from "@/lib/list-sort";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import { kindTone, trackingPair, type Finding } from "../logic/reconcile-view";
@@ -23,7 +24,7 @@ interface FindingsTableProps {
 export function FindingsTable({ rows, marking, onMarkHandled, sort, onSortChange, seqOffset }: FindingsTableProps) {
   const columns: DataColumn<Finding>[] = [
     { key: "shop_name", label: "店铺", sortable: true, width: 100, render: (v) => <span className="cell-ellipsis" title={String(v)}>{String(v)}</span> },
-    { key: "shop_order_id", label: "订单号", width: ID_COL_WIDTH, render: (v) => <span className={styles.tabular}>{String(v)}</span> },
+    { key: "shop_order_id", label: "订单号", width: ID_COL_WIDTH, render: (v) => <OrderNoCell value={v as string} /> },
     {
       key: "kind", label: "异常", sortable: true, width: 120,
       render: (_, row) => (

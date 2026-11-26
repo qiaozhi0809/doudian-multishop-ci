@@ -1,9 +1,10 @@
 import { Alert } from "@/components/arc/alert/alert";
 import { ListPager } from "@/components/custom/list-pager/list-pager";
 import { seqOffset } from "@/lib/list-sort";
-import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
+import { LoadError } from "@/components/custom/load-error/load-error";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import { PAGE_SIZE } from "../logic/label-columns";
 import { componentNotice, printGate, selectedWaybillIds } from "../logic/print-status";
 import styles from "../labeling-page.module.css";
@@ -20,16 +21,9 @@ import { ShipProgress } from "./ship-progress";
 /** 打单发货：店铺就绪判断 → 阶段与操作 → 打印状态 → 进度 → 表格 / 分页 → 预览、发货检查与收件人。 */
 export function LabelingPageView({ page }: { page: LabelPage }) {
   const { pool, actions, receiver, print, ship } = page;
-  if (page.shopsState === "loading") return <Skeleton label="正在读取店铺" lines={4} />;
+  if (page.shopsState === "loading") return <Skeleton label="正在读取店铺" lines={SKELETON_LINES.card} />;
   if (page.shopsState === "error") {
-    return (
-      <div className={styles.page}>
-        <Alert tone="danger" title="读取店铺失败，请确认本地服务已启动后重试" />
-        <div>
-          <Button variant="secondary" onClick={page.retryShops}>重新读取</Button>
-        </div>
-      </div>
-    );
+    return <LoadError title="读取店铺失败，请确认本地服务已启动后重试" onRetry={page.retryShops} />;
   }
   if (page.shopsState === "empty") {
     return <EmptyNoShops />;
@@ -77,16 +71,9 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
       <LabelProgress progress={actions.progress} />
       <ShipProgress progress={ship.progress} />
 
-      {pool.query.isLoading && <Skeleton label="正在读取订单池" lines={6} />}
+      {pool.query.isLoading && <Skeleton label="正在读取订单池" lines={SKELETON_LINES.list} />}
       {pool.query.isError && (
-        <div className={styles.page}>
-          <Alert tone="danger" title="读取订单池失败，请确认本地服务正常后重试" />
-          <div>
-            <Button variant="secondary" onClick={() => void pool.query.refetch()}>
-              重新读取
-            </Button>
-          </div>
-        </div>
+        <LoadError title="读取订单池失败，请确认本地服务正常后重试" onRetry={() => void pool.query.refetch()} />
       )}
       {data && (
         <>

@@ -1,8 +1,9 @@
-import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { LoadError } from "@/components/custom/load-error/load-error";
 import { NoticeList } from "@/components/custom/notice/notice-list";
 import type { ShopRow } from "@/lib/use-shops";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { ShopPage } from "../hooks/use-shop-page";
 import { isLoggedIn } from "../logic/shop-status";
 import styles from "../shop-page.module.css";
@@ -51,16 +52,9 @@ export function ShopPageView({ page }: { page: ShopPage }) {
         </div>
       )}
       <NoticeList notices={actions.notices} onDismiss={actions.dismissNotice} />
-      {page.status === "loading" && <Skeleton label="正在读取店铺" lines={5} />}
+      {page.status === "loading" && <Skeleton label="正在读取店铺" lines={SKELETON_LINES.list} />}
       {page.status === "error" && (
-        <div className={styles.page}>
-          <Alert tone="danger" title="读取店铺失败，请确认本地服务已启动后重试" />
-          <div>
-            <Button variant="secondary" onClick={page.retry}>
-              重新读取
-            </Button>
-          </div>
-        </div>
+        <LoadError title="读取店铺失败，请确认本地服务已启动后重试" onRetry={page.retry} />
       )}
       {page.status === "empty" && <EmptyShops onAdd={() => dialogs.setAddOpen(true)} />}
       {page.status === "ready" && (

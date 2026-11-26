@@ -49,6 +49,7 @@ describe("对账页", () => {
     expect(screen.getByText("OLD-TRACKING → NEW-TRACKING")).toBeInTheDocument();
     expect(screen.queryByText(/扫描 12 单/)).not.toBeInTheDocument();
     expect(screen.getByText(/3 → 2/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "69000001" })).toHaveAttribute("title", "点击复制订单号");
   });
 
   it("立即检查提交 30 天窗口并刷新结果", async () => {

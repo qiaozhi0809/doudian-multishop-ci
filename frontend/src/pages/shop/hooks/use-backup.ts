@@ -33,6 +33,10 @@ export function useBackup(notify: (key: string, tone: NoticeTone, text: string) 
     open,
     toggle: () => setOpen((value) => !value),
     list: snapshots.data ?? null,
+    loading: snapshots.isLoading,
+    /** 一份清单都没拿到才算读取失败；刷新失败时继续显示上次的清单。 */
+    failed: snapshots.isError && !snapshots.data,
+    retry: () => void snapshots.refetch(),
     pending: mutation.isPending,
     run: () => mutation.mutate(),
   };

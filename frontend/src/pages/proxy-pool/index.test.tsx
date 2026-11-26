@@ -37,10 +37,12 @@ describe("代理池页", () => {
     expect(rowOf("3.3.3.3").getByText("已过期")).toBeInTheDocument();
   });
 
-  it("空池显示引导", async () => {
+  it("空池显示引导：带图标的整页空状态和导入按钮", async () => {
     mockFetch({ "GET /api/proxy-pool": jsonResponse([]) });
     renderPage();
-    expect(await screen.findByText("代理池是空的")).toBeInTheDocument();
+    const title = await screen.findByText("代理池是空的");
+    expect(title.closest("section")!.querySelector("svg.lucide-network")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "导入代理" })).toBeInTheDocument();
   });
 
   it("读取失败可重试", async () => {

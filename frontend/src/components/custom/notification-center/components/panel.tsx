@@ -1,11 +1,12 @@
-import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Pagination } from "@/components/arc/pagination/pagination";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Switch } from "@/components/arc/switch/switch";
 import { Tooltip } from "@/components/arc/tooltip/tooltip";
+import { LoadError } from "@/components/custom/load-error/load-error";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import { countsText, type ProgressItem } from "../logic/progress";
 import { groupForPanel, lastPage, levelTone, openRows, type NotificationItem, type StrongOpenShop } from "../logic/notification-view";
 import styles from "../notification-center.module.css";
@@ -130,16 +131,11 @@ export function Panel(props: PanelProps) {
           <MarkAllRead disabled={props.unread === 0} onClick={props.onMarkAllRead} />
         </div>
         {props.loading ? (
-          <Skeleton label="正在读取通知" lines={3} />
+          <Skeleton label="正在读取通知" lines={SKELETON_LINES.card} />
         ) : props.error ? (
-          <div className={styles.error}>
-            <Alert tone="danger" title="读取通知失败" />
-            <Button variant="secondary" size="sm" onClick={props.onRetry}>
-              重新读取
-            </Button>
-          </div>
+          <LoadError size="sm" title="读取通知失败，请确认本地服务正常后重试" onRetry={props.onRetry} />
         ) : recent.length === 0 ? (
-          <p className={styles.empty}>暂无通知</p>
+          <p className="panel-empty">暂无通知</p>
         ) : (
           <ItemList items={recent} onOpenItem={props.onOpenItem} />
         )}

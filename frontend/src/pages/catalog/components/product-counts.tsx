@@ -12,6 +12,7 @@ import {
   type ProductCountKey,
   type ProductCountsResponse,
 } from "../logic/catalog-page";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import styles from "../catalog-page.module.css";
 
 interface CountsProps {
@@ -28,7 +29,7 @@ interface CountsProps {
 
 /** 商品状态计数（平台口径），也是快捷筛选（点卡片筛下方本地列表）。 */
 export function ProductCounts({ loading, error, data, shopName, bannerShopIds, onRetry, cardProps }: CountsProps) {
-  if (loading) return <Skeleton label="正在读取商品计数" lines={2} />;
+  if (loading) return <Skeleton label="正在读取商品计数" lines={SKELETON_LINES.count} />;
   if (error || !data) return <LoadError size="sm" title="读取商品计数失败，请确认本地服务正常后重试" onRetry={onRetry} />;
   const aggregated = aggregateProductCounts(data);
   return (
