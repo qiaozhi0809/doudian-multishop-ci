@@ -24,6 +24,20 @@ class FakeClock:
         return self.now
 
 
+@pytest.fixture(autouse=True)
+def _isolated_browsers(monkeypatch):
+    """每个测试一张新的浏览器登记表，配空进程表：不共享状态，不碰本机真实进程。"""
+    import app.adapter.browser.browser_registry as browser_registry
+    import app.wiring as wiring
+    from app.adapter.browser.browser_registry import BrowserRegistry
+    from tests.fakes import NullProcesses
+
+    registry = BrowserRegistry(NullProcesses())
+    monkeypatch.setattr(browser_registry, "REGISTRY", registry)
+    monkeypatch.setattr(wiring, "REGISTRY", registry)
+    return registry
+
+
 @pytest.fixture
 def clock():
     return FakeClock()

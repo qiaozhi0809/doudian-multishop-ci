@@ -15,13 +15,19 @@ import asyncio
 import re
 from pathlib import Path
 
-from app.adapter.browser.cloak_launch import launch_cloak
+from app.adapter.browser import browser_registry
+from app.adapter.browser.browser_registry import BrowserRegistry, Purpose
+from app.adapter.browser.browser_timing import (
+    SCRAPE_GOTO_TIMEOUT_S,
+    SCRAPE_RENDER_WAIT_S,
+    SCRAPE_TAB_WAIT_S,
+)
 from app.adapter.browser.login import playwright_proxy
 
 PAYMENT_URL = "https://fxg.jinritemai.com/ffa/ecom/merchant/payment-settings"
 SHOP_URL = "https://fxg.jinritemai.com/ffa/grs-new/qualification/common-tools"
 QUALIFICATION_URL = "https://fxg.jinritemai.com/ffa/mshop/shop/qualification"
-RENDER_WAIT_S = 8
+RENDER_WAIT_S = SCRAPE_RENDER_WAIT_S  # 耗时常量统一在 browser_timing，最长存活由它推导
 _DIGITS = re.compile(r"\D")
 _SHOP_ID = re.compile(r"店铺ID[:：]?\s*(\d+)")
 
@@ -74,14 +80,19 @@ def parse_entity(text: str) -> dict[str, str]:
     return {"entity": name} if name else {}
 
 
-async def scrape_platform_info(profile_dir: Path, proxy: str | None) -> dict[str, str]:
+async def scrape_platform_info(
+    profile_dir: Path, proxy: str | None, *, registry: BrowserRegistry | None = None,
+) -> dict[str, str]:
     """依次尝试三类信息，返回读到的字段；失败项直接缺席。
 
     proxy 是该店出口代理 URL（直连为 None）；浏览器不可用时抛 CloakUnavailable。
+    浏览器在登记表里登记（用途 scrape），关闭超时会强杀进程树。
     """
-    ctx = await launch_cloak(profile_dir, playwright_proxy(proxy), offscreen=True)
+    reg = registry or browser_registry.REGISTRY
     info: dict[str, str] = {}
-    try:
+    async with reg.open_cloak(
+        profile_dir, Purpose.SCRAPE, playwright_proxy(proxy), offscreen=True
+    ) as ctx:
         page = ctx.pages[0] if ctx.pages else await ctx.new_page()
         for url, parse in (
             (PAYMENT_URL, parse_bank_card),
@@ -89,18 +100,14 @@ async def scrape_platform_info(profile_dir: Path, proxy: str | None) -> dict[str
             (QUALIFICATION_URL, parse_entity),
         ):
             try:
-                await page.goto(url, wait_until="domcontentloaded", timeout=45_000)
+                await page.goto(
+                    url, wait_until="domcontentloaded", timeout=SCRAPE_GOTO_TIMEOUT_S * 1000)
                 await asyncio.sleep(RENDER_WAIT_S)
                 if url == QUALIFICATION_URL:
                     await page.evaluate(_CLICK_ENTITY_TAB)
-                    await asyncio.sleep(4)
+                    await asyncio.sleep(SCRAPE_TAB_WAIT_S)
                 text = await page.evaluate("document.body.innerText")
                 info.update(parse(text or ""))
             except Exception:  # noqa: BLE001 - 单页失败不影响其它项
                 continue
-    finally:
-        try:
-            await ctx.close()
-        except Exception:  # noqa: BLE001 - 页面已关闭时 close 会报错
-            pass
     return info

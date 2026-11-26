@@ -117,7 +117,7 @@ def api(tmp_path, clock):
         ip = env.ips.get(proxy)
         return ProbeResult(ip, None if ip else "network")
 
-    async def scan(profile_dir, channel, proxy, timeout_s, use_cloak=False):
+    async def scan(profile_dir, channel, proxy, timeout_s, use_cloak=False, registry=None):
         env.scan_calls.append((profile_dir, channel, proxy, timeout_s))
         return await env.scan_impl(profile_dir, channel, proxy, timeout_s)
 

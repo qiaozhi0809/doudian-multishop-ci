@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Protocol
 
 import structlog
 
+from app.adapter.browser.browser_registry import BrowserRegistry
+from app.adapter.browser.browser_timing import SCAN_WAIT_S
 from app.adapter.browser.login import CloakUnavailable, LoginCancelled, LoginResult, scan_login
 from app.adapter.doudian import endpoints as ep
 from app.adapter.doudian.client import FxgClient
@@ -28,11 +30,11 @@ class ScanFn(Protocol):
 
     def __call__(
         self, profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = ...,
-        use_cloak: bool = ...,
+        use_cloak: bool = ..., *, registry: BrowserRegistry | None = ...,
     ) -> Awaitable[LoginResult]: ...
 
 
-SCAN_TIMEOUT_S = 300
+SCAN_TIMEOUT_S = SCAN_WAIT_S  # 扫码浏览器最长存活由它推导（browser_timing.login_max_age）
 _USER_FACING = (DoudianError, EgressNotReady, EgressConflict, ShopPaused, NotFound,
                 LoginCancelled, CloakUnavailable)
 
@@ -43,7 +45,9 @@ class ShopLoginFlow:
         events: EventBus, profiles_dir: Path, channel: str,
         scan: ScanFn = scan_login, timeout_s: int = SCAN_TIMEOUT_S,
         use_cloak: bool = False, profile: "ShopProfileService | None" = None,
+        browsers: BrowserRegistry | None = None,
     ) -> None:
+        self._browsers = browsers
         self._runner = runner
         self._sessions = sessions
         self._base_data = base_data
@@ -82,7 +86,8 @@ class ShopLoginFlow:
             profile.mkdir(parents=True, exist_ok=True)
             proxy = self._runner.proxy_for(shop_id)  # 扫码浏览器必须走该店出口
             result = await self._scan(
-                profile, self._channel, proxy, self._timeout_s, use_cloak=self._use_cloak)
+                profile, self._channel, proxy, self._timeout_s, use_cloak=self._use_cloak,
+                registry=self._browsers)
             self._sessions.save_login(shop_id, result)
 
         return job

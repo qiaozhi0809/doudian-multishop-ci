@@ -7,6 +7,7 @@ from pathlib import Path
 
 from sqlalchemy import Engine
 
+from app.adapter.browser.browser_registry import BrowserRegistry
 from app.adapter.browser.cloak_launch import CloakUnavailable
 from app.adapter.browser.scrape import scrape_platform_info
 from app.adapter.doudian import endpoints as ep
@@ -30,8 +31,9 @@ class ShopProfileService:
 
     def __init__(
         self, engine: Engine, runner: ShopRunner, *, profiles_dir: Path,
-        clock: Callable[[], datetime] | None = None,
+        clock: Callable[[], datetime] | None = None, browsers: BrowserRegistry | None = None,
     ) -> None:
+        self._browsers = browsers
         self._engine = engine
         self._runner = runner
         self._profiles_dir = profiles_dir
@@ -51,7 +53,8 @@ class ShopProfileService:
         async def job(_client: object) -> dict[str, str]:
             try:
                 return await scrape_platform_info(
-                    self._profiles_dir / str(shop_id), self._runner.proxy_for(shop_id)
+                    self._profiles_dir / str(shop_id), self._runner.proxy_for(shop_id),
+                    registry=self._browsers,
                 )
             except CloakUnavailable as e:  # 未预下载等：提示本身就是处理办法，原样给用户
                 raise InvalidRequest(str(e)) from e

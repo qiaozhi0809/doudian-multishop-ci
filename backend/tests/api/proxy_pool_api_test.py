@@ -15,9 +15,10 @@ def import_one(api, i: int = 5) -> int:
 
 
 def test_requires_login(api):
-    with TestClient(api.app, base_url="http://127.0.0.1:8787") as anon:
-        assert anon.get("/api/proxy-pool").status_code == 401
-        assert anon.post("/api/proxy-pool/import", json={"text": ""}).status_code == 401
+    # 不用 with：应用已由 api 夹具启动，再跑一次 lifespan 会被单实例锁拒绝
+    anon = TestClient(api.app, base_url="http://127.0.0.1:8787")
+    assert anon.get("/api/proxy-pool").status_code == 401
+    assert anon.post("/api/proxy-pool/import", json={"text": ""}).status_code == 401
 
 
 def test_import_list_and_no_secrets(api):
