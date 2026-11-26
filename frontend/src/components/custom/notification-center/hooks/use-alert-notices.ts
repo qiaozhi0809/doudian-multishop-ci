@@ -9,6 +9,7 @@ import {
   type NotificationItem,
   type StrongOpenShop,
 } from "../logic/notification-view";
+import { useAlertChannel } from "./use-alert-channel";
 import { useNotificationAlerts } from "./use-notifications";
 
 interface Shown {
@@ -25,6 +26,7 @@ interface Shown {
 export function useAlertNotices(strongOpen: StrongOpenShop[]): void {
   const notify = useNotice();
   const dismiss = useNoticeDismiss();
+  const alertStrong = useAlertChannel();
   const shown = useRef(new Map<string, Shown>());
 
   const close = useCallback(
@@ -39,6 +41,7 @@ export function useAlertNotices(strongOpen: StrongOpenShop[]): void {
     const notice = alertNotice(item);
     if (!notify || !notice) return;
     notify(notice.text, notice.tone, { key: notice.key, persistent: notice.persistent, holdMs: notice.holdMs });
+    if (item.level === "strong") alertStrong(item);
     if (notice.persistent && item.state_key !== null && item.shop_id !== null) {
       shown.current.set(notice.key, { shopId: item.shop_id, kind: item.kind, seen: false });
     }
