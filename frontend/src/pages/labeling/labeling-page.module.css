@@ -150,56 +150,61 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
 }
 
 .planRow {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: var(--text-sm);
   padding: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
 }
 
+.planRow strong {
+  font-weight: 500;
+}
+
+/* 店名在左、单数在右 */
+.planHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.planDetail {
+  color: var(--text-secondary);
+}
+
 .planOrders {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .planChip {
   font-variant-numeric: tabular-nums;
   font-size: var(--text-xs);
-  padding: 2px 8px;
-  border-radius: 999px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
   background: var(--surface-raised);
   border: 1px solid var(--border);
 }
 
+/* 一行一条原因；字号跟随所在区块（提示条内小一号） */
 .reasonList {
-  margin: 0;
-  padding-left: 18px;
-  font-size: var(--text-sm);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-
-/* 对话框底部：ghost「取消」在左、主按钮在右，整组靠右（全站一致） */
-.dialogFooter {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
+  gap: var(--space-1);
 }
 
 .receiverGrid {
   display: grid;
-  grid-template-columns: 88px 1fr;
-  gap: 8px 12px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
   font-size: var(--text-sm);
 }
 
@@ -209,6 +214,7 @@
 
 .receiverGrid dd {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .srOnly {

@@ -1,6 +1,6 @@
 import { Alert } from "@/components/arc/alert/alert";
 import { failedRows, progressTitle, type ProgressState } from "../logic/ship-progress";
-import styles from "../labeling-page.module.css";
+import { ReasonList } from "./reason-list";
 
 /** 发货进度：按 SSE 逐单汇总；失败项就地列出原因。 */
 export function ShipProgress({ progress }: { progress: ProgressState }) {
@@ -10,11 +10,7 @@ export function ShipProgress({ progress }: { progress: ProgressState }) {
   return (
     <Alert tone={tone} title={progressTitle(progress)}>
       {failures.length > 0 && (
-        <ul className={styles.reasonList}>
-          {failures.map((row) => (
-            <li key={row.orderId}>{row.orderNo}：{row.reason ?? "发货失败"}</li>
-          ))}
-        </ul>
+        <ReasonList items={failures.map((row) => ({ key: row.orderId, text: `${row.orderNo}：${row.reason ?? "发货失败"}` }))} />
       )}
     </Alert>
   );

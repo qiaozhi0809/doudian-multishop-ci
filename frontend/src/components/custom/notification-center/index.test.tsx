@@ -1,7 +1,14 @@
+import type { ReactNode } from "react";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FakeEventSource } from "@/test/fake-event-source";
 import { item, setup, setupNotificationTests, shop } from "./test-harness";
+
+// 离场动画在假计时器下走不完：测试里让提示直接移除
+vi.mock("motion/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("motion/react")>()),
+  AnimatePresence: ({ children }: { children?: ReactNode }) => children,
+}));
 
 setupNotificationTests();
 

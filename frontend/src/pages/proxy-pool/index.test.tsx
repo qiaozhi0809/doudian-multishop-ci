@@ -125,7 +125,7 @@ describe("代理池页", () => {
     await user.click(await screen.findByRole("button", { name: "更多操作" }));
     await user.click(await screen.findByRole("menuitem", { name: "删除代理" }));
     const dialog = within(await screen.findByRole("dialog"));
-    expect(dialog.getByText("删除代理 1.2.3.4:8080")).toBeInTheDocument();
+    expect(dialog.getByText("删除代理「1.2.3.4:8080」")).toBeInTheDocument();
     const confirm = dialog.getByRole("button", { name: "删除代理" });
     expect(confirm.className).toMatch(/_danger_/);
     await user.click(confirm);

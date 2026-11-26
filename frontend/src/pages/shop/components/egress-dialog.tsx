@@ -2,7 +2,10 @@ import { useState, type FormEvent } from "react";
 import { useLastPresent } from "@/lib/use-last-present";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog } from "@/components/arc/dialog/dialog";
+import { AppDialogContent } from "@/components/custom/app-dialog/app-dialog-content";
+import { ConfirmDialog } from "@/components/custom/confirm-dialog/confirm-dialog";
+import { DialogFooter } from "@/components/custom/dialog-footer/dialog-footer";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import type { ShopRow } from "@/lib/use-shops";
 import type { ActionResult } from "@/lib/action-result";
@@ -10,7 +13,6 @@ import type { components } from "@/lib/api-types";
 import { buildEgressRequest, directDisabledReason, emptyEgressForm, type EgressField, type EgressForm } from "../logic/egress-form";
 import { isLoggedIn } from "../logic/shop-status";
 import styles from "../shop-page.module.css";
-import { ConfirmDialog } from "./confirm-dialog";
 import { EgressFields } from "./egress-fields";
 import { ReasonTip } from "./reason-tip";
 
@@ -30,7 +32,7 @@ export function EgressDialog({ shop, onOpenChange, pending, shops, onSave, onAcc
   const shown = useLastPresent(shop);
   return (
     <Dialog open={shop !== null} onOpenChange={onOpenChange} busy={pending}>
-      <DialogContent title="设置出口" description={shown?.name}>
+      <AppDialogContent size="form" title="设置出口" description={shown?.name}>
         {shop && (
           <EgressDialogBody
             key={shop.id}
@@ -42,7 +44,7 @@ export function EgressDialog({ shop, onOpenChange, pending, shops, onSave, onAcc
             onDone={() => onOpenChange(false)}
           />
         )}
-      </DialogContent>
+      </AppDialogContent>
     </Dialog>
   );
 }
@@ -104,20 +106,15 @@ function EgressDialogBody({ shop, pending, shops, onSave, onAcceptChange, onDone
         </ReasonTip>
         <EgressFields form={form} errors={errors} onChange={patch} />
         {serverError && <Alert tone="danger" title={serverError} />}
-        <div className={styles.formActions}>
-          <DialogClose asChild>
-            <Button type="button" variant="ghost" disabled={pending}>
-              取消
-            </Button>
-          </DialogClose>
+        <DialogFooter busy={pending}>
           <Button type="submit" loading={pending}>
             保存出口
           </Button>
-        </div>
+        </DialogFooter>
       </form>
       <ConfirmDialog
-        shop={confirming ? shop : null}
-        action="修改出口"
+        target={confirming ? shop : null}
+        title={(target) => `修改「${target.name}」的出口`}
         description="保存后需要重新扫码登录"
         confirmLabel="保存出口"
         danger

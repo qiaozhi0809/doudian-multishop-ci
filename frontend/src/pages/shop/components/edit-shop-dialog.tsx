@@ -2,7 +2,9 @@ import { useState, type FormEvent } from "react";
 import { useLastPresent } from "@/lib/use-last-present";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog } from "@/components/arc/dialog/dialog";
+import { AppDialogContent } from "@/components/custom/app-dialog/app-dialog-content";
+import { DialogFooter } from "@/components/custom/dialog-footer/dialog-footer";
 import { Input } from "@/components/arc/input/input";
 import type { ActionResult } from "@/lib/action-result";
 import type { ShopRow } from "@/lib/use-shops";
@@ -22,7 +24,7 @@ export function EditShopDialog({ shop, pending, onOpenChange, onSubmit }: EditSh
   const shown = useLastPresent(shop);
   return (
     <Dialog open={shop != null} onOpenChange={onOpenChange} busy={pending}>
-      <DialogContent title="编辑店铺" description={shown?.name}>
+      <AppDialogContent size="form" title="编辑店铺" description={shown?.name}>
         {shop && (
           <EditShopForm
             key={shop.id}
@@ -32,7 +34,7 @@ export function EditShopDialog({ shop, pending, onOpenChange, onSubmit }: EditSh
             onDone={() => onOpenChange(false)}
           />
         )}
-      </DialogContent>
+      </AppDialogContent>
     </Dialog>
   );
 }
@@ -109,16 +111,11 @@ function EditShopForm({
         }}
       />
       {error && <Alert tone="danger" title={error} />}
-      <div className={styles.formActions}>
-        <DialogClose asChild>
-          <Button type="button" variant="ghost" disabled={pending}>
-            取消
-          </Button>
-        </DialogClose>
+      <DialogFooter busy={pending}>
         <Button type="submit" loading={pending}>
           保存
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

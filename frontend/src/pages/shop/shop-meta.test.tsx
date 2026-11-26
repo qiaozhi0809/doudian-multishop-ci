@@ -153,7 +153,7 @@ describe("店铺字段展示与编辑", () => {
     );
     await user.click(await screen.findByRole("menuitem", { name: "停用店铺" }));
     const dialog = within(await screen.findByRole("dialog"));
-    expect(dialog.getByText("停用店铺 店铺甲")).toBeInTheDocument();
+    expect(dialog.getByText("停用店铺「店铺甲」")).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
     const confirm = dialog.getByRole("button", { name: "停用店铺" });
     expect(confirm.className).toMatch(/danger/);

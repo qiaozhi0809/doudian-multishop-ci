@@ -87,7 +87,10 @@ export function useLabelActions() {
   );
 
   const execute = useCallback(() => {
-    if (preview) executeMutation.mutate({ previewId: preview.preview_id, mode: previewMode });
+    if (!preview) return;
+    // 重试时先清掉上次的失败原因
+    setError(null);
+    executeMutation.mutate({ previewId: preview.preview_id, mode: previewMode });
   }, [preview, previewMode, executeMutation]);
 
   return {
@@ -101,7 +104,10 @@ export function useLabelActions() {
     executeBusy: executeMutation.isPending,
     running: runningPreviewId !== null && !progress.done,
     openPreview,
-    closePreview: () => setPreview(null),
+    closePreview: () => {
+      setPreview(null);
+      setError(null);
+    },
     execute,
   };
 }

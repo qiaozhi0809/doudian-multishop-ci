@@ -1,0 +1,25 @@
+/* 底部按钮栏。内容超出对话框高度时贴在底部，按钮始终看得到；左右与下方的负外边距抵掉正文内边距（--space-6）。
+   与正文的距离 = 父级纵向间距 16 + 上内边距 8 = 24。 */
+.footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin: 0 calc(-1 * var(--space-6)) calc(-1 * var(--space-6));
+  padding: var(--space-2) var(--space-6) var(--space-6);
+  background: var(--surface-raised);
+}
+
+/* 正文只有按钮时（确认框没有报错），不再多垫上内边距 */
+.footer:first-child {
+  padding-top: 0;
+}
+
+/* 按住确认按钮默认是方圆角，与旁边的全圆按钮统一 */
+.footer > button[data-tone] {
+  --radius-control: var(--radius-button);
+}

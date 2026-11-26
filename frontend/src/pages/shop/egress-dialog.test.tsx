@@ -53,7 +53,7 @@ describe("设置出口", () => {
     expect(within(dialog).getByText("该店已登录，修改出口后需要重新扫码")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "直连" }));
     await user.click(within(dialog).getByRole("button", { name: "保存出口" }));
-    const confirm = await screen.findByRole("dialog", { name: "修改出口 店铺甲" });
+    const confirm = await screen.findByRole("dialog", { name: "修改「店铺甲」的出口" });
     return { user, dialog, confirm };
   }
   const putCalls = (fetchMock: ReturnType<typeof mockFetch>) => fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT");
@@ -78,7 +78,7 @@ describe("设置出口", () => {
     const fetchMock = mockPageFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
     const { user, dialog, confirm } = await saveDirectEgress();
     await user.click(within(confirm).getByRole("button", { name: "取消" }));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "修改出口 店铺甲" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "修改「店铺甲」的出口" })).not.toBeInTheDocument());
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "直连" })).toHaveAttribute("aria-pressed", "true");
     expect(putCalls(fetchMock)).toHaveLength(0);

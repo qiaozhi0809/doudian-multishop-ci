@@ -77,6 +77,8 @@ export function useShippingActions() {
 
   const confirm = useCallback(() => {
     if (!check) return;
+    // 重试时先清掉上次的失败原因
+    setError(null);
     shipMutation.mutate({
       orderIds: requestedIds,
       acknowledged: check.double_check_total > 0,
@@ -94,7 +96,10 @@ export function useShippingActions() {
     shipBusy: shipMutation.isPending,
     running: batchId !== null && !progress.done,
     openCheck,
-    closeCheck: () => setCheck(null),
+    closeCheck: () => {
+      setCheck(null);
+      setError(null);
+    },
     confirm,
   };
 }

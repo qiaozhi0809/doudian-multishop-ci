@@ -102,12 +102,12 @@ describe("lastPage", () => {
 });
 
 describe("alertNotice", () => {
-  it("事件类强档常驻、中档 5 秒、弱档不弹；有正文时接在标题后面", () => {
+  it("事件类强档常驻、中档 5 秒、弱档不弹；标题与正文分开", () => {
     expect(alertNotice(item({ id: 5, level: "strong", kind: "new_aftersale", title: "示例店 新增 1 个售后" }))).toEqual({
-      text: "示例店 新增 1 个售后", tone: "danger", key: "notification:5", persistent: true,
+      text: "示例店 新增 1 个售后", event: "aftersale", tone: "danger", key: "notification:5", persistent: true,
     });
-    expect(alertNotice(item({ id: 6, level: "medium", title: "示例店 订单同步失败", body: "出口不通" }))).toEqual({
-      text: "示例店 订单同步失败，出口不通", tone: "warning", key: "notification:6", persistent: false, holdMs: 5000,
+    expect(alertNotice(item({ id: 6, level: "medium", kind: "sync_failed", title: "示例店 订单同步失败", body: "出口不通" }))).toEqual({
+      text: "示例店 订单同步失败", body: "出口不通", event: "system", tone: "warning", key: "notification:6", persistent: false, holdMs: 5000,
     });
     expect(alertNotice(item({ level: "weak" }))).toBeNull();
   });

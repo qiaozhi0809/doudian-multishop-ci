@@ -1,7 +1,7 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FakeEventSource } from "@/test/fake-event-source";
-import { jsonResponse, mockFetch } from "@/test/mock-fetch";
+import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
 import {
   hang,
   labeledRow,
@@ -153,6 +153,14 @@ describe("提交后的提示", () => {
   it("按住完成后写明做了什么", async () => {
     await openAndHold(null);
     expect(await screen.findByRole("button", { name: "已发起打单" }, { timeout: 4000 })).toBeInTheDocument();
+  });
+
+  it("提交失败：原因只显示在对话框里，按钮复位可以再按", async () => {
+    await openAndHold(errorResponse(422, "InvalidRequest", "预览已过期，请重新预览"));
+    const dialog = await screen.findByRole("dialog", { name: "预览：打单" });
+    expect(await within(dialog).findByText("预览已过期，请重新预览", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /按住确认打单/ })).toBeEnabled();
+    expect(screen.getAllByText("预览已过期，请重新预览")).toHaveLength(1);
   });
 
   it("发货按住完成后写明已发起发货", async () => {
