@@ -1,9 +1,10 @@
 import { Alert } from "@/components/arc/alert/alert";
 import { ListPager } from "@/components/custom/list-pager/list-pager";
 import { seqOffset } from "@/lib/list-sort";
-import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
+import { LoadError } from "@/components/custom/load-error/load-error";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import { PAGE_SIZE } from "../logic/label-columns";
 import { componentNotice, printGate, selectedWaybillIds } from "../logic/print-status";
 import styles from "../labeling-page.module.css";
@@ -20,16 +21,9 @@ import { ShipProgress } from "./ship-progress";
 /** 打单发货：店铺就绪判断 → 阶段与操作 → 打印状态 → 进度 → 表格 / 分页 → 预览、发货检查与收件人。 */
 export function LabelingPageView({ page }: { page: LabelPage }) {
   const { pool, actions, receiver, print, ship } = page;
-  if (page.shopsState === "loading") return <Skeleton label="正在读取店铺" lines={4} />;
+  if (page.shopsState === "loading") return <Skeleton label="正在读取店铺" lines={SKELETON_LINES.card} />;
   if (page.shopsState === "error") {
-    return (
-      <div className={styles.page}>
-        <Alert tone="danger" title="读取店铺失败，请确认本地服务已启动后重试" />
-        <div>
-          <Button variant="secondary" onClick={page.retryShops}>重新读取</Button>
-        </div>
-      </div>
-    );
+    return <LoadError title="读取店铺失败，请确认本地服务已启动后重试" onRetry={page.retryShops} />;
   }
   if (page.shopsState === "empty") {
     return <EmptyNoShops />;
@@ -40,7 +34,8 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
     stage: pool.stage,
     selectedCount: pool.selected.size,
     componentAvailable: print.status ? print.status.available : null,
-    busy: actions.previewBusy || actions.executeBusy || print.printing,
+    // 打印提交中由按钮转圈挡住重复点击，不算进置灰条件
+    busy: actions.previewBusy || actions.executeBusy,
   });
   const waybillIds = selectedWaybillIds(pool.selected, pool.rows);
   return (
@@ -65,36 +60,21 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
         error={print.error}
         onDismissError={print.clearError}
       />
-      {actions.error && (
+      {/* 对话框开着时报错显示在对话框里 */}
+      {actions.error && !actions.preview && (
         <Alert tone="danger" title={actions.error} onDismiss={actions.clearError} />
       )}
-      {actions.simulated && (
-        <Alert tone="warning" title="演练模式：已记录请求，未真实执行">
-          本次执行只写入了审计记录并返回模拟结果；关闭演练模式后重新预览并提交才会真实生效。
-        </Alert>
-      )}
-      {print.simulated && (
-        <Alert tone="warning" title="演练模式：已记录打印请求，未真正打印" />
-      )}
-      {ship.error && <Alert tone="danger" title={ship.error} onDismiss={ship.clearError} />}
-      {ship.simulated && (
-        <Alert tone="warning" title="演练模式：已记录发货请求，未真实发货">
-          本次提交只写入了审计记录并返回模拟结果；关闭演练模式后重新检查并确认才会真实回传平台。
-        </Alert>
+      {ship.error && !ship.check && <Alert tone="danger" title={ship.error} onDismiss={ship.clearError} />}
+      {/* 演练模式的整体说明在外壳顶部横条，这里只报本次结果 */}
+      {(actions.simulated || print.simulated || ship.simulated) && (
+        <Alert tone="warning" title="已记录请求，未真实执行" />
       )}
       <LabelProgress progress={actions.progress} />
       <ShipProgress progress={ship.progress} />
 
-      {pool.query.isLoading && <Skeleton label="正在读取订单池" lines={6} />}
+      {pool.query.isLoading && <Skeleton label="正在读取订单池" lines={SKELETON_LINES.list} />}
       {pool.query.isError && (
-        <div className={styles.page}>
-          <Alert tone="danger" title="读取订单池失败，请确认本地服务正常后重试" />
-          <div>
-            <Button variant="secondary" onClick={() => void pool.query.refetch()}>
-              重新读取
-            </Button>
-          </div>
-        </div>
+        <LoadError title="读取订单池失败，请确认本地服务正常后重试" onRetry={() => void pool.query.refetch()} />
       )}
       {data && (
         <>
@@ -118,10 +98,11 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
         preview={actions.preview}
         mode={actions.previewMode}
         busy={actions.executeBusy}
+        error={actions.error}
         onClose={actions.closePreview}
         onConfirm={actions.execute}
       />
-      <CheckDialog check={ship.check} busy={ship.shipBusy} onClose={ship.closeCheck} onConfirm={ship.confirm} />
+      <CheckDialog check={ship.check} busy={ship.shipBusy} error={ship.error} onClose={ship.closeCheck} onConfirm={ship.confirm} />
       <ReceiverDrawer
         orderId={receiver.orderId}
         pending={receiver.pending}

@@ -36,7 +36,7 @@ function CheckedCell({ item }: { item: PoolItem }) {
   );
 }
 
-/** 代理池表格（一次全量返回，前端排序）：序号 / 代理 / 到期日 / 状态 / 上次检查 / 操作（行内只露「检查」，编辑、删除收进「⋯」）。 */
+/** 代理池表格（一次全量返回，前端排序）：序号 / 代理 / 到期日 / 状态 / 上次检查 / 操作（行内只露「检查」，编辑代理、删除代理收进「⋯」）。 */
 export function PoolTable({ items, pendingIds, onCheck, onEdit, onDelete }: PoolTableProps) {
   const columns: TableColumn<PoolItem>[] = [
     { key: "proxy_display", label: "代理", width: 160, render: (v) => <span className={styles.proxy}>{String(v)}</span> },
@@ -56,8 +56,8 @@ export function PoolTable({ items, pendingIds, onCheck, onEdit, onDelete }: Pool
             </Button>
             <RowMenu
               items={[
-                { label: "编辑", onSelect: () => onEdit(row), disabled: busy },
-                { label: "删除", onSelect: () => onDelete(row), disabled: busy, destructive: true, separatorBefore: true },
+                { label: "编辑代理", onSelect: () => onEdit(row), disabled: busy },
+                { label: "删除代理", onSelect: () => onDelete(row), disabled: busy, destructive: true, separatorBefore: true },
               ]}
             />
           </div>

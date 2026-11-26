@@ -1,65 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { FakeEventSource } from "@/test/fake-event-source";
-import { makeShop } from "@/test/fixtures";
 import { jsonResponse, mockFetch } from "@/test/mock-fetch";
-import ReconcilePage from "./index";
-
-const shops = [makeShop({ id: 1, name: "店铺甲" })];
-
-const run = (over: Record<string, unknown> = {}) => ({
-  id: 1,
-  run_id: "r1",
-  status: "success",
-  shop_ids: [1],
-  window_days: 30,
-  started_at: "2026-11-25T00:00:00Z",
-  finished_at: "2026-11-25T00:01:00Z",
-  scanned: 12,
-  finding_count: 2,
-  error: null,
-  ...over,
-});
-
-const finding = (id: number, over: Record<string, unknown> = {}) => ({
-  id,
-  run_id: "r1",
-  shop_id: 1,
-  shop_name: "店铺甲",
-  shop_order_id: `6900000${id}`,
-  kind: "platform_shipped_local_not",
-  kind_title: "平台已发货、本地未记录",
-  local_status: null,
-  platform_status: 3,
-  local_tracking_no: null,
-  platform_tracking_no: `7920000000000${id}`,
-  local_company_code: null,
-  platform_company_code: "zhongtong",
-  detail: "平台已发货，快照无记录",
-  status: "open",
-  created_at: "2026-11-25T00:01:00Z",
-  handled_at: null,
-  ...over,
-});
-
-const findingsPage = (items: unknown[], total = items.length, runRow = run()) =>
-  jsonResponse({ items, total, page: 1, page_size: 50, run: runRow });
-
-function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/reconcile"]}>
-        <Routes>
-          <Route path="/reconcile" element={<ReconcilePage />} />
-          <Route path="/shops" element={<h1>店铺页</h1>} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-}
+import { finding, findingsPage, renderPage, shops, started } from "./reconcile-test-fixtures";
 
 let restoreEvents: () => void;
 beforeEach(() => {
@@ -77,7 +20,7 @@ describe("对账页", () => {
     expect(await screen.findByText("还没有店铺")).toBeInTheDocument();
   });
 
-  it("展示三类异常、运单对比与本次对账摘要", async () => {
+  it("展示三类异常与运单对比；上次检查正常时页内不放结果条", async () => {
     mockFetch({
       "GET /api/shops": jsonResponse(shops),
       "GET /api/reconcile/findings": findingsPage([
@@ -104,24 +47,16 @@ describe("对账页", () => {
     expect(screen.getByText("运单号不一致")).toBeInTheDocument();
     expect(screen.getByText("本地已发货、平台未发货")).toBeInTheDocument();
     expect(screen.getByText("OLD-TRACKING → NEW-TRACKING")).toBeInTheDocument();
-    expect(screen.getByText(/扫描 12 单，发现 2 条异常/)).toBeInTheDocument();
+    expect(screen.queryByText(/扫描 12 单/)).not.toBeInTheDocument();
     expect(screen.getByText(/3 → 2/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "69000001" })).toHaveAttribute("title", "点击复制订单号");
   });
 
   it("立即检查提交 30 天窗口并刷新结果", async () => {
     const fetchMock = mockFetch({
       "GET /api/shops": jsonResponse(shops),
       "GET /api/reconcile/findings": findingsPage([]),
-      "POST /api/reconcile/run": jsonResponse(
-        {
-          run_id: "r2",
-          status: "running",
-          shop_ids: [1],
-          window_days: 30,
-          started_at: "2026-11-25T00:02:00Z",
-        },
-        202,
-      ),
+      "POST /api/reconcile/run": started(),
     });
     renderPage();
     const user = userEvent.setup();

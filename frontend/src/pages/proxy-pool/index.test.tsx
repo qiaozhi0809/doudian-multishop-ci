@@ -37,10 +37,12 @@ describe("代理池页", () => {
     expect(rowOf("3.3.3.3").getByText("已过期")).toBeInTheDocument();
   });
 
-  it("空池显示引导", async () => {
+  it("空池显示引导：带图标的整页空状态和导入按钮", async () => {
     mockFetch({ "GET /api/proxy-pool": jsonResponse([]) });
     renderPage();
-    expect(await screen.findByText("代理池是空的")).toBeInTheDocument();
+    const title = await screen.findByText("代理池是空的");
+    expect(title.closest("section")!.querySelector("svg.lucide-network")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "导入代理" })).toBeInTheDocument();
   });
 
   it("读取失败可重试", async () => {
@@ -100,7 +102,7 @@ describe("代理池页", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "更多操作" }));
-    await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
+    await user.click(await screen.findByRole("menuitem", { name: "编辑代理" }));
     const dialog = within(await screen.findByRole("dialog"));
     expect(dialog.getAllByPlaceholderText("留空表示不改")).toHaveLength(2);
     const port = dialog.getByLabelText("端口");
@@ -121,10 +123,12 @@ describe("代理池页", () => {
     const user = userEvent.setup();
     // 行尾只露「检查」，编辑 / 删除在「⋯」里
     await user.click(await screen.findByRole("button", { name: "更多操作" }));
-    await user.click(await screen.findByRole("menuitem", { name: "删除" }));
+    await user.click(await screen.findByRole("menuitem", { name: "删除代理" }));
     const dialog = within(await screen.findByRole("dialog"));
-    expect(dialog.getByText("删除代理 1.2.3.4:8080")).toBeInTheDocument();
-    await user.click(dialog.getByRole("button", { name: "确认删除" }));
+    expect(dialog.getByText("删除代理「1.2.3.4:8080」")).toBeInTheDocument();
+    const confirm = dialog.getByRole("button", { name: "删除代理" });
+    expect(confirm.className).toMatch(/_danger_/);
+    await user.click(confirm);
     expect(await dialog.findByText("代理正被店铺「店A」使用，请先更换该店出口")).toBeInTheDocument();
   });
 

@@ -1,7 +1,9 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog } from "@/components/arc/dialog/dialog";
+import { AppDialogContent } from "@/components/custom/app-dialog/app-dialog-content";
+import { DialogFooter } from "@/components/custom/dialog-footer/dialog-footer";
 import { Textarea } from "@/components/arc/textarea/textarea";
 import type { Failure, PoolImportOut } from "../hooks/use-proxy-pool";
 import { previewImport } from "../logic/pool-import";
@@ -17,9 +19,9 @@ interface ImportDialogProps {
 export function ImportDialog({ open, onOpenChange, pending, onSubmit }: ImportDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={pending}>
-      <DialogContent title="导入代理" description="每行一条，格式：IP|端口|账号|密码|到期日（YYYY-MM-DD）">
+      <AppDialogContent size="form" title="导入代理" description="每行一条，格式：IP|端口|账号|密码|到期日（YYYY-MM-DD）">
         {open && <ImportForm pending={pending} onSubmit={onSubmit} />}
-      </DialogContent>
+      </AppDialogContent>
     </Dialog>
   );
 }
@@ -85,16 +87,11 @@ function ImportForm({ pending, onSubmit }: Pick<ImportDialogProps, "pending" | "
       )}
       {error && <Alert tone="danger" title={error} />}
       {result && <Summary result={result} />}
-      <div className={styles.formActions}>
-        <DialogClose asChild>
-          <Button type="button" variant="ghost" disabled={pending}>
-            取消
-          </Button>
-        </DialogClose>
+      <DialogFooter busy={pending}>
         <Button type="submit" loading={pending}>
           导入
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

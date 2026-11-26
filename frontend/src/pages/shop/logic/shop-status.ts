@@ -70,7 +70,7 @@ const BLOCKED: Record<ShopRow["egress_status"], string | null> = {
   ok: null,
   unchecked: "出口未检查通过，不能扫码",
   unreachable: "出口不通，请检查代理是否到期或更换代理",
-  changed: "出口 IP 已变化，请先确认新 IP",
+  changed: "出口 IP 已变化，请先接受新 IP",
   duplicate: "出口 IP 与其他店重复，请更换出口",
 };
 
@@ -80,10 +80,9 @@ export function scanBlockedReason(row: ShopRow): string | null {
   return BLOCKED[row.egress_status];
 }
 
-/** 界面上扫码按钮的禁用说明：已停用、风控暂停优先，其次是出口问题。 */
+/** 界面上扫码按钮的禁用说明：已停用优先，其次是出口问题（风控暂停时行内不出现扫码按钮）。 */
 export function scanDisabledReason(row: ShopRow): string | null {
   if (row.status === "disabled") return "店铺已停用，不能扫码";
-  if (row.paused_reason) return "风控暂停中，请先恢复";
   return scanBlockedReason(row);
 }
 
@@ -97,13 +96,14 @@ export function egressModeLabel(row: ShopRow): string {
   return row.egress_mode === "direct" ? "直连" : row.egress_mode === "proxy" ? "代理" : "未设置";
 }
 
-export type PrimaryAction = "set-egress" | "check-egress" | "login";
+export type PrimaryAction = "resume" | "set-egress" | "check-egress" | "login";
 
 /**
- * 行内直接显示的主操作（引导的顺序：设置出口 → 检查出口 → 扫码登录）。
+ * 行内直接显示的主操作：风控暂停时是恢复；否则按引导顺序（设置出口 → 检查出口 → 扫码登录）。
  * 扫码前必须先检查出口，所以出口没设置 / 没通过时不显示扫码登录。
  */
 export function primaryAction(row: ShopRow): PrimaryAction {
+  if (row.paused_reason) return "resume";
   if (row.egress_mode === null) return "set-egress";
   if (row.egress_status !== "ok") return "check-egress";
   return "login";

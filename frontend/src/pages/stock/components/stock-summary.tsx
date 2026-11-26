@@ -1,8 +1,8 @@
-import { Alert } from "@/components/arc/alert/alert";
 import { Badge } from "@/components/arc/badge/badge";
-import { Button } from "@/components/arc/button/button";
 import { MetricCard } from "@/components/arc/metric-card/metric-card";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { LoadError } from "@/components/custom/load-error/load-error";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { ShopWarehouses, StockQuick, StockSummary } from "../logic/stock-page";
 import styles from "../stock-page.module.css";
 
@@ -12,35 +12,22 @@ export function StockSummaryCards({
   error,
   data,
   onRetry,
-  quick,
-  onQuickChange,
+  cardProps,
 }: {
   loading: boolean;
   error: boolean;
   data: StockSummary | undefined;
   onRetry: () => void;
-  /** 快捷筛选：预警 / 售罄卡筛下方列表，「商品数」卡清除筛选。 */
-  quick: StockQuick | null;
-  onQuickChange: (quick: StockQuick | null) => void;
+  /** 快捷筛选：预警 / 售罄卡筛下方列表，再点清除；「商品数」卡不对应筛选。 */
+  cardProps: (key: StockQuick) => { selected: boolean; onSelect: () => void };
 }) {
-  if (loading) return <Skeleton label="正在读取库存汇总" lines={2} />;
-  if (error || !data) {
-    return (
-      <div className={styles.counts}>
-        <Alert tone="danger" title="读取库存汇总失败，请确认本地服务正常后重试" />
-        <div>
-          <Button variant="secondary" size="sm" onClick={onRetry}>
-            重新读取
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Skeleton label="正在读取库存汇总" lines={SKELETON_LINES.count} />;
+  if (error || !data) return <LoadError size="sm" title="读取库存汇总失败，请确认本地服务正常后重试" onRetry={onRetry} />;
   return (
     <div className="count-row">
-      <MetricCard label="商品数" value={data.total} tone="neutral" selected={quick === null} onSelect={() => onQuickChange(null)} />
-      <MetricCard label="库存预警" value={data.alarm_count} tone="warning" selected={quick === "alarm"} onSelect={() => onQuickChange("alarm")} />
-      <MetricCard label="售罄" value={data.sold_out_count} tone="danger" selected={quick === "sold_out"} onSelect={() => onQuickChange("sold_out")} />
+      <MetricCard label="商品数" value={data.total} tone="neutral" />
+      <MetricCard label="库存预警" value={data.alarm_count} tone="warning" {...cardProps("alarm")} />
+      <MetricCard label="售罄" value={data.sold_out_count} tone="danger" {...cardProps("sold_out")} />
     </div>
   );
 }

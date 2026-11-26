@@ -1,4 +1,5 @@
 /** 通知的纯视图逻辑：档位色调、面板分组、是否该弹提醒。 */
+import type { NoticeEvent } from "@/components/custom/notice/notice-types";
 import type { components } from "@/lib/api-types";
 
 type Schemas = components["schemas"];
@@ -108,8 +109,17 @@ export const lastPage = (total: number, pageSize: number): number =>
 /** 中档弹窗停留 5 秒。 */
 export const MEDIUM_HOLD_MS = 5000;
 
+/** 有专属图标的事件；其余通知归为 system。 */
+const NOTICE_EVENTS: Partial<Record<NotificationItem["kind"], NoticeEvent>> = {
+  new_order: "order",
+  new_aftersale: "aftersale",
+  new_message: "message",
+};
+
 export interface AlertNotice {
   text: string;
+  body?: string;
+  event: NoticeEvent;
   tone: Tone;
   key: string;
   persistent: boolean;
@@ -122,9 +132,13 @@ export const noticeKey = (id: number): string => `notification:${id}`;
 /** 右下角弹窗：只弹事件类，强档常驻、中档 5 秒、弱档不弹；状态类（有 state_key）由顶部横条显示，不弹。 */
 export function alertNotice(item: NotificationItem): AlertNotice | null {
   if (item.level === "weak" || item.state_key !== null) return null;
-  const text = item.body ? `${item.title}，${item.body}` : item.title;
-  const key = noticeKey(item.id);
+  const content = {
+    text: item.title,
+    ...(item.body ? { body: item.body } : {}),
+    event: NOTICE_EVENTS[item.kind] ?? "system",
+    key: noticeKey(item.id),
+  };
   return item.level === "strong"
-    ? { text, tone: "danger", key, persistent: true }
-    : { text, tone: "warning", key, persistent: false, holdMs: MEDIUM_HOLD_MS };
+    ? { ...content, tone: "danger", persistent: true }
+    : { ...content, tone: "warning", persistent: false, holdMs: MEDIUM_HOLD_MS };
 }

@@ -6,6 +6,7 @@ import { SHOP_FILTER_PARAM, serializeShopFilter } from "@/components/custom/app-
 import { EMPTY_TEXT } from "@/lib/empty-text";
 import { KpiDot, type KpiTone } from "@/lib/kpi-tone";
 import { formatCents } from "@/lib/money-format";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { SectionState } from "../hooks/use-dashboard";
 import type { DashboardKpis } from "../logic/dashboard";
 import styles from "../dashboard-page.module.css";
@@ -41,7 +42,7 @@ function KpiRow({ label, tone, value, raw, section, to }: KpiRowProps) {
         </span>
         {state === "loading" ? (
           <span className={styles.kpiSkeleton}>
-            <Skeleton label={`正在读取${label}`} lines={1} />
+            <Skeleton label={`正在读取${label}`} lines={SKELETON_LINES.value} />
           </span>
         ) : (
           <span className={styles.kpiValue} data-empty={state === "error" || undefined}>

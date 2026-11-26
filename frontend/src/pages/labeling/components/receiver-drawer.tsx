@@ -1,6 +1,7 @@
 import { Alert } from "@/components/arc/alert/alert";
 import { Drawer, DrawerContent } from "@/components/arc/drawer/drawer";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { keepOpenOnNotice } from "@/components/custom/notice/keep-open-on-notice";
 import { formatBjTime } from "@/lib/time-format";
 import styles from "../labeling-page.module.css";
 import { EMPTY_TEXT } from "@/lib/empty-text";
@@ -19,8 +20,9 @@ export function ReceiverDrawer({ orderId, pending, data, message, onClose }: Rec
     <Drawer open={orderId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DrawerContent
         title="收件人"
-        description="明文只在本次显示，不写入本地库；每次解密消耗当日额度"
+        description="每次解密消耗当日额度"
         side="right"
+        onInteractOutside={keepOpenOnNotice}
       >
         {pending && <Skeleton label="正在解密收件人" lines={3} />}
         {!pending && message && <Alert tone="warning" title={message} />}

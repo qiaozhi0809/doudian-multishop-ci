@@ -25,14 +25,48 @@
   gap: var(--space-4);
 }
 
+/* 可折叠标题：沿用区块标题的字号字重，只加展开箭头 */
+.disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.disclosure svg {
+  color: var(--text-muted);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.disclosure[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure svg {
+    transition: none;
+  }
+}
+
 .backupHint {
-  margin: var(--space-1) 0 0;
+  margin: 0;
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
 /* 宽表格只在自身卡片内横向滚动：序号 + 「店铺」列固定在左（全站 .table-fit 规则），操作列固定在右，窄屏下也总能看到店铺名和操作按钮。 */
 @media (min-width: 621px) {
+  /* 店铺表列多：左右内边距收到 12，1366 宽下不用横向滚动（可排序表头的内边距在按钮上） */
+  .tableWrap table :is(td, th:not([data-sortable])),
+  .tableWrap table th > button {
+    padding-inline: var(--space-3);
+  }
+
   .tableWrap :is(td, th):last-child {
     position: sticky;
     right: 0;
@@ -40,14 +74,6 @@
     /* 不另刷底色：沿用单元格自身的填充（悬停、排序列着色与左侧固定列一样不断开） */
     border-left: 1px solid var(--border-subtle);
   }
-}
-
-.cellStack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  padding: var(--space-2) 0;
 }
 
 /* 单行单元格：内容不换行，列宽不够时表格自己横向滚动 */
@@ -58,19 +84,26 @@
   white-space: nowrap;
 }
 
-/* 「直连 / 代理」不压缩；代理地址太长时才省略，悬停看全 */
-.egressMode {
-  flex: none;
-  max-width: 10rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* 状态与出口单元格：放不下时裁在本格内（留 8px 给焦点框），不压到相邻列 */
+.cellClip {
+  overflow: clip;
+  overflow-clip-margin: var(--space-2);
 }
 
-.cellRow {
+/* 「直连 / 代理」不压缩；代理地址按剩余宽度省略，悬停看全 */
+.egressMode {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  align-items: baseline;
+  gap: var(--space-1);
+  min-width: 2em;
+}
+
+.egressAddress {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
 }
 
 .muted {
@@ -96,6 +129,11 @@
   display: inline-flex;
 }
 
+/* 表单里的提示外层只占内容宽度 */
+.form > .tip {
+  align-self: flex-start;
+}
+
 .actions {
   display: flex;
   align-items: center;
@@ -109,22 +147,10 @@
   gap: var(--space-4);
 }
 
-/* 表单里的开关只占自身宽度，点旁边空白不会误触 */
-.formSwitch {
-  align-self: flex-start;
-}
-
 .formRow {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: var(--space-3);
-}
-
-.formActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
 }
 
 .section {

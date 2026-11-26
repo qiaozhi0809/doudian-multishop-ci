@@ -1,20 +1,27 @@
-import { Alert } from "@/components/arc/alert/alert";
-import { Button } from "@/components/arc/button/button";
+import { MetricCard } from "@/components/arc/metric-card/metric-card";
+import metricCard from "@/components/arc/metric-card/metric-card.module.css";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { LoadError } from "@/components/custom/load-error/load-error";
+import { CountMeta } from "@/components/custom/shop-failure-alert/count-meta";
 import { formatCents } from "@/lib/money-format";
-import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import { settledMarginTotal, type FundSummary } from "../logic/fund-page";
 import { KpiDot, type KpiTone } from "@/lib/kpi-tone";
 import styles from "../fund-page.module.css";
 
-function StatCard({ label, value, tone }: { label: string; value: string; tone?: KpiTone }) {
+/**
+ * 金额卡：MetricCard 只收数字、不能带 ¥ 和两位小数，这里沿用它的样式放格式化好的金额（不可点）。
+ */
+function AmountCard({ label, cents, tone }: { label: string; cents: number; tone: KpiTone }) {
   return (
-    <article className={styles.statCard}>
-      <span className={styles.statLabel}>
-        {tone ? <KpiDot tone={tone} /> : null}
-        {label}
-      </span>
-      <strong className={styles.statValue}>{value}</strong>
+    <article className={metricCard.card}>
+      <div className={metricCard.top}>
+        <span className={metricCard.name}>
+          <KpiDot tone={tone} />
+          <span className="cell-ellipsis">{label}</span>
+        </span>
+      </div>
+      <strong className={styles.amount}>{formatCents(cents)}</strong>
     </article>
   );
 }
@@ -31,19 +38,8 @@ export function FundSummaryCards({
   data: FundSummary | undefined;
   onRetry: () => void;
 }) {
-  if (loading) return <Skeleton label="正在读取资金概览" lines={2} />;
-  if (error || !data) {
-    return (
-      <div className={styles.counts}>
-        <Alert tone="danger" title="读取资金概览失败，请确认本地服务正常后重试" />
-        <div>
-          <Button variant="secondary" size="sm" onClick={onRetry}>
-            重新读取
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Skeleton label="正在读取资金概览" lines={SKELETON_LINES.count} />;
+  if (error || !data) return <LoadError size="sm" title="读取资金概览失败，请确认本地服务正常后重试" onRetry={onRetry} />;
   const synced = data.shops.filter((shop) => shop.synced_at).length;
   const latest = data.shops
     .map((shop) => shop.synced_at)
@@ -53,27 +49,11 @@ export function FundSummaryCards({
   return (
     <div className={styles.counts}>
       <div className="count-row">
-        <StatCard
-          label="待结算总额"
-          value={formatCents(data.total_unsettled_amount_cents)}
-          tone="info"
-        />
-        <StatCard
-          label="待结算订单"
-          value={String(data.total_unsettled_count)}
-          tone="info"
-        />
-        <StatCard
-          label={`保证金余额 · ${synced} 家店`}
-          tone="neutral"
-          value={formatCents(settledMarginTotal(data))}
-        />
+        <AmountCard label="待结算总额" cents={data.total_unsettled_amount_cents} tone="info" />
+        <MetricCard label="待结算订单" value={data.total_unsettled_count} tone="info" />
+        <AmountCard label={`保证金余额 · ${synced} 家店`} cents={settledMarginTotal(data)} tone="neutral" />
       </div>
-      {latest && (
-        <div className={styles.countMeta}>
-          <span title={formatBjTime(latest)}>数据时间 {formatBjTimeSmart(latest)}</span>
-        </div>
-      )}
+      <CountMeta fetchedAt={latest} />
     </div>
   );
 }

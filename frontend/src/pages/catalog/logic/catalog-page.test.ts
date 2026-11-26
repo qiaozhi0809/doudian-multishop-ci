@@ -19,7 +19,7 @@ describe("catalog logic", () => {
 
   it("价格区间：同价只显示一个价格，不同价显示区间，缺失显示暂无", () => {
     expect(priceRange(row() as never)).toBe("¥128.00");
-    expect(priceRange(row({ price_higher_cents: 9900 }) as never)).toBe("¥99.00 – ¥128.00");
+    expect(priceRange(row({ price_higher_cents: 9900 }) as never)).toBe("¥99.00 至 ¥128.00");
     expect(priceRange(row({ price_lower_cents: null, price_higher_cents: null }) as never)).toBe("暂无");
   });
 

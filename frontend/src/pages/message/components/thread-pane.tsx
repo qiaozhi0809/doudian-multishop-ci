@@ -1,10 +1,9 @@
 import { useEffect, useRef } from "react";
-import { MessageSquare } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Alert } from "@/components/arc/alert/alert";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/arc/button/button";
-import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { LoadError } from "@/components/custom/load-error/load-error";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { ThreadState } from "../hooks/use-thread";
 import { formatWait, isOverdue, ordersLink, waitSecondsAt } from "../logic/message-page";
 import styles from "../message-page.module.css";
@@ -23,16 +22,9 @@ function Messages({ thread }: { thread: ThreadState }) {
   const preview = thread.known?.preview;
   return (
     <div className={styles.messages} ref={box}>
-      {isLoading && <Skeleton label="正在读取消息" lines={5} />}
+      {isLoading && <Skeleton label="正在读取消息" lines={SKELETON_LINES.list} />}
       {thread.loadError && (
-        <div className={styles.stack}>
-          <Alert tone="danger" title={`读取消息失败：${thread.loadError}`} />
-          <div>
-            <Button variant="secondary" size="sm" onClick={() => void refetch()}>
-              重新读取
-            </Button>
-          </div>
-        </div>
+        <LoadError size="sm" title={`读取消息失败：${thread.loadError}`} onRetry={() => void refetch()} />
       )}
       {data && data.items.length === 0 && !preview && <p className="panel-empty">暂无消息</p>}
       {data && (data.items.length > 0 || preview) && (
@@ -51,11 +43,12 @@ function Messages({ thread }: { thread: ThreadState }) {
 /** 右栏：只读会话详情。回复在飞鸽里做，这里没有输入框。 */
 export function ThreadPane({ thread, shopName, now }: { thread: ThreadState; shopName: string | undefined; now: Date }) {
   const { selection, row, known } = thread;
+  const navigate = useNavigate();
   if (!selection) {
     return (
       <section className={styles.thread} aria-label="会话详情">
         <div className={styles.threadEmpty}>
-          <EmptyState icon={<MessageSquare size={24} strokeWidth={1.75} aria-hidden="true" />} title="选择一个会话" />
+          <p className="panel-empty">选择一个会话</p>
         </div>
       </section>
     );
@@ -76,9 +69,9 @@ export function ThreadPane({ thread, shopName, now }: { thread: ThreadState; sho
         <Button loading={thread.opening} onClick={thread.openInFlybird}>
           在飞鸽中回复
         </Button>
-        <Link className={styles.linkButton} to={ordersLink(selection.shopId)}>
+        <Button variant="secondary" onClick={() => void navigate(ordersLink(selection.shopId))}>
           查看订单
-        </Link>
+        </Button>
       </footer>
     </section>
   );

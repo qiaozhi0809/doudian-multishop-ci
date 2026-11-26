@@ -1,9 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { X } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import { NOTICE_ROOT } from "./keep-open-on-notice";
+import type { NoticeEvent, NoticeTone } from "./notice-types";
 import styles from "./notice.module.css";
+import { Toast, type ToastItem } from "./toast";
 
-export type NoticeTone = "success" | "info" | "warning" | "danger";
+export type { NoticeEvent, NoticeTone };
 export interface NoticeOptions {
   /** 同一个 key 的提示互相替换（如某店的「等待扫码」被「登录成功」取代）；不给则按文字去重。 */
   key?: string;
@@ -11,16 +14,12 @@ export interface NoticeOptions {
   holdMs?: number;
   /** 常驻：不自动消失、换页面也不收起，只能手动关闭（强提醒用）。 */
   persistent?: boolean;
+  /** 标题下的第二行（原因、明细）。 */
+  body?: string;
+  /** 事件弹窗（新订单、新售后、新消息等）：与操作结果提示视觉区分。 */
+  event?: NoticeEvent;
 }
 export type Notify = (text: string, tone?: NoticeTone, options?: NoticeOptions) => void;
-
-interface Item {
-  id: number;
-  key: string;
-  text: string;
-  tone: NoticeTone;
-  persistent: boolean;
-}
 
 /** 没有 Provider 时为 null：调用方据此退回页面内提示（单独渲染页面的测试里会这样）。 */
 const NoticeContext = createContext<Notify | null>(null);
@@ -31,7 +30,7 @@ const HOLD_DANGER_MS = 8000;
 /** 普通提示最多同时显示几条；常驻的强提醒不计入、也不会被挤掉。 */
 const MAX_VISIBLE = 4;
 
-function trim(list: Item[]): Item[] {
+function trim(list: ToastItem[]): ToastItem[] {
   const evict = list.filter((item) => !item.persistent).length - MAX_VISIBLE;
   if (evict <= 0) return list;
   const dropped = new Set(list.filter((item) => !item.persistent).slice(0, evict).map((item) => item.id));
@@ -51,7 +50,7 @@ interface Timer {
  * 需要用户处理才能继续的问题（读取失败、演练模式）仍用页面内提示条，不要靠这里。
  */
 export function NoticeProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<ToastItem[]>([]);
   const seq = useRef(0);
   const timers = useRef(new Map<number, Timer>());
   const { pathname } = useLocation();
@@ -117,7 +116,9 @@ export function NoticeProvider({ children }: { children: ReactNode }) {
       setItems((list) => {
         for (const old of list.filter((item) => item.key === key)) clear(old.id);
         const persistent = options.persistent === true;
-        return trim([...list.filter((item) => item.key !== key), { id, key, text, tone, persistent }]);
+        const next: ToastItem = { id, key, text, tone, persistent, body: options.body, event: options.event };
+        // 同 key 原地替换内容（不先飞出再飞进），挪到最下面
+        return trim([...list.filter((item) => item.key !== key), next]);
       });
       if (!options.persistent) start(id, options.holdMs ?? (tone === "danger" ? HOLD_DANGER_MS : HOLD_MS));
     },
@@ -127,23 +128,18 @@ export function NoticeProvider({ children }: { children: ReactNode }) {
   return (
     <NoticeContext.Provider value={notify}>
       {children}
-      <div className={styles.toasts} aria-label="操作提示">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className={styles.toast}
-            data-tone={item.tone}
-            role={item.tone === "danger" ? "alert" : "status"}
-            onMouseEnter={() => pause(item.id)}
-            onMouseLeave={() => resume(item.id)}
-          >
-            <span className={styles.dot} aria-hidden="true" />
-            <span className={styles.text}>{item.text}</span>
-            <button type="button" className={styles.close} aria-label="关闭提示" onClick={() => dismiss(item.id)}>
-              <X size={14} strokeWidth={1.75} aria-hidden="true" />
-            </button>
-          </div>
-        ))}
+      <div className={styles.toasts} aria-label="操作提示" {...{ [NOTICE_ROOT]: true }}>
+        <AnimatePresence>
+          {items.map((item) => (
+            <Toast
+              key={item.key}
+              item={item}
+              onDismiss={() => dismiss(item.id)}
+              onPause={() => pause(item.id)}
+              onResume={() => resume(item.id)}
+            />
+          ))}
+        </AnimatePresence>
       </div>
     </NoticeContext.Provider>
   );

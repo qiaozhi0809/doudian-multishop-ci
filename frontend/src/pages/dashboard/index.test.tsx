@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { makeShop, strongOpenSummary } from "@/test/fixtures";
@@ -82,9 +83,6 @@ describe("仪表盘", () => {
     await waitFor(() => expect(cardOf("库存预警")).toHaveTextContent("2"));
     await waitFor(() => expect(cardOf("在售商品")).toHaveTextContent("7"));
 
-    expect(await screen.findByText(/1 家店未取到部分平台数据/)).toBeInTheDocument();
-    expect(screen.getByText("店铺乙：上游超时")).toBeInTheDocument();
-
     expect(screen.getByRole("heading", { name: "发货压力" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "待结算分布" })).toBeInTheDocument();
 
@@ -98,6 +96,42 @@ describe("仪表盘", () => {
     expect(screen.queryByText("支付 GMV")).not.toBeInTheDocument();
   });
 
+  it("部分店铺未取到：指标上方一条提示，原因点开才显示，可收起", async () => {
+    mockFetch(routes());
+    renderPage();
+    const title = await screen.findByText("1 家店未取到");
+    const kpi = screen.getByRole("region", { name: "关键指标" });
+    expect(title.compareDocumentPosition(kpi) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("合计不含未取到的店铺")).toBeInTheDocument();
+    expect(screen.queryByText("店铺乙：上游超时")).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    const toggle = screen.getByRole("button", { name: "查看原因" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await user.click(toggle);
+    expect(screen.getByText("店铺乙：上游超时")).toBeInTheDocument();
+    const collapse = screen.getByRole("button", { name: "收起原因" });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+    await user.click(collapse);
+    await waitFor(() => expect(screen.queryByText("店铺乙：上游超时")).not.toBeInTheDocument());
+  });
+
+  it("图表副标题只写家数，不写数据来源说明", async () => {
+    mockFetch(routes());
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("1 家店")).toHaveLength(2));
+    expect(screen.queryByText(/平台实时计数|待结算合计/)).not.toBeInTheDocument();
+  });
+
+  it("店铺排行的会话状态带状态圆点", async () => {
+    mockFetch(routes());
+    renderPage();
+    const table = await screen.findByRole("table", { name: "店铺排行" });
+    for (const name of [/店铺甲/, /店铺乙/]) {
+      const cell = within(within(table).getByRole("row", { name })).getByText(/^(正常|需重新登录)$/).closest("td")!;
+      expect(cell.querySelector('[aria-hidden="true"] > span')).not.toBeNull();
+    }
+  });
+
   it("未取到数据的店已在顶部横条时不再提示", async () => {
     mockFetch({
       ...routes(),
@@ -107,7 +141,8 @@ describe("仪表盘", () => {
     const kpi = await screen.findByRole("region", { name: "关键指标" });
     await waitFor(() => expect(within(kpi).getByText("待发货").closest("a")).toHaveTextContent("5"));
     await waitFor(() => expect(screen.queryByText(/家店未取到/)).not.toBeInTheDocument());
-    expect(screen.queryByText("店铺乙：上游超时")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "查看原因" })).not.toBeInTheDocument();
+    expect(screen.getByText("合计不含未取到的店铺")).toBeInTheDocument();
   });
 
   it("单个数据源失败时只有对应卡片显示暂无，其他指标照常", async () => {

@@ -26,50 +26,13 @@
 }
 
 
-/* 金额卡：和 MetricCard 一样的一行胶囊 */
-.statCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-width: 0;
-  height: var(--metric-card-height);
-  padding: 0 var(--metric-card-pad);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  box-shadow: var(--shadow-resting);
-}
-
-.statLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.statValue {
+/* 金额卡的数字：字号随 MetricCard 的样式，这里只补字重与等宽数字 */
+.amount {
   color: var(--foreground);
-  font-size: 18px;
+  font-weight: 500;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
 }
-
-.statContext {
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
-
-.countMeta {
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
-
 
 .productCell {
   display: flex;
@@ -88,6 +51,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.billError {
+  color: var(--danger);
+  font-size: var(--text-sm);
 }
 
 .tabular {

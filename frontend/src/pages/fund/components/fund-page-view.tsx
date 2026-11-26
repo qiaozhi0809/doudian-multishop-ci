@@ -1,9 +1,9 @@
-import { Alert } from "@/components/arc/alert/alert";
 import { ListPager } from "@/components/custom/list-pager/list-pager";
-import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
+import { LoadError } from "@/components/custom/load-error/load-error";
 import { SyncMessageBar } from "@/components/custom/sync-control/sync-control";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { FundPageState } from "../hooks/use-fund-page";
 import { seqOffset } from "@/lib/list-sort";
 import { UNSETTLED_PAGE_SIZE } from "../logic/fund-page";
@@ -12,34 +12,10 @@ import { FundSummaryCards } from "./fund-summary";
 import { BillsTable, MarginTable, UnsettledTable } from "./fund-tables";
 import { FundToolbar } from "./fund-toolbar";
 
-function LoadError({ title, onRetry }: { title: string; onRetry: () => void }) {
-  return (
-    <div className={styles.page}>
-      <Alert tone="danger" title={title} />
-      <div>
-        <Button variant="secondary" onClick={onRetry}>
-          重新读取
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 /** 资金页：没有店铺 → 引导；否则 工具栏 → 概览 → 当前标签页内容。 */
 export function FundPageView({ page }: { page: FundPageState }) {
-  if (page.shopsState === "loading") return <Skeleton label="正在读取店铺" lines={4} />;
-  if (page.shopsState === "error") {
-    return (
-      <div className={styles.page}>
-        <Alert tone="danger" title="读取店铺失败，请确认本地服务已启动后重试" />
-        <div>
-          <Button variant="secondary" onClick={page.retryShops}>
-            重新读取
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (page.shopsState === "loading") return <Skeleton label="正在读取店铺" lines={SKELETON_LINES.card} />;
+  if (page.shopsState === "error") return <LoadError title="读取店铺失败，请确认本地服务已启动后重试" onRetry={page.retryShops} />;
   if (page.shopsState === "empty") {
     return <EmptyNoShops />;
   }
@@ -64,7 +40,7 @@ export function FundPageView({ page }: { page: FundPageState }) {
 
       {page.tab === "unsettled" && (
         <>
-          {page.unsettled.isLoading && <Skeleton label="正在读取待结算明细" lines={6} />}
+          {page.unsettled.isLoading && <Skeleton label="正在读取待结算明细" lines={SKELETON_LINES.list} />}
           {page.unsettled.isError && (
             <LoadError
               title="读取待结算明细失败，请确认本地服务正常后重试"
@@ -87,7 +63,7 @@ export function FundPageView({ page }: { page: FundPageState }) {
 
       {page.tab === "margin" && (
         <>
-          {page.margin.isLoading && <Skeleton label="正在读取保证金" lines={4} />}
+          {page.margin.isLoading && <Skeleton label="正在读取保证金" lines={SKELETON_LINES.list} />}
           {page.margin.isError && (
             <LoadError
               title="读取保证金失败，请确认本地服务正常后重试"
@@ -100,7 +76,7 @@ export function FundPageView({ page }: { page: FundPageState }) {
 
       {page.tab === "bills" && (
         <>
-          {page.bills.isLoading && <Skeleton label="正在读取账单" lines={4} />}
+          {page.bills.isLoading && <Skeleton label="正在读取账单" lines={SKELETON_LINES.list} />}
           {page.bills.isError && (
             <LoadError
               title="读取账单失败（上游不可用时账单无法展示；待结算与保证金不受影响）"

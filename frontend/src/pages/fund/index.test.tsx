@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { makeShop } from "@/test/fixtures";
-import { jsonResponse, mockFetch } from "@/test/mock-fetch";
+import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
 import FundPage from "./index";
 
 const unsettled = (over: Record<string, unknown> = {}) => ({
@@ -80,6 +80,82 @@ describe("资金聚合页", () => {
     expect(tableRow.getByText("确认收货 / 核销后 21 天结算")).toBeInTheDocument();
     expect(await screen.findByText("待结算总额")).toBeInTheDocument();
     expect(screen.getByText("¥505.68")).toBeInTheDocument();
+  });
+
+  it("待结算订单号能点击复制", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup(); // setup 会安装自己的剪贴板替身，之后再覆盖
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "GET /api/fund/summary": summary,
+      "GET /api/fund/unsettled": jsonResponse({ items: [unsettled()], total: 1, page: 1, page_size: 50 }),
+    });
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "6900000000000000001" }));
+    expect(writeText).toHaveBeenCalledWith("6900000000000000001");
+    expect(await screen.findByText("已复制")).toBeInTheDocument();
+  });
+
+  it("概览三张卡不对应筛选，不可点；金额带 ¥ 与两位小数", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "GET /api/fund/summary": summary,
+      "GET /api/fund/unsettled": jsonResponse({ items: [], total: 0, page: 1, page_size: 50 }),
+    });
+    renderPage();
+    expect(await screen.findByText("待结算总额")).toBeInTheDocument();
+    expect(screen.getByText("¥505.68")).toBeInTheDocument();
+    expect(screen.getByText("¥10.00")).toBeInTheDocument();
+    for (const name of [/待结算总额/, /待结算订单/, /保证金余额/]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+  });
+
+  it("概览读取失败：区块内报错并可重新读取", async () => {
+    let fail = true;
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "GET /api/fund/summary": () => (fail ? errorResponse(500, "Internal", "boom") : summary),
+      "GET /api/fund/unsettled": jsonResponse({ items: [], total: 0, page: 1, page_size: 50 }),
+    });
+    renderPage();
+    expect(await screen.findByText("读取资金概览失败，请确认本地服务正常后重试")).toBeInTheDocument();
+    fail = false;
+    await userEvent.setup().click(screen.getByRole("button", { name: "重新读取" }));
+    expect(await screen.findByText("待结算总额")).toBeInTheDocument();
+  });
+
+  it("账单金额未校准：一条简短的 warning 提示条，不用徽章装整句话", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "GET /api/fund/summary": summary,
+      "GET /api/fund/unsettled": jsonResponse({ items: [], total: 0, page: 1, page_size: 50 }),
+      "GET /api/fund/bills": bills,
+    });
+    renderPage();
+    await screen.findByText("待结算总额");
+    await userEvent.setup().click(screen.getByRole("button", { name: "账单" }));
+    const note = await screen.findByText("部分账单金额待探明");
+    expect(note.closest('[role="status"]')).not.toBeNull();
+    expect(screen.queryByText(/平台字段名未校准/)).not.toBeInTheDocument();
+  });
+
+  it("账单里取数失败的店：短状态「未取到」加原因文字", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "GET /api/fund/summary": summary,
+      "GET /api/fund/unsettled": jsonResponse({ items: [], total: 0, page: 1, page_size: 50 }),
+      "GET /api/fund/bills": jsonResponse({
+        days: 30,
+        shops: [{ shop_id: 1, source: "error", total: 0, error: "出口不通，请检查代理是否到期", fetched_at: null, items: null }],
+      }),
+    });
+    renderPage();
+    await screen.findByText("待结算总额");
+    await userEvent.setup().click(screen.getByRole("button", { name: "账单" }));
+    expect(await screen.findByText("未取到")).toBeInTheDocument();
+    expect(screen.getByText("出口不通，请检查代理是否到期")).toHaveAttribute("title", "出口不通，请检查代理是否到期");
   });
 
   it("切到账单：URL 带 tab=bills，未校准金额显示「待探明」", async () => {

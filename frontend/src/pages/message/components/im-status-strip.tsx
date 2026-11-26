@@ -1,5 +1,6 @@
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
+import { LoadError } from "@/components/custom/load-error/load-error";
 import { canRestart, type ShopStatus } from "../logic/message-page";
 import styles from "../message-page.module.css";
 
@@ -14,18 +15,7 @@ interface ImStatusStripProps {
 
 /** 接收状态条：一店一行；都在接收时整条不显示。 */
 export function ImStatusStrip({ shops, failed, onRetry, pending, onRestart }: ImStatusStripProps) {
-  if (failed) {
-    return (
-      <div className={styles.stack}>
-        <Alert tone="danger" title="读取接收状态失败，请确认本地服务正常后重试" />
-        <div>
-          <Button variant="secondary" size="sm" onClick={onRetry}>
-            重新读取
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (failed) return <LoadError size="sm" title="读取接收状态失败，请确认本地服务正常后重试" onRetry={onRetry} />;
   if (shops.length === 0) return null;
   return (
     <div className={styles.stack}>

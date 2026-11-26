@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FakeEventSource } from "@/test/fake-event-source";
 import { jsonResponse, mockFetch } from "@/test/mock-fetch";
-import { labeledRow, page, preview, printRoutes, printRow, renderPage, row, shops } from "./labeling-test-fixtures";
+import { labeledRow, page, preview, printRoutes, printRow, reasonOf, renderPage, row, shops } from "./labeling-test-fixtures";
 
 let restoreEvents: () => void;
 beforeEach(() => {
@@ -30,7 +30,7 @@ describe("打单发货", () => {
       ]),
     });
     renderPage();
-    expect(await screen.findByText("6900000" + "1")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "69000001" })).toHaveAttribute("title", "点击复制订单号");
     expect(screen.getByText("缺少合单 ID（combine_id）")).toBeInTheDocument();
     expect(screen.getByLabelText("选择订单 69000002")).toBeDisabled();
     expect(screen.getByText("¥1,234.56")).toBeInTheDocument();
@@ -165,10 +165,10 @@ describe("打单发货", () => {
     renderPage("/labeling?stage=labeled");
     const user = userEvent.setup();
     await user.click(await screen.findByLabelText("选择订单 69000001"));
-    const button = screen.getByRole("button", { name: "打印面单" });
-    await waitFor(() => expect(button).toHaveAttribute("title", "请先启动抖店官方打印组件"));
-    expect(button).toBeDisabled();
     expect(await screen.findByText(/打印组件未启动/)).toBeInTheDocument();
+    const gated = screen.getByRole("button", { name: "打印面单" });
+    expect(gated).not.toHaveAttribute("title");
+    expect(await reasonOf(gated)).toContain("请先启动抖店官方打印组件");
   });
 
   it("打印任务状态显示在面单列与汇总里", async () => {

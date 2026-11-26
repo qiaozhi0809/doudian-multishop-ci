@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog } from "@/components/arc/dialog/dialog";
+import { AppDialogContent } from "@/components/custom/app-dialog/app-dialog-content";
+import { DialogFooter } from "@/components/custom/dialog-footer/dialog-footer";
 import { PasswordField } from "@/components/arc/password-field/password-field";
 import { validatePassword } from "@/pages/auth/logic/auth-messages";
 import styles from "../app-shell.module.css";
@@ -37,7 +39,7 @@ export function ChangePasswordDialog({ open, onOpenChange, onSubmit, pending, er
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={pending}>
-      <DialogContent title="修改密码">
+      <AppDialogContent size="form" title="修改密码">
         <form onSubmit={handleSubmit} noValidate className={styles.dialogForm}>
           <PasswordField
             label="原密码"
@@ -65,18 +67,13 @@ export function ChangePasswordDialog({ open, onOpenChange, onSubmit, pending, er
           />
           {error && <Alert tone="danger" title={error} />}
           {succeeded && <Alert tone="success" title="密码已修改，其他设备需要重新登录" />}
-          <div className={styles.formActions}>
-            <DialogClose asChild>
-              <Button type="button" variant="ghost" disabled={pending}>
-                取消
-              </Button>
-            </DialogClose>
+          <DialogFooter busy={pending}>
             <Button type="submit" loading={pending}>
               修改密码
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </DialogContent>
+      </AppDialogContent>
     </Dialog>
   );
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { Badge } from "@/components/arc/badge/badge";
 import { Button } from "@/components/arc/button/button";
 import { RowMenu } from "@/components/custom/row-menu/row-menu";
-import { Tooltip } from "@/components/arc/tooltip/tooltip";
+import { orEmpty } from "@/lib/empty-text";
 import { formatBjTime, formatRemaining } from "@/lib/time-format";
 import type { ShopRow } from "@/lib/use-shops";
 import {
@@ -15,6 +15,7 @@ import {
   shopStatusBadge,
 } from "../logic/shop-status";
 import styles from "../shop-page.module.css";
+import { ReasonTip } from "./reason-tip";
 
 /**
  * 店铺名单元格；highlighted 时把所在行标为当前（`aria-current`，带底色），
@@ -33,61 +34,57 @@ export function NameCell({ name, highlighted, onMark }: { name: string; highligh
     return () => row.removeAttribute("aria-current");
   }, []);
   return (
-    <span className={styles.shopName} ref={highlighted ? mark : undefined}>
+    <span className={`cell-ellipsis ${styles.shopName}`} title={name} ref={highlighted ? mark : undefined}>
       {name}
     </span>
   );
 }
 
-export function StatusCell({ row, waiting, onResume }: { row: ShopRow; waiting: boolean; onResume: () => void }) {
+/** 单行文本：列窄时省略，悬停看全；空值显示「暂无」。 */
+export function TextCell({ value }: { value: string | null }) {
+  return (
+    <span className="cell-ellipsis" title={value ?? undefined}>
+      {orEmpty(value)}
+    </span>
+  );
+}
+
+/** 一行：会话状态、等待扫码、风控暂停（原因悬停看）；恢复按钮在操作列。 */
+export function StatusCell({ row, waiting }: { row: ShopRow; waiting: boolean }) {
   const status = shopStatusBadge(row);
   const paused = pausedBadge(row);
-  if (!paused) {
-    return (
-      <div className={styles.cellLine}>
-        <Badge tone={status.tone} dot>
-          {status.label}
-        </Badge>
-        {waiting && <Badge tone="info">等待扫码</Badge>}
-      </div>
-    );
-  }
-  // 风控暂停是少见的例外：多一行放「风控暂停」和「恢复」
   return (
-    <div className={styles.cellStack}>
-      <div className={styles.cellRow}>
-        <Badge tone={status.tone} dot>
-          {status.label}
+    <div className={`${styles.cellLine} ${styles.cellClip}`}>
+      <Badge tone={status.tone} dot>
+        {status.label}
+      </Badge>
+      {waiting && (
+        <Badge tone="info" dot>
+          等待扫码
         </Badge>
-        {waiting && <Badge tone="info">等待扫码</Badge>}
-      </div>
-      <div className={styles.cellRow}>
-        <Tooltip content={`原因：${paused.reason}`}>
-          <span className={styles.tip} tabIndex={0}>
-            <Badge tone="danger" dot>
-              {paused.label}
-            </Badge>
-          </span>
-        </Tooltip>
-        <Button variant="secondary" size="sm" onClick={onResume}>
-          恢复
-        </Button>
-      </div>
+      )}
+      {paused && (
+        <ReasonTip reason={`原因：${paused.reason}`}>
+          <Badge tone="danger" dot>
+            {paused.label}
+          </Badge>
+        </ReasonTip>
+      )}
     </div>
   );
 }
 
-/** 一行：出口方式（代理时带代理地址，悬停看全）+ 出口状态。 */
+/** 一行：出口方式（代理地址放不下时省略，悬停看全）+ 出口状态（悬停看全）。 */
 export function EgressCell({ row }: { row: ShopRow }) {
   const egress = egressBadge(row);
   const mode = egressModeLabel(row);
   return (
-    <div className={styles.cellLine}>
+    <div className={`${styles.cellLine} ${styles.cellClip}`}>
       <span className={styles.egressMode} title={row.proxy_display ? `${mode} ${row.proxy_display}` : undefined}>
-        {mode}
-        {row.proxy_display ? <span className={styles.muted}>{` ${row.proxy_display}`}</span> : null}
+        <span>{mode}</span>
+        {row.proxy_display ? <span className={styles.egressAddress}>{row.proxy_display}</span> : null}
       </span>
-      <Badge tone={egress.tone} dot>
+      <Badge tone={egress.tone} dot title={egress.label}>
         {egress.label}
       </Badge>
     </div>
@@ -106,25 +103,25 @@ export function ExpiryCell({ row }: { row: ShopRow }) {
 
 export function ReadyCell({ row }: { row: ShopRow }) {
   const ready = readyBadge(row);
-  const badge = <Badge tone={ready.tone}>{ready.label}</Badge>;
-  if (!ready.detail) return badge;
   return (
-    <Tooltip content={ready.detail}>
-      <span className={styles.tip} tabIndex={0}>
-        {badge}
-      </span>
-    </Tooltip>
+    <ReasonTip reason={ready.detail}>
+      <Badge tone={ready.tone} dot>
+        {ready.label}
+      </Badge>
+    </ReasonTip>
   );
 }
 
 export interface RowActions {
   onLogin: () => void;
+  onResume: () => void;
   onEgress: () => void;
   onCheckEgress: () => void;
   onProbe: () => void;
   onSyncBase: () => void;
   onViewBase: () => void;
   onEdit: () => void;
+  onToggleIm: () => void;
   onToggle: () => void;
 }
 
@@ -135,19 +132,19 @@ interface ActionsCellProps {
   waiting: boolean;
 }
 
-/** 操作列：按引导顺序在行内只露一个主操作（设置出口 → 检查出口 → 扫码登录），其余收进「⋯」。 */
+/** 操作列：行内只露一个主操作（恢复 / 设置出口 → 检查出口 → 扫码登录），其余收进「⋯」。 */
 export function ActionsCell({ row, actions, pending, waiting }: ActionsCellProps) {
   const busy = (action: string) => pending.includes(`${action}:${row.id}`);
   const primary = primaryAction(row);
   const reason = scanDisabledReason(row);
-  const scan = (
-    <Button variant="secondary" size="sm" disabled={reason !== null || waiting} loading={busy("login")} onClick={actions.onLogin}>
-      扫码登录
-    </Button>
-  );
 
   return (
     <div className={styles.actions}>
+      {primary === "resume" && (
+        <Button variant="secondary" size="sm" loading={busy("resume")} onClick={actions.onResume}>
+          恢复
+        </Button>
+      )}
       {primary === "set-egress" && (
         <Button variant="secondary" size="sm" onClick={actions.onEgress}>
           设置出口
@@ -158,16 +155,13 @@ export function ActionsCell({ row, actions, pending, waiting }: ActionsCellProps
           检查出口
         </Button>
       )}
-      {primary === "login" &&
-        (reason ? (
-          <Tooltip content={reason}>
-            <span className={styles.tip} tabIndex={0}>
-              {scan}
-            </span>
-          </Tooltip>
-        ) : (
-          scan
-        ))}
+      {primary === "login" && (
+        <ReasonTip reason={reason}>
+          <Button variant="secondary" size="sm" disabled={reason !== null || waiting} loading={busy("login")} onClick={actions.onLogin}>
+            扫码登录
+          </Button>
+        </ReasonTip>
+      )}
       <RowMenu
         items={[
           ...(primary === "set-egress" ? [] : [{ label: "设置出口", onSelect: actions.onEgress }]),
@@ -176,8 +170,9 @@ export function ActionsCell({ row, actions, pending, waiting }: ActionsCellProps
             : [{ label: "检查出口", onSelect: actions.onCheckEgress, disabled: busy("egress-check") }]),
           { label: "检查登录状态", onSelect: actions.onProbe, disabled: busy("probe") },
           { label: "更新发货资料", onSelect: actions.onSyncBase, disabled: busy("sync-base") },
-          { label: "店铺资料", onSelect: actions.onViewBase, separatorBefore: true },
+          { label: "查看店铺资料", onSelect: actions.onViewBase, separatorBefore: true },
           { label: "编辑店铺", onSelect: actions.onEdit },
+          { label: row.im_enabled ? "关闭飞鸽消息" : "开启飞鸽消息", onSelect: actions.onToggleIm, disabled: busy("im") },
           { label: row.status === "disabled" ? "启用店铺" : "停用店铺", onSelect: actions.onToggle, disabled: busy("toggle") },
         ]}
       />

@@ -27,7 +27,7 @@ export function printGate(input: PrintGateInput): { disabled: boolean; reason: s
     return { disabled: true, reason: "请先启动抖店官方打印组件" };
   }
   if (input.busy) return { disabled: true, reason: "有操作进行中" };
-  if (input.selectedCount === 0) return { disabled: true, reason: "请先勾选面单" };
+  if (input.selectedCount === 0) return { disabled: true, reason: "先勾选订单" };
   return { disabled: false, reason: null };
 }
 

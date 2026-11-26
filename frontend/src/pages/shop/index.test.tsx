@@ -1,30 +1,9 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
 import { FakeEventSource } from "@/test/fake-event-source";
 import { makeShop } from "@/test/fixtures";
-import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
-import ShopPage from "./index";
-
-/** 店铺页测试统一带上备份快照的空响应，避免每个用例重复登记。 */
-function mockPageFetch(routes: Parameters<typeof mockFetch>[0]) {
-  return mockFetch({
-    "GET /api/backup/snapshots": jsonResponse({ items: [], backups_dir: "", keep: 7 }),
-    ...routes,
-  });
-}
-
-function renderPage(path = "/shops") {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <ShopPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-}
+import { errorResponse, jsonResponse } from "@/test/mock-fetch";
+import { mockPageFetch, renderPage } from "./page-test-utils";
 
 const rowOf = (name: string) => screen.getByRole("row", { name: new RegExp(name) });
 
@@ -135,11 +114,36 @@ describe("店铺与设置页", () => {
     expect(row.queryByRole("button", { name: "扫码登录" })).not.toBeInTheDocument();
   });
 
-  it("风控暂停的店铺出口正常时，扫码登录保持可见但禁用", async () => {
+  it("风控暂停：行内主按钮换成恢复，和「更多操作」同在操作列，不显示扫码登录", async () => {
     mockPageFetch({ "GET /api/shops": jsonResponse([makeShop({ paused_reason: "risk_blocked:1" })]) });
     renderPage();
     const row = within(await screen.findByRole("row", { name: /店铺甲/ }));
-    expect(row.getByRole("button", { name: "扫码登录" })).toBeDisabled();
+    expect(row.getByRole("button", { name: "恢复" }).closest("td")).toBe(row.getByRole("button", { name: "更多操作" }).closest("td"));
+    expect(row.getByText("风控暂停").closest("td")!.querySelector("button")).toBeNull();
+    expect(row.queryByRole("button", { name: "扫码登录" })).not.toBeInTheDocument();
+  });
+
+  it("风控暂停的原因在状态徽标上悬停查看", async () => {
+    mockPageFetch({ "GET /api/shops": jsonResponse([makeShop({ paused_reason: "risk_blocked:1" })]) });
+    renderPage();
+    const row = within(await screen.findByRole("row", { name: /店铺甲/ }));
+    act(() => row.getByText("风控暂停").closest<HTMLElement>("[tabindex='0']")!.focus());
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("原因：risk_blocked:1");
+  });
+
+  it("状态类徽标都带圆点：会话、取号就绪、等待扫码", async () => {
+    mockPageFetch({
+      "GET /api/shops": jsonResponse([makeShop()]),
+      "POST /api/shops/1/login": jsonResponse({ status: "started" }, 202),
+    });
+    renderPage();
+    const row = within(await screen.findByRole("row", { name: /店铺甲/ }));
+    await userEvent.setup().click(row.getByRole("button", { name: "扫码登录" }));
+    await within(rowOf("店铺甲")).findByText("等待扫码");
+    for (const label of ["正常", "就绪", "等待扫码"]) {
+      const badge = within(rowOf("店铺甲")).getByText(label).closest("[class*='badge']")!;
+      expect(badge.querySelector("[class*='dot']"), label).not.toBeNull();
+    }
   });
 
   it("扫码登录：提示去扫码并进入等待态，收到事件后提示成功", async () => {
@@ -179,76 +183,10 @@ describe("店铺与设置页", () => {
     await user.click(row.getByRole("button", { name: "恢复" }));
     const dialog = await screen.findByRole("dialog");
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
-    await user.click(within(dialog).getByRole("button", { name: "确认恢复" }));
+    const confirm = within(dialog).getByRole("button", { name: "恢复店铺" });
+    expect(confirm.className).toMatch(/primary/);
+    await user.click(confirm);
     expect(await screen.findByText("店铺甲：已解除风控暂停")).toBeInTheDocument();
-  });
-
-  describe("设置出口", () => {
-    it("粘贴代理商一行并保存：提交 paste 字段", async () => {
-      const fetchMock = mockPageFetch({
-        "GET /api/shops": jsonResponse([makeShop({ status: "needs_login", egress_status: "unchecked" })]),
-        "PUT /api/shops/1/egress": jsonResponse(makeShop()),
-      });
-      renderPage();
-      const user = userEvent.setup();
-      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
-      await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
-      const dialog = await screen.findByRole("dialog");
-      await user.click(within(dialog).getByRole("button", { name: "粘贴" }));
-      await user.type(within(dialog).getByLabelText("代理商格式"), "1.2.3.4|8000|user|pass|2026-12-31");
-      await user.click(within(dialog).getByRole("button", { name: "保存出口" }));
-      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-      const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")!;
-      expect(JSON.parse(String(put[1]?.body))).toEqual({ mode: "proxy", paste: "1.2.3.4|8000|user|pass|2026-12-31" });
-    });
-
-    it("粘贴格式不对时提示，不发请求", async () => {
-      const fetchMock = mockPageFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
-      renderPage();
-      const user = userEvent.setup();
-      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
-      await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
-      const dialog = await screen.findByRole("dialog");
-      await user.click(within(dialog).getByRole("button", { name: "粘贴" }));
-      await user.type(within(dialog).getByLabelText("代理商格式"), "1.2.3.4|8000");
-      await user.click(within(dialog).getByRole("button", { name: "保存出口" }));
-      expect(await within(dialog).findByText("代理商格式应为 IP|端口|账号|密码|到期日")).toBeInTheDocument();
-      expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
-    });
-
-    it("已登录的店铺修改出口前提示需要重新扫码；后端拒绝时就地显示原因", async () => {
-      mockPageFetch({
-        "GET /api/shops": jsonResponse([makeShop()]),
-        "PUT /api/shops/1/egress": errorResponse(422, "InvalidRequest", "端口必须是数字"),
-      });
-      renderPage();
-      const user = userEvent.setup();
-      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
-      await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
-      const dialog = await screen.findByRole("dialog");
-      expect(within(dialog).getByText("该店已登录，修改出口后需要重新扫码")).toBeInTheDocument();
-      await user.click(within(dialog).getByRole("button", { name: "直连" }));
-      await user.click(within(dialog).getByRole("button", { name: "保存出口" }));
-      expect(await within(dialog).findByText("端口必须是数字")).toBeInTheDocument();
-    });
-
-    it("出口 IP 变化时提供确认新 IP", async () => {
-      const fetchMock = mockPageFetch({
-        "GET /api/shops": jsonResponse([makeShop({ egress_status: "changed", egress_ip_pending: "1.2.3.5" })]),
-        "POST /api/shops/1/egress/check": jsonResponse({ egress_ip: "1.2.3.5", egress_ip_pending: null, egress_status: "ok" }),
-      });
-      renderPage();
-      const user = userEvent.setup();
-      await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
-      await user.click(await screen.findByRole("menuitem", { name: "设置出口" }));
-      await user.click(await screen.findByRole("button", { name: "确认新 IP" }));
-      await waitFor(() =>
-        expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain("/api/shops/1/egress/check?accept_change=true"),
-      );
-      // 确认新 IP 不得顺带提交出口表单
-      expect(screen.queryByText("请选择池里的代理")).toBeNull();
-      expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === "PUT")).toBe(false);
-    });
   });
 
   it("添加店铺：成功后接着打开设置出口", async () => {
@@ -285,11 +223,29 @@ describe("店铺与设置页", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
-    await user.click(await screen.findByRole("menuitem", { name: "店铺资料" }));
+    await user.click(await screen.findByRole("menuitem", { name: "查看店铺资料" }));
     const drawer = await screen.findByRole("dialog");
     expect(await within(drawer).findByText("仓库")).toBeInTheDocument();
     expect(within(drawer).getByText("圆通")).toBeInTheDocument();
     expect(within(drawer).getByText("默认 · 余额 暂无")).toBeInTheDocument();
     expect(within(drawer).getAllByText("暂无").length).toBeGreaterThan(0);
+  });
+
+  describe("数据备份", () => {
+    const created = { file_name: "app-20261126-120000.db", size_bytes: 2048, trigger: "manual", actor: "admin", created_at: "2026-11-26T04:00:00Z", pruned: [] };
+
+    it.each([
+      ["成功提示快照文件名", () => jsonResponse(created), "已生成快照 app-20261126-120000.db"],
+      ["失败提示去看日志", () => errorResponse(500, "Internal", "boom"), "备份失败，请查看 logs 目录下的日志"],
+    ])("不用展开就能立即备份：%s", async (_, response, text) => {
+      mockPageFetch({ "GET /api/shops": jsonResponse([makeShop()]), "POST /api/backup/run": response });
+      renderPage();
+      await screen.findByRole("table");
+      const card = screen.getByRole("region", { name: "数据备份" });
+      await userEvent.setup().click(within(card).getByRole("button", { name: "立即备份" }));
+      expect(await screen.findByText(text)).toBeInTheDocument();
+      // 结果走操作提示，不插在备份卡片里
+      expect(within(card).queryByText(text)).not.toBeInTheDocument();
+    });
   });
 });
