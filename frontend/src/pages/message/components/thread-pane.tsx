@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { MessageSquare } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
@@ -51,6 +51,7 @@ function Messages({ thread }: { thread: ThreadState }) {
 /** 右栏：只读会话详情。回复在飞鸽里做，这里没有输入框。 */
 export function ThreadPane({ thread, shopName, now }: { thread: ThreadState; shopName: string | undefined; now: Date }) {
   const { selection, row, known } = thread;
+  const navigate = useNavigate();
   if (!selection) {
     return (
       <section className={styles.thread} aria-label="会话详情">
@@ -76,9 +77,9 @@ export function ThreadPane({ thread, shopName, now }: { thread: ThreadState; sho
         <Button loading={thread.opening} onClick={thread.openInFlybird}>
           在飞鸽中回复
         </Button>
-        <Link className={styles.linkButton} to={ordersLink(selection.shopId)}>
+        <Button variant="secondary" onClick={() => void navigate(ordersLink(selection.shopId))}>
           查看订单
-        </Link>
+        </Button>
       </footer>
     </section>
   );

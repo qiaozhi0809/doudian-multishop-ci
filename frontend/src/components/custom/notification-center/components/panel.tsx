@@ -1,8 +1,10 @@
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Checkbox } from "@/components/arc/checkbox/checkbox";
 import { Pagination } from "@/components/arc/pagination/pagination";
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { Switch } from "@/components/arc/switch/switch";
+import { Tooltip } from "@/components/arc/tooltip/tooltip";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import { countsText, type ProgressItem } from "../logic/progress";
 import { groupForPanel, lastPage, levelTone, openRows, type NotificationItem, type StrongOpenShop } from "../logic/notification-view";
@@ -31,6 +33,28 @@ export interface PanelProps {
   onMarkAllRead: () => void;
 }
 
+const FILTERS = [
+  { value: "all", label: "全部" },
+  { value: "unread", label: "未读" },
+];
+
+/** 没有未读时按钮禁用，悬停或聚焦说明原因。 */
+function MarkAllRead({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
+  const button = (
+    <Button variant="ghost" disabled={disabled} onClick={onClick}>
+      全部已读
+    </Button>
+  );
+  if (!disabled) return button;
+  return (
+    <Tooltip content="没有未读通知">
+      <span tabIndex={0} className={styles.disabledWrap}>
+        {button}
+      </span>
+    </Tooltip>
+  );
+}
+
 function ItemList({ items, onOpenItem }: { items: NotificationItem[]; onOpenItem: (item: NotificationItem) => void }) {
   return (
     <ul className={styles.list}>
@@ -54,7 +78,7 @@ function ItemList({ items, onOpenItem }: { items: NotificationItem[]; onOpenItem
   );
 }
 
-/** 通知面板：进行中 → 待处理（全部未解决的强提醒，一店一行）→ 最近的通知（分页）→ 全部已读。 */
+/** 通知面板：进行中 → 待处理（全部未解决的强提醒，一店一行）→ 最近的通知（全部 / 未读、全部已读、分页）。 */
 export function Panel(props: PanelProps) {
   const open = openRows(props.strongOpen);
   // 未解决的状态类已在「待处理」里，最近列表不再重复
@@ -64,10 +88,7 @@ export function Panel(props: PanelProps) {
     <div className={styles.panelBody}>
       <div className={styles.head}>
         <h2 className={styles.heading}>通知</h2>
-        <div className={styles.toggles}>
-          <Checkbox label="只看未读" checked={props.unreadOnly} onCheckedChange={(v) => props.onUnreadOnlyChange(v === true)} />
-          <Checkbox label="提示音" checked={!props.muted} onCheckedChange={(v) => props.onMutedChange(v !== true)} />
-        </div>
+        <Switch label="提示音" checked={!props.muted} onCheckedChange={(on) => props.onMutedChange(!on)} />
       </div>
       {props.progress.length > 0 && (
         <section className={styles.section} aria-labelledby="notify-progress">
@@ -99,6 +120,15 @@ export function Panel(props: PanelProps) {
       )}
       <section className={styles.section} aria-labelledby="notify-recent">
         <h3 id="notify-recent" className={styles.sectionTitle}>最近</h3>
+        <div className={styles.listToolbar}>
+          <SegmentedControl
+            label="通知筛选"
+            options={FILTERS}
+            value={props.unreadOnly ? "unread" : "all"}
+            onValueChange={(value) => props.onUnreadOnlyChange(value === "unread")}
+          />
+          <MarkAllRead disabled={props.unread === 0} onClick={props.onMarkAllRead} />
+        </div>
         {props.loading ? (
           <Skeleton label="正在读取通知" lines={3} />
         ) : props.error ? (
@@ -114,12 +144,11 @@ export function Panel(props: PanelProps) {
           <ItemList items={recent} onOpenItem={props.onOpenItem} />
         )}
       </section>
-      <div className={styles.foot}>
-        {pages > 1 ? <Pagination page={props.page} pageCount={pages} onPageChange={props.onPageChange} label="通知分页" /> : <span />}
-        <Button variant="ghost" size="sm" disabled={props.unread === 0} onClick={props.onMarkAllRead}>
-          全部已读
-        </Button>
-      </div>
+      {pages > 1 && (
+        <div className={styles.foot}>
+          <Pagination page={props.page} pageCount={pages} onPageChange={props.onPageChange} label="通知分页" />
+        </div>
+      )}
     </div>
   );
 }

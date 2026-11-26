@@ -23,15 +23,17 @@ describe("客服消息页：列表与计数", () => {
     expect(screen.getByRole("button", { name: "超 3 分钟未回复 1" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("勾「只看未读」请求带 unread=true，并回到第 1 页", async () => {
+  it("未读筛选只有「未读会话」计数卡：没有复选框，旧链接里的 unread=1 不发给接口", async () => {
     const fn = mockIm({ [LIST]: () => listPage([makeConversation()], 60, 2) });
-    renderPage("/messages?page=2");
+    renderPage("/messages?page=2&unread=1");
     await list();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByText("只看未读")).not.toBeInTheDocument();
     expect(lastList(fn).has("unread")).toBe(false);
-    await userEvent.setup().click(screen.getByRole("checkbox", { name: "只看未读" }));
-    await waitFor(() => expect(lastList(fn).get("unread")).toBe("true"));
+    await userEvent.setup().click(screen.getByRole("button", { name: "未读会话 4" }));
+    await waitFor(() => expect(lastList(fn).get("quick")).toBe("unread"));
     expect(lastList(fn).get("page")).toBe("1");
-    expect(screen.getByTestId("where")).toHaveTextContent("unread=1");
+    expect(lastList(fn).has("unread")).toBe(false);
   });
 
   it("店铺筛选与排序原样发给接口", async () => {

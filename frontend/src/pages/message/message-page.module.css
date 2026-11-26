@@ -46,11 +46,6 @@
   flex: 1;
 }
 
-.listToolbar {
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
 .listScroll {
   flex: 1;
   min-height: 0;
@@ -246,26 +241,6 @@
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--border-subtle);
-}
-
-/* 跳转用链接，外观同次要按钮 */
-.linkButton {
-  display: inline-flex;
-  align-items: center;
-  height: var(--control-height-md);
-  padding: 0 var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-button);
-  background: var(--surface);
-  color: var(--foreground);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  text-decoration: none;
-  transition: background-color var(--duration-fast) var(--ease-standard);
-}
-
-.linkButton:hover {
-  background: var(--surface-muted);
 }
 
 /* 窄窗口时四张计数卡收一点内边距，「超 3 分钟未回复」放得下 */

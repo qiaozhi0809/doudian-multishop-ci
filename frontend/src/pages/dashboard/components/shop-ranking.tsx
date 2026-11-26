@@ -15,7 +15,7 @@ const columns: DataColumn<RankingRow>[] = [
     label: "会话",
     sortable: true,
     width: 96,
-    render: (_, row) => <Badge tone={row.stateTone}>{row.stateText}</Badge>,
+    render: (_, row) => <Badge tone={row.stateTone} dot>{row.stateText}</Badge>,
   },
   { key: "stockUp", label: "待发货", sortable: true, numeric: true, width: 94, render: numberText },
   { key: "expShip", label: "24 小时内须发", sortable: true, numeric: true, width: 136, render: numberText },

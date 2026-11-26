@@ -27,11 +27,10 @@ describe("客服消息页：会话详情", () => {
     expect(await row()).toHaveAttribute("aria-current", "true");
   });
 
-  it("「在飞鸽中回复」发 POST；「查看订单」只带该店", async () => {
+  it("「在飞鸽中回复」发 POST", async () => {
     const fn = mockIm();
     renderPage();
     await openRow();
-    expect(within(detail()).getByRole("link", { name: "查看订单" })).toHaveAttribute("href", "/orders?shops=1");
     await userEvent.setup().click(within(detail()).getByRole("button", { name: "在飞鸽中回复" }));
     await waitFor(() =>
       expect(
@@ -41,6 +40,15 @@ describe("客服消息页：会话详情", () => {
       ).toHaveLength(1),
     );
     expect(screen.queryByText("飞鸽里没找到该会话")).not.toBeInTheDocument();
+  });
+
+  it("「查看订单」是按钮，跳到只带该店的订单页", async () => {
+    mockIm();
+    renderPage();
+    await openRow();
+    expect(within(detail()).queryByRole("link", { name: "查看订单" })).not.toBeInTheDocument();
+    await userEvent.setup().click(within(detail()).getByRole("button", { name: "查看订单" }));
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent(/^\/orders\?shops=1$/));
   });
 
   it("飞鸽里没定位到会话时提示", async () => {
@@ -103,6 +111,6 @@ describe("客服消息页：会话详情", () => {
     await within(detail()).findByText("在的");
     await screen.findByText("测试小铺：已停止");
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
-    expect(container.querySelectorAll("textarea, input:not([type=checkbox]), [contenteditable]")).toHaveLength(0);
+    expect(container.querySelectorAll("textarea, input, [contenteditable]")).toHaveLength(0);
   });
 });

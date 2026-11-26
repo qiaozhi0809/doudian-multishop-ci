@@ -67,11 +67,18 @@
   font-weight: 500;
 }
 
-.toggles {
+/* 筛选在左、全部已读在右 */
+.listToolbar {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  font-size: var(--text-sm);
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* 禁用按钮外层：接住悬停与焦点，显示原因 */
+.disabledWrap {
+  display: inline-flex;
+  border-radius: var(--radius-button);
 }
 
 .section {
@@ -208,9 +215,7 @@
 
 .foot {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  justify-content: center;
   padding-top: var(--space-3);
   border-top: 1px solid var(--border-subtle);
 }
