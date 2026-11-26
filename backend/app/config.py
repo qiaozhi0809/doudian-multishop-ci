@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     dev_mode: bool = False
     dry_run: bool = False
     max_concurrent_shops: int = 3
+    im_max_browsers: int = Field(3, ge=1, le=10)  # 同时常驻的飞鸽页面上限
     printer_name: str = ""  # 取号请求的 printer 字段；M3 接打印组件前默认不传
     frontend_dist: Path = REPO_ROOT / "frontend" / "dist"
 
