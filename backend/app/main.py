@@ -5,6 +5,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
@@ -27,6 +28,7 @@ from app.api import backup as backup_api
 from app.api import catalog as catalog_api
 from app.api import event as event_api
 from app.api import fund as fund_api
+from app.api import im as im_api
 from app.api import label as label_api
 from app.api import notification as notification_api
 from app.api import order as order_api
@@ -64,6 +66,9 @@ from app.wiring import Overrides, build_services
 log = structlog.get_logger()
 ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 ALREADY_RUNNING = "该数据目录已有后端在运行，本次启动已退出"
+# 本次启动的「浏览器启动清理已做完」：清残留锁之后才能开飞鸽常驻页。
+# 建任务时复制上下文，所以清理任务与飞鸽任务拿到的是同一个事件
+_browsers_cleaned: ContextVar[asyncio.Event] = ContextVar("browsers_cleaned")
 
 
 def _utc_now() -> datetime:
@@ -122,6 +127,7 @@ def create_app(
         aftersale_all = partial(  # 售后定时检查：每轮一次计数，变了才完整同步
             for_each_active_shop, engine, lambda sid: aftersale.check_new(sid, SYSTEM_ACTOR)
         )
+        _browsers_cleaned.set(asyncio.Event())  # 必须在建任务之前
         tasks = [
             asyncio.create_task(app.state.notification_feed.run(app.state.events, stop)),
             # 启动对账一次：升级前已有的店铺问题、停机期间丢失的事件
@@ -133,6 +139,8 @@ def create_app(
                 settings.ship_deadline_scan_interval_s, _deadline_scan(app), stop)),
             # 浏览器进程：启动先清孤儿与残留锁，之后每 5 分钟巡检（design/backend 5.17）
             asyncio.create_task(_browser_upkeep(app.state.browsers, settings.profiles_dir, stop)),
+            # 飞鸽常驻页：排在通知订阅之后，等上面的启动清理做完才开浏览器
+            asyncio.create_task(_run_im(app, stop)),
         ]
         if settings.reconcile_daily:
             tasks.append(asyncio.create_task(run_daily_at(
@@ -146,6 +154,7 @@ def create_app(
         finally:
             stop.set()
             await asyncio.gather(*tasks, return_exceptions=True)
+            await app.state.im.shutdown()  # 先让飞鸽会话收尾，再取消后台任务、关浏览器
             await app.state.tasks.shutdown()
             await app.state.browsers.close_all(CloseReason.SHUTDOWN)
             engine.dispose()
@@ -167,6 +176,7 @@ def create_app(
         auth_api, shop_api, proxy_pool_api, order_api, label_api, print_api, event_api,
         aftersale_api, catalog_api, fund_api, shipping_api, reconcile_api,
         backup_api, system_api, notification_api,
+        im_api,
     ):
         app.include_router(module.router)
     _mount_frontend(app, settings)
@@ -180,8 +190,21 @@ async def _browser_upkeep(
         await browsers.startup_cleanup(profiles_dir)
     except Exception:
         log.exception("browser.startup_cleanup_failed")
+    _browsers_cleaned.get().set()
     await run_every(
         SWEEP_INTERVAL_S, partial(browsers.sweep, profiles_dir), stop, delay_first=True)
+
+
+async def _run_im(app: FastAPI, stop: asyncio.Event) -> None:
+    """启动清理做完后运行飞鸽常驻页；清理期间就要退出则不再启动。"""
+    waits = [asyncio.ensure_future(e.wait()) for e in (_browsers_cleaned.get(), stop)]
+    try:
+        await asyncio.wait(waits, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for wait in waits:
+            wait.cancel()
+    if not stop.is_set():
+        await app.state.im.run(app.state.events, stop)
 
 
 async def _startup_reconcile(app: FastAPI) -> None:
@@ -209,6 +232,11 @@ def _daily_backup(app: FastAPI) -> Callable[[], Awaitable[object]]:
             log.info("notifications.purged", count=purged)
         except Exception:
             log.exception("notifications.purge_failed")
+        try:  # 飞鸽消息保留 30 天，同样在备份之后清理
+            removed = await asyncio.to_thread(app.state.im.purge_messages, app.state.clock())
+            log.info("im.messages_purged", count=removed)
+        except Exception:
+            log.exception("im.messages_purge_failed")
         return result
 
     return backup

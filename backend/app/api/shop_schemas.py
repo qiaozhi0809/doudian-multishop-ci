@@ -38,6 +38,7 @@ class ShopRow(BaseModel):
     platform_shop_id: str | None
     bank_name: str | None
     bank_tail: str | None
+    im_enabled: bool
 
 
 class ShopCreate(BaseModel):
@@ -58,6 +59,7 @@ class ShopPatch(BaseModel):
     platform_shop_id: PlatformShopId | None = None
     bank_name: BankName | None = None
     bank_tail: BankTail | None = None
+    im_enabled: bool | None = None
 
 
 class EgressRequest(BaseModel):

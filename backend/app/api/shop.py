@@ -65,7 +65,8 @@ def patch_shop(
         k: getattr(body, k) for k in ("entity", "platform_shop_id", "bank_name", "bank_tail")
     } | cleared
     _state(request).shop_admin.update(
-        shop_id, name=body.name, channel=body.channel, enabled=body.enabled, actor=admin, **text,
+        shop_id, name=body.name, channel=body.channel, enabled=body.enabled,
+        im_enabled=body.im_enabled, actor=admin, **text,
     )
     return _row(request, shop_id)
 

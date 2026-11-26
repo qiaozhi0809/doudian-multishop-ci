@@ -63,12 +63,38 @@ async def test_route_handler_only_aborts():
     context = await installed()
     [(_, handler)] = context.routes
     route = FakeRoute()
-    before = read_guard.blocked_count()
 
     await handler(route)
 
     assert route.calls == ["abort"]
-    assert read_guard.blocked_count() == before + 1
+    assert read_guard.blocked_count(context) == 1
+
+
+async def test_blocked_count_is_per_context():
+    first, second = await installed(), await installed()
+    [(_, first_handler)], [(_, second_handler)] = first.routes, second.routes
+
+    await first_handler(FakeRoute())
+    await second_handler(FakeRoute())
+    await second_handler(FakeRoute())
+
+    assert read_guard.blocked_count(first) == 1
+    assert read_guard.blocked_count(second) == 2
+    assert read_guard.blocked_count(FakeContext()) == 0  # 没装过拦截
+
+
+async def test_failed_abort_is_not_counted():
+    context = await installed()
+    [(_, handler)] = context.routes
+
+    class Broken:
+        async def abort(self):
+            raise RuntimeError("route closed")
+
+    with pytest.raises(RuntimeError):
+        await handler(Broken())
+
+    assert read_guard.blocked_count(context) == 0
 
 
 @pytest.mark.parametrize("url", [

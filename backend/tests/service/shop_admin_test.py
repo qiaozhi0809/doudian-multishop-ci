@@ -91,3 +91,30 @@ def test_create_with_paste_leaks_no_password_in_audit(env):
     with env.engine.connect() as conn:
         dump = " ".join(str(tuple(r)) for r in conn.execute(sa.text("select * from audit_log")))
     assert dump and PW not in dump
+
+
+def test_im_switch_change_publishes_shop_status_changed(env):
+    sid = env.admin.create("店B")
+    env.seen.clear()
+
+    env.admin.update(sid, im_enabled=True)
+
+    assert env.admin.get_view(sid)["im_enabled"] is True
+    expected = {"shop_id": sid, "status": "needs_login", "egress_status": "unchecked"}
+    assert env.seen == [(SHOP_STATUS_CHANGED, expected)]
+    env.admin.update(sid, im_enabled=True)  # 没变化：不发
+    env.admin.update(sid, name="改名")
+    assert len(env.seen) == 1
+    env.admin.update(sid, im_enabled=False)
+    assert env.seen == [(SHOP_STATUS_CHANGED, expected)] * 2
+    assert env.admin.get_view(sid)["im_enabled"] is False
+
+
+def test_im_switch_with_disable_publishes_once_with_new_status(env):
+    sid = env.admin.create("店B")
+    env.seen.clear()
+
+    env.admin.update(sid, enabled=False, im_enabled=True)
+
+    assert [(topic, data["status"]) for topic, data in env.seen] == [
+        (SHOP_STATUS_CHANGED, "disabled")]

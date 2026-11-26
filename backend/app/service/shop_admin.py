@@ -133,7 +133,7 @@ class ShopAdminService:
         self, shop_id: int, *, name: str | None = None, entity: str | None = None,
         channel: str | None = None, enabled: bool | None = None,
         platform_shop_id: str | None = None, bank_name: str | None = None,
-        bank_tail: str | None = None, actor: str = "system",
+        bank_tail: str | None = None, im_enabled: bool | None = None, actor: str = "system",
     ) -> None:
         fields: dict[str, Any] = {}
         if name is not None:
@@ -153,11 +153,14 @@ class ShopAdminService:
             )
             if value is not None
         }
+        if im_enabled is not None:
+            fields["im_enabled"] = int(im_enabled)
         now = self._now()
         new_status: str | None = None
         try:
             with self._engine.begin() as conn:
                 shop = self._get(conn, shop_id)
+                im_changed = "im_enabled" in fields and fields["im_enabled"] != shop["im_enabled"]
                 old_profile = shop_profile_store.get(conn, shop_id) or {}
                 shop_store.update_fields(conn, shop_id, now, **fields)
                 if profile_fields:
@@ -184,9 +187,10 @@ class ShopAdminService:
                     self._audit(conn, shop_id, "shop.enable", actor, now)
         except sa.exc.IntegrityError:
             raise EgressConflict(REENABLE_CONFLICT) from None
-        if new_status is not None:
+        if new_status is not None or im_changed:  # 飞鸽常驻页靠这个事件开停
             self._events.publish(SHOP_STATUS_CHANGED, {
-                "shop_id": shop_id, "status": new_status, "egress_status": "unchecked"
+                "shop_id": shop_id, "status": new_status or shop["status"],
+                "egress_status": "unchecked"
                 if new_status == NEEDS_LOGIN else shop["egress_status"],
             })
 
@@ -252,5 +256,6 @@ class ShopAdminService:
             "platform_shop_id": (profile or {}).get("platform_shop_id"),
             "bank_name": (profile or {}).get("bank_name"),
             "bank_tail": (profile or {}).get("bank_tail"),
+            "im_enabled": bool(shop["im_enabled"]),
         }
 

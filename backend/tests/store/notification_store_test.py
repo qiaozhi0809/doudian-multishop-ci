@@ -97,16 +97,20 @@ def test_unread_count_and_mark_read(engine):
 def test_unread_count_skips_open_states(engine):
     with engine.begin() as conn:
         _ins(conn)
-        _ins(conn, state_key="open")
-        _ins(conn, state_key="done", resolved_at=T1)
+        _ins(conn, level="strong", state_key="open")
+        _ins(conn, level="strong", state_key="done", resolved_at=T1)
         assert ns.unread_count(conn) == 2
+        # 未解决但不是强档：横条不代表它，照常计入未读
+        _ins(conn, level="medium", state_key="medium")
+        assert ns.unread_count(conn) == 3
 
 
 def test_open_strong_states(engine):
     with engine.begin() as conn:
-        _ins(conn)
-        _ins(conn, state_key="x", resolved_at=T1)
-        open_id = _ins(conn, state_key="y")
+        _ins(conn, level="strong")
+        _ins(conn, level="strong", state_key="x", resolved_at=T1)
+        _ins(conn, level="medium", state_key="z")
+        open_id = _ins(conn, level="strong", state_key="y")
         assert [r["id"] for r in ns.open_strong_states(conn)] == [open_id]
 
 

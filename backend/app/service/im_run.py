@@ -68,7 +68,7 @@ class Run:
         self.started_at: datetime | None = None  # 开始接收的时间
         self.stop_reason: StopReason | None = None  # 本系统决定的原因
         self.close_reason: StopReason | None = None  # 登记表回传的原因，优先
-        self.blocked_before = read_guard.blocked_count()
+        self._context: Any = None  # 本轮打开过的浏览器上下文；关掉后仍用来读拦截计数
         self._stack = AsyncExitStack()
 
     @property
@@ -77,15 +77,14 @@ class Run:
 
     @property
     def read_blocked(self) -> int:
-        """本轮拦下的已读请求数。计数是进程级的，多店同时接收时会算进别店的。"""
-        return read_guard.blocked_count() - self.blocked_before
+        """本轮在本店浏览器里拦下的已读请求数。"""
+        return 0 if self._context is None else read_guard.blocked_count(self._context)
 
     async def open(self, browser: AbstractAsyncContextManager[Any]) -> Any:
         """进入浏览器上下文并一直持有到 close()。"""
-        self.blocked_before = read_guard.blocked_count()
-        context = await self._stack.enter_async_context(browser)
+        self._context = await self._stack.enter_async_context(browser)
         self.opened = True
-        return context
+        return self._context
 
     async def close(self) -> None:
         try:

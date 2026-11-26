@@ -1,15 +1,19 @@
-"""飞鸽消息的读回与落库。正文只经这里进出 im_message 表，不进日志。"""
+"""飞鸽消息的读回、落库与过期删除。正文只经这里进出 im_message 表，不进日志。"""
 
 import asyncio
 from dataclasses import asdict, fields
+from datetime import UTC, datetime
 
 import structlog
 from sqlalchemy import Engine
 
 from app.adapter.flybird.parse import Message
+from app.domain.im_rules import MESSAGE_RETENTION
 from app.store import im_message_store
 
 log = structlog.get_logger()
+
+_ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def load_since(engine: Engine, shop_id: int, since: str) -> list[Message]:
@@ -18,6 +22,13 @@ def load_since(engine: Engine, shop_id: int, since: str) -> list[Message]:
         rows = im_message_store.recent_for_shop(conn, shop_id, since)
     names = [f.name for f in fields(Message)]
     return [Message(**{name: row[name] for name in names}) for row in rows]
+
+
+def purge(engine: Engine, now: datetime) -> int:
+    """删除保存超过保留期的消息，返回删除条数。"""
+    cutoff = (now.astimezone(UTC) - MESSAGE_RETENTION).strftime(_ISO_FMT)
+    with engine.begin() as conn:
+        return im_message_store.purge_before(conn, cutoff)
 
 
 async def save(engine: Engine, shop_id: int, msgs: list[Message], captured_at: str) -> None:

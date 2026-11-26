@@ -97,13 +97,12 @@ async def test_history_is_loaded_as_baseline(rig):
     assert ("im_unread_changed", {"shop_id": rig.shop_id, "unread": 1, "new": 0}) in rig.published
 
 
-async def test_audit_on_start_and_stop(rig, monkeypatch):
-    blocked = [5]
-    monkeypatch.setattr("app.adapter.flybird.read_guard.blocked_count", lambda: blocked[0])
+async def test_audit_on_start_and_stop(rig):
     await rig.start()
     rig.attach.pages[0].on_messages([msg("msg-test-1")])
     await until(lambda: rig.messages())
-    blocked[0] = 8
+    for _ in range(3):
+        await rig.attach.pages[0].context.mark_read()
 
     await rig.watcher.stop(rig.shop_id, reason="ineligible", actor=ADMIN)
 
@@ -112,6 +111,22 @@ async def test_audit_on_start_and_stop(rig, monkeypatch):
     assert [(r["actor"], r["result"]) for r in stop] == [(ADMIN, "ok")]
     assert stop[0]["resp"] == {"reason": "ineligible", "read_blocked": 3}
     assert "在吗" not in str(start + stop)
+
+
+async def test_read_blocked_counts_own_shop_only(rig):
+    other = rig.add_shop()
+    await rig.start()
+    await rig.start(other)
+    first, second = (page.context for page in rig.attach.pages)
+    await first.mark_read()
+    await second.mark_read()
+    await second.mark_read()
+
+    for shop_id in (rig.shop_id, other):
+        await rig.watcher.stop(shop_id, reason="ineligible", actor=ADMIN)
+
+    stops = {r["shop_id"]: r["resp"]["read_blocked"] for r in rig.audits("im.stop")}
+    assert stops == {rig.shop_id: 1, other: 2}
 
 
 async def test_audit_start_failure(rig):

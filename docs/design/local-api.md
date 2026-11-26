@@ -28,7 +28,7 @@
 | | `POST /api/shops/{id}/probe` | 立即探测会话 |
 | | `POST /api/shops/{id}/sync-base` | 同步地址 / 模板 / 快递 / 面单账户 |
 | | `GET /api/shops/{id}/base` | 查看本店基础数据 |
-| | `PATCH /api/shops/{id}` | 改名、停用、切换通道、默认打印机；手工维护主体 / 店铺ID（1~20 位数字）/ 开户行（≤ 50 字）/ 卡尾号（4 位数字），省略 = 不改，显式 `null` = 清空，格式不符 422；改动写审计 `shop.profile_edit`（只记字段名） |
+| | `PATCH /api/shops/{id}` | 改名、停用、切换通道、默认打印机；手工维护主体 / 店铺ID（1~20 位数字）/ 开户行（≤ 50 字）/ 卡尾号（4 位数字），省略 = 不改，显式 `null` = 清空，格式不符 422；改动写审计 `shop.profile_edit`（只记字段名）；`im_enabled` 开关接收飞鸽消息（默认关） |
 | | `PUT /api/shops/{id}/egress {mode: direct\|proxy, pool_id? \| proxy_url? \| paste?, expires_at?}` | 设置固定出口；`pool_id`（从代理池选）、`proxy_url`、`paste` 三者最多给一个，否则 422；`pool_id` 要求池项存在、未过期、未被别的启用店铺占用；`paste` / `proxy_url` 先按 `identity` 写入代理池再绑定；`paste` 为代理商格式 `IP\|端口\|账号\|密码\|到期日`；只接受 `http(s)://`；修改已登录店铺的出口会使其转 `needs_login`（backend 5.17） |
 | | `POST /api/shops/{id}/egress/check[?accept_change=true]` | 经该出口检查连通并取出口 IP → `{egress_ip, egress_ip_pending, egress_status}`；`accept_change` 用于人工确认 IP 变化 |
 | | `POST /api/shops/{id}/resume` | 解除风控暂停（`paused_reason` 置空） |
@@ -59,8 +59,10 @@
 | | `POST /api/tasks/{id}/retry` · `POST /api/tasks/{id}/cancel` | 重试 / 取消 |
 | | `GET /api/events` | SSE 推送 |
 | 通知 | `GET /api/notifications?unread=&page=` | 通知列表（新的在前，每页 50）：`{items, total, page, page_size}`，条目含 `kind` `level` `shop_id` `title` `body` `link` `count` `state_key` `resolved_at` `read_at` `created_at` `updated_at` |
-| | `GET /api/notifications/summary` | `{unread, strong_open: [{shop_id, shop_name, kinds, link, problems: [{kind, link}]}]}`：铃铛未读数（不含未解决的状态类）与全站横条（未解决的强状态，一店一行，每个问题带自己的链接；`link` 为第一个问题的链接） |
+| | `GET /api/notifications/summary` | `{unread, strong_open: [{shop_id, shop_name, kinds, link, problems: [{kind, link}]}]}`：铃铛未读数（不含未解决的强状态）与全站横条（未解决的强状态，一店一行，每个问题带自己的链接；`link` 为第一个问题的链接） |
 | | `POST /api/notifications/{id}/read` · `POST /api/notifications/read-all` | 标已读（204）；单条不存在 404 |
+| 飞鸽（只读） | `GET /api/im/status` | 开启接收飞鸽消息的店：`{shop_id, shop_name, state, state_label, since, next_retry_at, last_error}`；不含消息内容 |
+| | `POST /api/im/shops/{shop_id}/restart` | 手动重新连接（清零退避计数，仍走全部关卡，不等页面打开）→ 该店状态；店铺不存在 404，开关未开 422 |
 | 售后（只读） | `GET /api/aftersale` · `GET /api/aftersale/todo` · `GET /api/aftersale/counts` · `GET /api/aftersale/statuses` · `GET /api/aftersale/{after_sale_id}?shop_id=` · `POST /api/aftersale/sync` | 快照列表 / 待办队列（按处理截止时间）、平台计数、状态筛选项、按需详情、同步 |
 | 商品 / 库存（只读） | `GET /api/catalog/products` · `GET /api/catalog/products/counts` · `GET /api/catalog/products/groups` · `GET /api/catalog/stock` · `GET /api/catalog/stock/summary` · `GET /api/catalog/stock/warehouses` · `POST /api/catalog/products/sync` · `POST /api/catalog/stock/sync` | 商品快照、状态计数、分组、库存快照、本地预警汇总、仓库列表、同步 |
 | 资金（只读） | `GET /api/fund/summary` · `GET /api/fund/unsettled` · `GET /api/fund/margin` · `GET /api/fund/bills?days=&page=` · `POST /api/fund/sync` | 多店概览、待结算快照、保证金、近 N 天账单（上游、不落库）、同步 |

@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import pytest
 
+from app.domain.notification_rules import LEVEL_BY_KIND
 from app.service.events import NOTIFICATION, EventBus
 from app.service.notifications import NotificationService
 from tests.service.label_support import add_shop
@@ -215,6 +216,19 @@ def test_summary_groups_strong_open_by_shop(svc, engine, shop_a):
     }]
     # 未解决的强状态由横条 / 待处理代表，不计未读：已解决的风控 + 已恢复 + 新订单
     assert s["unread"] == 3
+
+
+def test_state_downgraded_to_medium_leaves_banner(svc, shop_a, monkeypatch):
+    """所有者把「超时未回复」改成中档（只改 LEVEL_BY_KIND 一行）后横条也消失。"""
+    monkeypatch.setitem(LEVEL_BY_KIND, "im_waiting", "medium")
+    svc.raise_state("im_wait", "im_waiting", shop_id=shop_a, count=2)
+    svc.raise_state("login", "login_expired", shop_id=shop_a)
+
+    summary = svc.summary()
+
+    (group,) = summary["strong_open"]
+    assert group["kinds"] == ["login_expired"]
+    assert summary["unread"] == 1  # 中档的那条改由铃铛未读数代表
 
 
 def test_summary_problem_links_per_kind(svc, shop_a):
