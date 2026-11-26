@@ -25,6 +25,7 @@ class Row:
     ct: float
     status: str = "running"
     unkillable: bool = False  # psutil kill 不掉，只能靠 taskkill
+    access_denied: bool = False  # kill 抛 AccessDenied（psutil.Error 子类）
     children: list[int] = field(default_factory=list)
 
 
@@ -78,9 +79,15 @@ class FakeProcess:
     def children(self, recursive=False):
         return [FakeProcess(self.ps, c, self.ps.rows[c].ct) for c in self._row().children]
 
+    def resume(self):
+        self._row()
+        self.ps.events.append(f"resume {self.pid}")
+
     def kill(self):
         r = self._row()
         self.ps.events.append(f"kill {self.pid}")
+        if r.access_denied:
+            raise NoSuchProcess(self.pid)
         if not r.unkillable:
             del self.ps.rows[self.pid]
 
@@ -136,10 +143,48 @@ def test_kill_tree_suspends_then_kills_whole_tree():
 
 def test_kill_tree_catches_child_spawned_after_snapshot():
     ps = FakePs({10: browser_row(children=[11]), 11: Row(10, ["gpu"], 101.0),
-                 12: Row(10, ["network"], 150.0),  # 不在快照里
-                 13: Row(10, ["old"], 50.0)})  # 早于主进程：pid 复用前的旧子进程，不碰
+                 12: Row(10, ["network", f"--user-data-dir={DIR}"], 150.0),  # 不在快照里
+                 13: Row(10, ["old", f"--user-data-dir={DIR}"], 50.0)})  # 早于主进程，不碰
     PsutilProcesses(ps).kill_tree(BrowserProc(10, DIR, 100.0))
     assert set(ps.rows) == {13}
+
+
+def test_late_child_check_uses_its_own_parent_and_profile():
+    """Windows 上 ppid 不随父进程退出更新、pid 会被复用：只凭 ppid 补杀会误杀无关进程。"""
+    ps = FakePs({
+        10: browser_row(children=[11]),
+        11: Row(10, ["gpu", f"--user-data-dir={DIR}"], 300.0),  # 快照里的子进程，创建得晚
+        # 父进程是 11、晚于主进程，但早于 11 自己：ppid 指向的是 pid 复用前的旧进程
+        20: Row(11, ["chrome", f"--user-data-dir={DIR}"], 200.0),
+        # 晚于 11，但命令行没有该店目录：无关进程
+        21: Row(11, ["notepad.exe"], 400.0),
+        # 晚于 11，目录是另一家店
+        22: Row(11, ["chrome", "--user-data-dir=/data/profiles/2"], 400.0),
+        # 真正的漏网子进程
+        23: Row(11, ["chrome", "--type=utility", f"--user-data-dir={DIR}"], 400.0),
+    })
+    PsutilProcesses(ps).kill_tree(BrowserProc(10, DIR, 100.0))
+    assert set(ps.rows) == {20, 21, 22}
+
+
+def test_access_denied_still_falls_back_to_taskkill():
+    ps = FakePs({10: browser_row(access_denied=True)})
+    calls = []
+    PsutilProcesses(ps, run=lambda a, **k: calls.append(a), platform="win32").kill_tree(
+        BrowserProc(10, DIR, 100.0))
+    assert calls == [["taskkill", "/PID", "10", "/F"]]
+
+
+def test_unkillable_root_is_resumed():
+    ps = FakePs({10: browser_row(unkillable=True)})
+    PsutilProcesses(ps, platform="darwin").kill_tree(BrowserProc(10, DIR, 100.0))
+    assert ps.events[0] == "suspend 10" and ps.events[-1] == "resume 10"
+
+
+def test_killed_root_is_not_resumed():
+    ps = FakePs({10: browser_row()})
+    PsutilProcesses(ps).kill_tree(BrowserProc(10, DIR, 100.0))
+    assert "resume 10" not in ps.events
 
 
 def test_windows_fallback_taskkills_each_survivor_without_tree_flag():

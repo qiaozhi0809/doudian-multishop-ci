@@ -144,7 +144,8 @@ class PsutilProcesses:
 
         先挂起主进程（防止它在杀子进程期间重新拉起 GPU / 网络子进程），按快照逐个结束；
         psutil 的 Process 对象自带 pid 复用检查。仍存活的逐个兜底（Windows 用不带 /T 的
-        taskkill），最后再找一次父进程已被结束、晚于主进程创建的漏网子进程。
+        taskkill）；主进程最终没杀掉就恢复运行，不留在挂起状态。最后补杀漏网子进程，
+        条件很严（见 ``_late_children``），宁可漏杀不可误杀。
         """
         root = self._verified(proc)
         if root is None:
@@ -155,16 +156,37 @@ class PsutilProcesses:
             procs = [root, *root.children(recursive=True)]
         except self._ps.Error:
             procs = [root]
+        born: dict[int, float] = {}  # 已杀进程 pid → 它自己的创建时间
+        for p in procs:
+            with suppress(self._ps.Error):
+                born[p.pid] = p.create_time()
         self._kill_all(procs)
-        killed = {p.pid for p in procs}
-        late = []
-        for q in self._ps.process_iter(["pid", "ppid", "create_time"]):
-            if (q.info.get("ppid") in killed and q.info["pid"] not in killed
-                    and (q.info.get("create_time") or 0) >= proc.create_time):
-                late.append(q)
+        with suppress(self._ps.Error):
+            if root.is_running():
+                root.resume()
+        late = self._late_children(born, proc.user_data_dir)
         if late:
             self._kill_all(late)
         return True
+
+    def _late_children(self, born: dict[int, float], user_data_dir: str) -> list[Any]:
+        """快照之后才拉起的子进程：父进程是刚杀掉的某个进程、创建时间不早于**那个父进程**、
+        命令行带同一个 --user-data-dir。
+
+        Windows 上 ppid 不随父进程退出而更新，pid 也可能已被复用，只凭 ppid 会误杀无关进程。
+        """
+        late = []
+        for q in self._ps.process_iter(["pid", "ppid", "create_time", "cmdline"]):
+            info = q.info
+            parent_born = born.get(info.get("ppid"))
+            if parent_born is None or info["pid"] in born:
+                continue
+            if (info.get("create_time") or 0) < parent_born:
+                continue
+            found = user_data_dir_of(info.get("cmdline") or [])
+            if found is not None and same_dir(found, user_data_dir):
+                late.append(q)
+        return late
 
     def _kill_all(self, procs: list[Any]) -> None:
         for p in procs:
@@ -172,13 +194,16 @@ class PsutilProcesses:
                 p.kill()
         _, alive = self._ps.wait_procs(procs, timeout=KILL_WAIT_S)
         for p in alive:
-            with suppress(self._ps.Error):
-                if not p.is_running():
+            try:
+                if not p.is_running():  # 带 pid 复用检查：已不是原来那个进程就跳过
                     continue
+            except self._ps.Error:
+                continue
+            with suppress(self._ps.Error):
                 p.kill()
-                if self._platform == "win32":
-                    with suppress(subprocess.TimeoutExpired, OSError):
-                        self._run(  # noqa: S603 - 固定参数，pid 为整数，已核对身份
-                            ["taskkill", "/PID", str(p.pid), "/F"],
-                            capture_output=True, timeout=KILL_WAIT_S * 2, check=False,
-                        )
+            if self._platform == "win32":  # kill 抛 AccessDenied 时也要兜底
+                with suppress(subprocess.TimeoutExpired, OSError):
+                    self._run(  # noqa: S603 - 固定参数，pid 为整数，已核对身份
+                        ["taskkill", "/PID", str(p.pid), "/F"],
+                        capture_output=True, timeout=KILL_WAIT_S * 2, check=False,
+                    )
