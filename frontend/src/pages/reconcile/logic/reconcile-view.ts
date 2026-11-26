@@ -20,7 +20,7 @@ export const isKind = (value: string | null): value is KindFilter =>
   KIND_OPTIONS.some((option) => option.value === value);
 
 export const STATUS_OPTIONS = [
-  { value: "all", label: "全部处理状态" },
+  { value: "all", label: "全部状态" },
   { value: "open", label: "未处理" },
   { value: "handled", label: "已处理" },
 ] as const;
@@ -42,14 +42,17 @@ export function trackingPair(row: Finding): string {
 }
 
 export function runSummary(run: ReconcileRun): string {
-  if (run.status === "running") return "检查进行中，结果会自动刷新";
   const head = run.status === "failed" ? "检查失败" : "检查完成";
   const tail = run.error ? `；${run.error}` : "";
   return `${head}：扫描 ${run.scanned} 单，发现 ${run.finding_count} 条异常${tail}`;
 }
 
 export function runTone(run: ReconcileRun): Tone {
-  if (run.status === "running") return "info";
   if (run.status === "failed") return "danger";
-  return "success";
+  return run.error ? "warning" : "success";
+}
+
+/** 结束了但没跑全（整批失败或有店铺没取到）：页内要一直看得到，定时检查也算。 */
+export function runIncomplete(run: ReconcileRun): boolean {
+  return run.status !== "running" && (run.status === "failed" || Boolean(run.error));
 }

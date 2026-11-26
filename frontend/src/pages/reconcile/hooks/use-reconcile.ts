@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
+import { useNoticeQueue } from "@/components/custom/notice/use-notice-queue";
 import { api, ApiError } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
 import { queryKeys } from "@/lib/query-keys";
@@ -12,6 +13,8 @@ import {
   PAGE_SIZE,
   isKind,
   isStatus,
+  runSummary,
+  runTone,
   type Finding,
   type KindFilter,
   type StatusFilter,
@@ -23,13 +26,13 @@ function message(error: unknown): string {
   return error instanceof ApiError ? error.message : "操作失败，请重试";
 }
 
-/** 对账页：筛选与排序在 URL 里；触发后靠 SSE + 轮询刷新同一个查询。 */
+/** 对账页：筛选与排序在 URL 里；触发后靠 SSE + 轮询刷新同一个查询，结果发到右下角提示。 */
 export function useReconcile() {
   const { shopIds } = useShopFilter();
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const sorting = useListSort(FINDING_SORT_KEYS);
-  const [error, setError] = useState<string | null>(null);
+  const { notices, notify, dismissNotice } = useNoticeQueue();
 
   const kindParam = params.get("kind");
   const kind: KindFilter = isKind(kindParam) ? kindParam : "all";
@@ -81,21 +84,30 @@ export function useReconcile() {
         window_days: 30,
       }),
     onSuccess: () => {
-      setError(null);
       void client.invalidateQueries({ queryKey: queryKeys.reconcileRoot() });
     },
-    onError: (e) => setError(message(e)),
+    onError: (e) => notify("reconcile:run", "danger", message(e)),
   });
 
   const markMutation = useMutation({
     mutationFn: (findingId: number) =>
       api.patch<Finding>(`/api/reconcile/findings/${findingId}`, { status: "handled" }),
     onSuccess: () => {
-      setError(null);
       void client.invalidateQueries({ queryKey: queryKeys.reconcileRoot() });
     },
-    onError: (e) => setError(message(e)),
+    onError: (e) => notify("reconcile:mark", "danger", message(e)),
   });
+
+  // 本页触发的批次跑完后报一次结果
+  const startedRunId = runMutation.data?.run_id;
+  const latestRun = query.data?.run ?? null;
+  const reportedRunId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!latestRun || latestRun.status === "running") return;
+    if (latestRun.run_id !== startedRunId || reportedRunId.current === latestRun.run_id) return;
+    reportedRunId.current = latestRun.run_id;
+    notify("reconcile:run", runTone(latestRun), runSummary(latestRun));
+  }, [latestRun, startedRunId, notify]);
 
   useEventSubscription("reconcile_done", () => {
     void client.invalidateQueries({ queryKey: queryKeys.reconcileRoot() });
@@ -105,7 +117,7 @@ export function useReconcile() {
   return {
     query,
     rows: query.data?.items ?? [],
-    run: query.data?.run ?? null,
+    run: latestRun,
     kind,
     status,
     page,
@@ -118,8 +130,8 @@ export function useReconcile() {
     running: runMutation.isPending || query.data?.run?.status === "running",
     markHandled: markMutation.mutate,
     marking: markMutation.isPending,
-    error,
-    clearError: () => setError(null),
+    notices,
+    dismissNotice,
   };
 }
 
