@@ -12,14 +12,20 @@ interface BaseDataDrawerProps {
   onOpenChange: (open: boolean) => void;
   state: { isLoading: boolean; isError: boolean; data?: components["schemas"]["BaseData"] };
   onRetry: () => void;
+  onSyncCard?: () => void;
+  syncing?: boolean;
 }
 
-/** 查看本店基础数据：加载中、出错（可重试）、成功三种状态都有。 */
-export function BaseDataDrawer({ shop, onOpenChange, state, onRetry }: BaseDataDrawerProps) {
+/** 查看本店资料：加载中、出错（可重试）、成功三种状态都有。 */
+export function BaseDataDrawer({
+  shop, onOpenChange, state, onRetry, onSyncCard, syncing = false,
+}: BaseDataDrawerProps) {
   return (
     <Drawer open={shop !== null} onOpenChange={onOpenChange}>
-      <DrawerContent title="基础数据" description={shop?.name} side="right">
-        {shop && <ShopProfileSections shop={shop} />}
+      <DrawerContent title="店铺资料" description={shop?.name} side="right">
+        {shop && (
+          <ShopProfileSections shop={shop} onSyncCard={onSyncCard} syncing={syncing} />
+        )}
         {state.isLoading && <Skeleton label="正在读取基础数据" lines={6} />}
         {state.isError && (
           <div>

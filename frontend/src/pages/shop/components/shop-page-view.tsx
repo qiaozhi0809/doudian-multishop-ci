@@ -27,7 +27,6 @@ export function ShopPageView({ page }: { page: ShopPage }) {
     onResume: () => dialogs.setResumeShopId(shop.id),
     onEdit: () => dialogs.setEditShopId(shop.id),
     onToggle: () => void actions.toggleEnabled(shop),
-    onScrapeCard: () => void actions.scrapeCard(shop.id),
   });
 
   return (
@@ -94,6 +93,12 @@ export function ShopPageView({ page }: { page: ShopPage }) {
         onOpenChange={(open) => !open && dialogs.setBaseShopId(null)}
         state={page.base.query}
         onRetry={() => void page.base.query.refetch()}
+        onSyncCard={
+          page.base.shop ? () => void actions.scrapeCard(page.base.shop!.id) : undefined
+        }
+        syncing={
+          page.base.shop ? actions.pending.includes(`scrape:${page.base.shop.id}`) : false
+        }
       />
     </div>
   );

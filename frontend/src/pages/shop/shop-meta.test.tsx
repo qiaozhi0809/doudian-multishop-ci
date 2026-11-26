@@ -89,11 +89,15 @@ describe("店铺字段展示与编辑", () => {
     });
   });
 
-  it("抓取收款信息：点菜单后 POST 到 profile/scrape", async () => {
+  it("收款账户为空时，抽屉里显示「同步收款信息」并触发抓取", async () => {
+    const emptyBase = jsonResponse({
+      addresses: [], couriers: [], templates: [], accounts: [],
+    });
     const fetchMock = mockPageFetch({
       "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "GET /api/shops/1/base": emptyBase,
       "POST /api/shops/1/profile/scrape": jsonResponse(
-        makeShop({ id: 1, bank_name: "中国工商银行", bank_tail: "7433" }),
+        makeShop({ id: 1, bank_name: "示例银行", bank_tail: "4567" }),
       ),
     });
     renderPage();
@@ -101,7 +105,8 @@ describe("店铺字段展示与编辑", () => {
     await user.click(
       within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }),
     );
-    await user.click(await screen.findByRole("menuitem", { name: "抓取收款信息" }));
+    await user.click(await screen.findByRole("menuitem", { name: "查看店铺资料" }));
+    await user.click(await screen.findByRole("button", { name: "同步收款信息" }));
     await waitFor(() => {
       expect(
         fetchMock.mock.calls.some(
@@ -110,6 +115,25 @@ describe("店铺字段展示与编辑", () => {
         ),
       ).toBe(true);
     });
+  });
+
+  it("已有收款账户时不显示同步按钮", async () => {
+    mockPageFetch({
+      "GET /api/shops": jsonResponse([
+        makeShop({ id: 1, name: "店铺甲", bank_name: "示例银行", bank_tail: "4567" }),
+      ]),
+      "GET /api/shops/1/base": jsonResponse({
+        addresses: [], couriers: [], templates: [], accounts: [],
+      }),
+    });
+    renderPage();
+    const user = userEvent.setup();
+    await user.click(
+      within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "查看店铺资料" }));
+    await screen.findByText("**** 4567");
+    expect(screen.queryByRole("button", { name: "同步收款信息" })).not.toBeInTheDocument();
   });
 
   it("停用店铺：PATCH enabled=false", async () => {

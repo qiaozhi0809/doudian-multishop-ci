@@ -105,7 +105,6 @@ export interface RowActions {
   onViewBase: () => void;
   onEdit: () => void;
   onToggle: () => void;
-  onScrapeCard: () => void;
 }
 
 interface ActionsCellProps {
@@ -154,10 +153,9 @@ export function ActionsCell({ row, actions, pending, waiting }: ActionsCellProps
           ...(primary === "check-egress" || row.egress_mode === null
             ? []
             : [{ label: "检查出口", onSelect: actions.onCheckEgress, disabled: busy("egress-check") }]),
-          { label: "探测会话", onSelect: actions.onProbe, disabled: busy("probe") },
-          { label: "同步基础数据", onSelect: actions.onSyncBase, disabled: busy("sync-base") },
-          { label: "查看基础数据", onSelect: actions.onViewBase, separatorBefore: true },
-          { label: "抓取收款信息", onSelect: actions.onScrapeCard, disabled: busy(`scrape:${row.id}`) },
+          { label: "检查登录状态", onSelect: actions.onProbe, disabled: busy("probe") },
+          { label: "更新发货资料", onSelect: actions.onSyncBase, disabled: busy("sync-base") },
+          { label: "查看店铺资料", onSelect: actions.onViewBase, separatorBefore: true },
           { label: "编辑店铺", onSelect: actions.onEdit },
           { label: row.status === "disabled" ? "启用店铺" : "停用店铺", onSelect: actions.onToggle },
         ]}

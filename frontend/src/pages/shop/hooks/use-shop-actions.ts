@@ -120,13 +120,13 @@ export function useShopActions(shops: ShopRow[]) {
   };
 
   const probe = (id: number) =>
-    run("probe", id, () => api.post<ShopRow>(`/api/shops/${id}/probe`), () => ({ tone: "success", text: "探测完成" }));
+    run("probe", id, () => api.post<ShopRow>(`/api/shops/${id}/probe`), () => ({ tone: "success", text: "登录状态正常" }));
 
   const syncBase = (id: number) =>
     run("sync-base", id, () => api.post<Schemas["BaseSummary"]>(`/api/shops/${id}/sync-base`), (s) => ({
       tone: s.ready_for_label ? "success" : "warning",
       text:
-        `基础数据已同步（地址 ${s.addresses}、快递 ${s.couriers}、模板 ${s.templates}、面单账户 ${s.accounts}）` +
+        `发货资料已更新（地址 ${s.addresses}、快递 ${s.couriers}、模板 ${s.templates}、面单账户 ${s.accounts}）` +
         (s.ready_for_label ? "" : `，未就绪：${s.not_ready_reasons.join("；")}`),
     }));
 
@@ -209,7 +209,7 @@ export function useShopActions(shops: ShopRow[]) {
     await track(`scrape:${id}`, async () => {
       try {
         await api.post<ShopRow>(`/api/shops/${id}/profile/scrape`);
-        notify(`scrape:${id}`, "success", `${nameOf(id)}：收款信息已更新`);
+        notify(`scrape:${id}`, "success", `${nameOf(id)}：收款信息已同步`);
         await refreshShops();
       } catch (e) {
         notify(`scrape:${id}`, "danger", `${nameOf(id)}：${errorText(e)}`);

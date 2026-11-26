@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sqlalchemy import Engine
 
-from app.adapter.browser.scrape import scrape_bank_card
+from app.adapter.browser.scrape import scrape_platform_info
 from app.adapter.doudian import endpoints as ep
 from app.adapter.doudian.client import FxgClient
 from app.service.shop_runner import ShopRunner
@@ -34,20 +34,21 @@ class ShopProfileService:
         self._clock = clock or _utc_now
 
     async def scrape_card(self, shop_id: int) -> dict[str, str]:
-        """手动触发：用该店已登录的 profile 读提现卡，只存开户行与尾号。
+        """手动触发：用该店已登录的 profile 读平台页面上的固定信息。
 
-        平台无对应接口（数据由服务端渲染进页面），因此这一步是手动按钮而不是
+        提现卡、店铺ID、主体三类都试一遍，读到哪个存哪个；读不到就留空，
+        用户可以在「编辑店铺」里手填。平台没有对应接口，所以是手动按钮而不是
         登录时自动执行——避免每次扫码多等十几秒，也避免页面改版拖垮登录流程。
         """
-        card = await scrape_bank_card(
+        info = await scrape_platform_info(
             self._profiles_dir / str(shop_id), self._runner.proxy_for(shop_id)
         )
-        if card:
+        if info:
             with self._engine.begin() as conn:
                 shop_profile_store.patch(
-                    conn, shop_id, self._clock().strftime(_ISO_FMT), **card
+                    conn, shop_id, self._clock().strftime(_ISO_FMT), **info
                 )
-        return card
+        return info
 
     async def sync(self, shop_id: int) -> dict:
         async def job(client: FxgClient) -> dict:

@@ -91,7 +91,7 @@ describe("其他操作", () => {
     const { result, invalidate } = setup();
     await act(() => result.current.probe(1));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["shops"] });
-    expect(texts(result)).toContain("店铺甲：探测完成");
+    expect(texts(result)).toContain("店铺甲：登录状态正常");
     await act(() => result.current.probe(2));
     expect(texts(result)).toContain("店铺乙：会话已过期，请重新扫码登录");
   });
@@ -102,7 +102,7 @@ describe("其他操作", () => {
     });
     const { result } = setup();
     await act(() => result.current.syncBase(1));
-    expect(texts(result)).toContain("店铺甲：基础数据已同步（地址 2、快递 5、模板 3、面单账户 1），未就绪：缺少默认发货地址");
+    expect(texts(result)).toContain("店铺甲：发货资料已更新（地址 2、快递 5、模板 3、面单账户 1），未就绪：缺少默认发货地址");
   });
 
   it("checkEgress 确认新 IP 时带 accept_change=true", async () => {

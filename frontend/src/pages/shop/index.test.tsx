@@ -249,7 +249,7 @@ describe("店铺与设置页", () => {
     expect(await screen.findByRole("dialog", { name: "设置出口" })).toBeInTheDocument();
   });
 
-  it("查看基础数据：列出各项，空的显示暂无", async () => {
+  it("查看店铺资料：列出各项，空的显示暂无", async () => {
     mockPageFetch({
       "GET /api/shops": jsonResponse([makeShop()]),
       "GET /api/shops/1/base": jsonResponse({
@@ -262,7 +262,7 @@ describe("店铺与设置页", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
-    await user.click(await screen.findByRole("menuitem", { name: "查看基础数据" }));
+    await user.click(await screen.findByRole("menuitem", { name: "查看店铺资料" }));
     const drawer = await screen.findByRole("dialog");
     expect(await within(drawer).findByText("仓库")).toBeInTheDocument();
     expect(within(drawer).getByText("圆通")).toBeInTheDocument();
