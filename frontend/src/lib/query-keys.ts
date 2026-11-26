@@ -85,4 +85,8 @@ export const queryKeys = {
   backupSnapshots: () => ["backup", "snapshots"] as const,
   // ---- 代理池 ----
   proxyPool: () => ["proxyPool"] as const,
+  // ---- 通知中心 ----
+  notificationsRoot: () => ["notifications"] as const,
+  notifications: (unreadOnly: boolean, page: number) => ["notifications", "list", unreadOnly, page] as const,
+  notificationSummary: () => ["notifications", "summary"] as const,
 };
