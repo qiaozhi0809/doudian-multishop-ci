@@ -66,6 +66,19 @@ def latest_unread_event(
     )
 
 
+def events_since(
+    conn: sa.Connection, *, shop_id: int, kind: str, since: str
+) -> list[dict[str, Any]]:
+    """该店铺该类型、created_at 不早于 since 的事件（state_key 为空），新的在前。"""
+    rows = conn.execute(
+        sa.select(n).where(
+            n.c.shop_id == shop_id, n.c.kind == kind,
+            n.c.state_key.is_(None), n.c.created_at >= since,
+        ).order_by(n.c.created_at.desc(), n.c.id.desc())
+    ).mappings().all()
+    return [dict(r) for r in rows]
+
+
 def list_page(
     conn: sa.Connection, *, unread_only: bool, offset: int, limit: int
 ) -> tuple[list[dict[str, Any]], int]:

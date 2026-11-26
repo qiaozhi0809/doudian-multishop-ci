@@ -14,6 +14,7 @@ SHIP_PROGRESS = "ship_progress"  # 逐单发货结果（成功 / 失败 / 跳过
 SHIP_DONE = "ship_done"  # 一个发货批次的结束汇总
 RECONCILE_DONE = "reconcile_done"  # 一次对账的结束汇总
 SHIP_DEADLINE_WARNING = "ship_deadline_warning"  # 临近发货超时的订单（ENG-07）
+NOTIFICATION = "notification"  # 通知新增 / 更新 / 恢复 / 已读
 
 DEFAULT_QUEUE_SIZE = 100
 

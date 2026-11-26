@@ -125,3 +125,16 @@ def test_sync_baseline_establish_idempotent(engine):
         assert not sync_baseline_store.has(conn, sid, "aftersale")
         got = conn.execute(sa.text("SELECT established_at FROM sync_baseline")).scalar_one()
         assert got == NOW
+
+
+def test_events_since_filters_shop_kind_time_and_state(engine):
+    with engine.begin() as conn:
+        sid = shop_store.create(conn, "测试店", NOW)
+        other = shop_store.create(conn, "测试店二", NOW)
+        _ins(conn, shop_id=sid, kind="recovered", at=T1)
+        keep = _ins(conn, shop_id=sid, kind="recovered", at=T2)
+        _ins(conn, shop_id=other, kind="recovered", at=T3)
+        _ins(conn, shop_id=sid, kind="new_order", at=T3)
+        _ins(conn, shop_id=sid, kind="recovered", at=T3, state_key="s", resolved_at=T3)
+        rows = ns.events_since(conn, shop_id=sid, kind="recovered", since=T2)
+        assert [r["id"] for r in rows] == [keep]
