@@ -6,6 +6,10 @@
 
 from typing import Literal
 
+# 飞鸽会话列表不在 SQL 里排和筛：白名单与规则一起定义在 domain，这里只转出
+from app.domain.im_view_rules import ImConversationSort as ImConversationSort
+from app.domain.im_view_rules import ImQuick as ImQuick
+
 SortOrder = Literal["asc", "desc"]
 
 OrderSort = Literal[

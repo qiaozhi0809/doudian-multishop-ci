@@ -1,7 +1,6 @@
-"""飞鸽消息的读回、落库与过期删除。正文只经这里进出 im_message 表，不进日志。"""
+"""飞鸽消息的读回、落库与过期删除。正文只经这里进出 im_message 表，不进日志；买家昵称不落库。"""
 
 import asyncio
-from dataclasses import asdict, fields
 from datetime import UTC, datetime
 
 import structlog
@@ -14,14 +13,15 @@ from app.store import im_message_store
 log = structlog.get_logger()
 
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
+# 允许进出 im_message 表的 Message 字段；没列出的（买家昵称）只在内存
+_STORED = ("conversation_id", "message_id", "sender_role", "text", "sent_at")
 
 
 def load_since(engine: Engine, shop_id: int, since: str) -> list[Message]:
     """该店 since 之后的消息，按发送时间正序。"""
     with engine.connect() as conn:
         rows = im_message_store.recent_for_shop(conn, shop_id, since)
-    names = [f.name for f in fields(Message)]
-    return [Message(**{name: row[name] for name in names}) for row in rows]
+    return [Message(**{name: row[name] for name in _STORED}) for row in rows]
 
 
 def purge(engine: Engine, now: datetime) -> int:
@@ -33,7 +33,7 @@ def purge(engine: Engine, now: datetime) -> int:
 
 async def save(engine: Engine, shop_id: int, msgs: list[Message], captured_at: str) -> None:
     """写失败不抛出（接收照常），只记条数与异常类型：异常信息里带 SQL 参数，即消息正文。"""
-    rows = [asdict(m) for m in msgs]
+    rows = [{name: getattr(m, name) for name in _STORED} for m in msgs]
 
     def insert() -> None:
         with engine.begin() as conn:
