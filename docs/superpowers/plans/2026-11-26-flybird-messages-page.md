@@ -6,7 +6,7 @@
 
 **Architecture:** 会话列表来自第一阶段 `ImWatcher.snapshot()` 的内存快照（跨店合并，白名单排序与快捷筛选在内存里做完再分页）；消息来自 `im_message`。「在飞鸽中回复」经 `ShopRunner` 队列，在该店已登记的常驻页上执行 `adapter/flybird/focus.py`：窗口移回屏幕、置前、点开该会话，这是全系统唯一的页面点击。
 
-**Depends on:** 第一阶段 `2026-11-26-flybird-readonly-im.md` 全部完成（含 Task 0 的 go 结论、`WAIT_SOURCE`、`FOCUS_METHOD`），以及其依赖的分支 `feat/browser-lifecycle` 已合并。Task 0 为 no-go 时本阶段不做。
+**Depends on:** 第一阶段 `2026-11-26-flybird-readonly-im.md` 全部完成（Task 0 已为 go，2026-11-26），以及其依赖的分支 `feat/browser-lifecycle` 已合并。`FOCUS_METHOD`（U12）在本阶段 Task 14 开头实测确定。
 
 **Tech Stack:** 同第一阶段。
 
@@ -17,7 +17,7 @@
 - 第一阶段的全部约束照用：只读、出口只经登记表、启动经 ShopRunner、消息正文不进日志 / 审计 / 事件 / 通知。
 - **唯一的点击**：只在所有者点「在飞鸽中回复」时，在 `adapter/flybird/focus.py` 里做窗口置前与一次会话点击；不输入、不按键、不发送。守卫测试锁定（Task 14）。点开会话会把该会话标为已读，这是所有者自己的动作，不产生通知。
 - **无输入框**：消息页任何位置都没有文本输入（`textarea`、`input[type=text]`）；测试断言。
-- **兜底**：`WAIT_SOURCE == "unread"`（Task 0 判定没有消息正文来源）时，会话详情**只显示该会话最新一条预览**，接口返回 `source="preview_only"`；「待回复 / 超 3 分钟未回复」按未读起点计时。
+- **买家显示名**：消息推送里没有昵称（Task 0），列表与详情显示「买家 · 尾号 xxxx」（会话 short ID 后 4 位）。页面自动打开会话时自己请求的 `backstage/workstation/get_user_card` 响应可能有昵称，作为后续改进，不在本阶段。
 - 排序与快捷筛选：白名单 `Literal`，非白名单 422；在内存快照里筛完、排完再分页（快照不落库，见第一阶段）。
 - 店铺筛选沿用全站 `shops` 参数（`useShopFilter`，接口参数 `shop_ids`）；快捷筛选沿用 `quick`（`useQuickFilter`）。
 - 文件长度、四层分层、文案规则、测试命令、提交格式同第一阶段。测试数据一律虚构（`测试小铺`、`测试买家`、`在吗`、`conv-test-1`）。
@@ -25,7 +25,7 @@
 ## Review Focus
 
 1. **点击只在一处**：`focus.py` 之外没有 `.click(`、`bring_to_front`、`setWindowBounds`；`focus.py` 里只有一次 `.click(`，选择器只拼会话 ID。→ Task 14。
-2. **兜底是否说清楚**：没有消息来源时，详情只显示最新预览，界面不报错、不出现空白。→ Task 13、15。
+2. **启动前的消息**：常驻页启动前到达、本系统没收到的消息不会出现；详情只显示已采集的消息，不报错、不空白。→ Task 13、15。
 3. **等待计时一致**：后端 `wait_seconds` 与前端走秒用同一起点；超 3 分钟的行与「超 3 分钟未回复」卡片数一致。→ Task 12、15。
 4. **订单跳转**：订单接口没有买家筛选，只带店铺。→ Task 15。
 
@@ -40,7 +40,8 @@
 
 **Interfaces:**
 - Produces:
-  - `@dataclass(frozen=True) class ConvRow: shop_id: int; shop_name: str; conversation_id: str; buyer: str; preview: str; unread: int; last_at: str | None; waiting_since: str | None`
+  - `@dataclass(frozen=True) class ConvRow: shop_id: int; shop_name: str; conversation_id: str; buyer: str; preview: str; unread: int; last_at: str | None; waiting_since: str | None`（由第一阶段 `ConvView` 转来：`preview = last_text`、`unread = pending`、`buyer = buyer_label(conversation_id)`）
+  - `buyer_label(conversation_id: str) -> str`：`买家 · 尾号{后 4 位}`
   - `wait_seconds(row: ConvRow, now: datetime) -> int | None`
   - `is_overdue(row, now) -> bool`（`> WAIT_ALERT`，与 `im_rules.overdue_count` 同一判定）
   - `is_today(last_at: str | None, now: datetime) -> bool`（按 `app/shared/time_bj.BEIJING` 的自然日）
@@ -80,11 +81,11 @@
   - `rows(shop_ids: list[int]) -> list[ConvRow]`（逐店 `im.snapshot(shop_id)`，店名取 `shop_store`）
   - `conversations(shop_ids, *, unread_only: bool, quick: ImQuick | None, sort, order, page, page_size) -> tuple[list[ConvRow], int]`
   - `counts(shop_ids) -> dict[ImQuick, int]`
-  - `thread(shop_id: int, conversation_id: str) -> ImThreadData`：`WAIT_SOURCE == "messages"` 时读 `im_message_store.list_for_conversation`，`source="captured"`；否则或没有记录时 `items=[]`、`source="preview_only"`，`preview` 取快照；快照与消息表都没有该会话 → `NotFound`
+  - `thread(shop_id: int, conversation_id: str) -> ImThreadData`：读 `im_message_store.list_for_conversation`；快照与消息表都没有该会话 → `NotFound`
 - Produces（`im_schemas.py` 追加）：
   - `ImConversation`（`shop_id, shop_name, conversation_id, buyer, preview, unread, last_at, waiting_since, wait_seconds`）；`ImConversationPage`（`items, total, page, page_size`）
   - `ImCounts`（`unread, waiting, overdue, today`，键名与 `ImQuick` 一致）
-  - `ImMessage`（`message_id, sender_role: Literal["buyer", "agent", "platform"], text, sent_at`）；`ImThread`（`shop_id, conversation_id, items: list[ImMessage], source: Literal["captured", "preview_only"], preview: str | None`）
+  - `ImMessage`（`message_id, sender_role: Literal["buyer", "agent", "robot", "platform"], text, sent_at`）；`ImThread`（`shop_id, conversation_id, items: list[ImMessage]`）
   - `ConversationId = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_:.\-]{1,128}$")]`
 - Produces（`api/im.py` 追加，全部 `Depends(require_admin)`；店铺范围经 `state.shop_admin.target_ids(parse_shop_ids(shop_ids))`）：
   - `GET /conversations?shop_ids=&unread=false&quick=&sort=&order=desc&page=1&page_size=50` → `ImConversationPage`（`page_size` ≤ 200）
@@ -93,7 +94,7 @@
 - `wiring.py`：`"im_query": ImQueryService(engine, im, **clock_kw)`
 
 - [ ] **Step 1: 写失败测试**
-  - `im_query_test.py`（假 `ImWatcher` 快照：`测试小铺` 的 `测试买家` / `在吗`）：`test_rows_merge_shops`；`test_conversations_filter_sort_page`；`test_counts_independent_of_quick`；`test_thread_captured_in_time_order`；`test_thread_preview_only_when_wait_source_unread`；`test_thread_preview_only_when_no_rows`；`test_thread_unknown_conversation_not_found`
+  - `im_query_test.py`（假 `ImWatcher` 快照：`测试小铺` 的 `测试买家` / `在吗`）：`test_rows_merge_shops`；`test_conversations_filter_sort_page`；`test_counts_independent_of_quick`；`test_thread_in_time_order`；`test_thread_known_conversation_without_rows_is_empty`；`test_thread_unknown_conversation_not_found`；`test_buyer_label_last4`
   - `im_api_test.py`：`test_conversations_requires_admin`；`test_conversations_default_sort_waiting_desc`；`test_conversations_bad_sort_or_quick_422`；`test_conversations_shop_filter`；`test_counts_shape`；`test_messages_ok`；`test_messages_bad_conversation_id_422`；`test_messages_unknown_404`
   - `openapi_test.py`：路径集合加 `/api/im/conversations`、`/api/im/conversations/counts`、`/api/im/conversations/{shop_id}/{conversation_id}/messages`
 - [ ] **Step 2:** `cd backend && uv run pytest -q tests/service/im_query_test.py tests/api/im_api_test.py tests/api/openapi_test.py` → FAIL
@@ -108,7 +109,7 @@
 
 **Files:**
 - Create: `backend/app/adapter/flybird/focus.py`
-- Modify: `backend/app/adapter/flybird/endpoints.py`（`FOCUS_BOUNDS = {"left": 0, "top": 0, "windowState": "normal"}`）
+- Modify: `backend/app/adapter/flybird/endpoints.py`（`FOCUS_BOUNDS = {"left": 0, "top": 0, "windowState": "normal"}`；Step 0 的结论 `FOCUS_METHOD: Literal["cdp_bounds", "relaunch_visible"]`、`CONVERSATION_SELECTOR`、`CONV_ID_ATTR`）
 - Modify: `backend/app/service/im_watcher.py`（`focus`）
 - Modify: `backend/app/api/im.py`、`backend/app/api/im_schemas.py`
 - Test: `backend/tests/adapter/flybird_focus_test.py`、`backend/tests/adapter/flybird_readonly_guard_test.py`、`backend/tests/service/im_watcher_test.py`、`backend/tests/api/im_api_test.py`、`backend/tests/api/openapi_test.py`
@@ -124,6 +125,7 @@
   - 审计 `CallRecord(shop_id, "im.focus", actor, {}, {"result": result}, "ok" | "error", 0)`，不记会话 ID、昵称、正文
 - Produces（API）：`POST /conversations/{shop_id}/{conversation_id}/open-in-flybird` → `ImFocusResult`（`result: Literal["opened", "not_found"]`）；未运行 → `InvalidRequest`；店不存在 → `NotFound`
 
+- [ ] **Step 0: 实测（所有者在场，测试店）**：U12，`offscreen=True` 的常驻页经同一浏览器连接移回屏幕并置前是否可行，成立则 `FOCUS_METHOD = "cdp_bounds"`，否则 `"relaunch_visible"`；在 DOM 里找会话元素上与消息帧会话 short ID 对应的属性，填 `CONV_ID_ATTR`（找不到则按会话行文本里的买家标识定位，在本任务里改写定位规则后再实现）；点开自己的测试会话一次，确认只打开、不发送、输入框为空。记录只留本机，结论写进 flybird.md §5。
 - [ ] **Step 1: 写失败测试**
   - `flybird_focus_test.py`（`FakePage` / `FakeCdpSession` 记录调用）：`test_cdp_bounds_then_bring_to_front_then_single_click`（调用序列恰为 `getWindowForTarget`、`setWindowBounds`、`bring_to_front`、`click`）；`test_selector_uses_conversation_id_attr`；`test_missing_element_returns_false_without_click`；`test_invalid_conversation_id_rejected`；`test_relaunch_visible_skips_cdp`
   - `flybird_readonly_guard_test.py`：`test_click_only_in_focus_module` 现在 `focus.py` 存在，断言 `.click(` 只在该文件出现且只一次；`bring_to_front`、`setWindowBounds` 只在该文件；全包仍不含 `.fill(`、`.type(`、`keyboard`、`.press(`、`.send(`
@@ -157,7 +159,7 @@
   - `IM_QUICK = ["unread", "waiting", "overdue", "today"] as const`；`type ImQuick = (typeof IM_QUICK)[number]`
   - `waitSecondsAt(waitingSince: string | null, now: Date) -> number | null`；`formatWait(seconds: number | null) -> string`（`""`、`45 秒`、`3 分 10 秒`、`1 小时 5 分`）
   - `isOverdue(seconds: number | null) -> boolean`（> 180）
-  - `senderLabel(role) -> "买家" | "客服" | "平台"`
+  - `senderLabel(role) -> "买家" | "客服" | "智能客服" | "平台"`
   - `ordersLink(shopId: number) -> string`（`withShopFilter("/orders", [shopId])`；订单接口没有买家筛选，只带店铺）
   - `selectionParam`：`conv=<shop_id>:<conversation_id>` 的读写；`canRestart(state)`（`needs_refresh`、`backoff`、`stopped`）
 - `use-message-page.ts`：`useShopFilter()`；`useQuickFilter(IM_QUICK)`；URL 参数 `unread=1`（只看未读）、`sort`、`order`、`page`（沿用 `use-list-sort`）；查询 `/api/im/conversations`、`/api/im/conversations/counts`、`/api/im/status`；`useEventSubscription` 订阅 `im_unread_changed`、`im_wait_changed`、`im_stopped` 时失效 `imRoot`；每 30 秒重取一次；页面内每秒一个时钟用于走秒
@@ -166,7 +168,7 @@
   - 顶部一行四张 `MetricCard`：「未读会话」（`info`）、「待回复」（`warning`）、「超 3 分钟未回复」（`danger`）、「今日会话」（`neutral`），`{...cardProps(key)}`
   - 状态条：只列不在「接收中」的已开启店铺，每店一行 `Alert`（店名、`state_label`，`canRestart` 时带「重新连接」）
   - 两栏：左栏工具条只有「只看未读」`Checkbox`（店铺由全局筛选控制）；列表行：买家、店铺、最后一条预览、等待时间、未读数徽标；超 3 分钟的行 `data-overdue` 用 `--danger` 标红；底部 `components/custom/list-pager`；默认按等待时间倒序
-  - 右栏：头部买家、店铺、等待时间；正文按时间列消息，每条显示发送方与时间，平台消息用居中弱化的系统行；`source == "preview_only"` 时只显示最新一条预览；底部两个按钮「在飞鸽中回复」「查看订单」；**没有输入框**
+  - 右栏：头部买家、店铺、等待时间；正文按时间列消息，每条显示发送方与时间，平台消息用居中弱化的系统行；底部两个按钮「在飞鸽中回复」「查看订单」；**没有输入框**
   - 未选中会话时右栏为空状态「选择一个会话」；列表为空「暂无会话」。不放说明小字，不做导航未读小圆点（铃铛已计数）
 
 - [ ] **Step 1: 写失败测试**
@@ -177,7 +179,6 @@
     - 勾「只看未读」后请求带 `unread=true`
     - 超 3 分钟的行带 `data-overdue`
     - 点一行后右栏显示买家、店铺、等待时间与消息；平台消息渲染为系统行
-    - `preview_only` 时右栏只显示 `在吗`
     - 点「在飞鸽中回复」发 `POST .../open-in-flybird`；「查看订单」链接为 `/orders?shops=1`
     - 页面里 `queryAllByRole("textbox")` 为空
     - 收到 `im_wait_changed` 事件后重新请求列表
@@ -208,6 +209,6 @@
 | 只读 | 后台零点击；唯一点击在 `focus.py`，守卫测试锁定次数与位置；全站无输入框（Task 14、15） |
 | 出口 | 置前用同一浏览器连接的 CDP 会话；兜底重开也经登记表与 ShopRunner，无直连 |
 | 数据 | 正文只经管理员接口返回，不进日志与审计；`im.focus` 审计不含会话 ID |
-| 兜底 | `preview_only` 写进接口契约、服务、页面与测试 |
+| 买家名 | 推送无昵称，统一「买家 · 尾号」，写进规则与测试 |
 | 一致 | 计数卡键名 = `ImQuick` = 前端 `IM_QUICK`；排序白名单与 `list_sort_test` 对应 |
 | 长度 | 本文件 ≤ 600 行；`index.tsx` ≤ 80 行，组件按区块拆分 |
