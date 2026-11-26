@@ -29,6 +29,9 @@ class ShopRow(BaseModel):
     not_ready_reasons: list[str]
     admin_name: str | None
     shop_name: str | None
+    platform_shop_id: str | None
+    bank_name: str | None
+    bank_tail: str | None
 
 
 class ShopCreate(BaseModel):
@@ -43,6 +46,10 @@ class ShopPatch(BaseModel):
     entity: str | None = None
     channel: Literal["protocol", "browser"] | None = None
     enabled: bool | None = None
+    # 平台侧无稳定接口，允许手工维护（迁移 0010）
+    platform_shop_id: str | None = None
+    bank_name: str | None = None
+    bank_tail: str | None = None
 
 
 class EgressRequest(BaseModel):

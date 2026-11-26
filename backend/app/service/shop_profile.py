@@ -3,9 +3,11 @@
 import json
 from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
 
 from sqlalchemy import Engine
 
+from app.adapter.browser.scrape import scrape_bank_card
 from app.adapter.doudian import endpoints as ep
 from app.adapter.doudian.client import FxgClient
 from app.service.shop_runner import ShopRunner
@@ -23,11 +25,29 @@ class ShopProfileService:
     """best-effort：同步失败不应让扫码登录整体失败，由调用方兜住异常。"""
 
     def __init__(
-        self, engine: Engine, runner: ShopRunner, *, clock: Callable[[], datetime] | None = None
+        self, engine: Engine, runner: ShopRunner, *, profiles_dir: Path,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._engine = engine
         self._runner = runner
+        self._profiles_dir = profiles_dir
         self._clock = clock or _utc_now
+
+    async def scrape_card(self, shop_id: int) -> dict[str, str]:
+        """手动触发：用该店已登录的 profile 读提现卡，只存开户行与尾号。
+
+        平台无对应接口（数据由服务端渲染进页面），因此这一步是手动按钮而不是
+        登录时自动执行——避免每次扫码多等十几秒，也避免页面改版拖垮登录流程。
+        """
+        card = await scrape_bank_card(
+            self._profiles_dir / str(shop_id), self._runner.proxy_for(shop_id)
+        )
+        if card:
+            with self._engine.begin() as conn:
+                shop_profile_store.patch(
+                    conn, shop_id, self._clock().strftime(_ISO_FMT), **card
+                )
+        return card
 
     async def sync(self, shop_id: int) -> dict:
         async def job(client: FxgClient) -> dict:

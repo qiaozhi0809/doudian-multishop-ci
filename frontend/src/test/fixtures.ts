@@ -22,6 +22,9 @@ export function makeShop(overrides: Partial<ShopRow> = {}): ShopRow {
     not_ready_reasons: [],
     admin_name: null,
     shop_name: null,
+    platform_shop_id: null,
+    bank_name: null,
+    bank_tail: null,
     ...overrides,
   };
 }

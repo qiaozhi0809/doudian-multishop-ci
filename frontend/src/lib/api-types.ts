@@ -1064,6 +1064,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/shops/{shop_id}/profile/scrape": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Scrape Profile
+         * @description 手动读取平台页面上可见、但没有接口的收款信息（开户行 + 卡号尾号）。
+         */
+        post: operations["scrape_profile_api_shops__shop_id__profile_scrape_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shops/{shop_id}/resume": {
         parameters: {
             query?: never;
@@ -2281,6 +2301,10 @@ export interface components {
         };
         /** ShopPatch */
         ShopPatch: {
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Bank Tail */
+            bank_tail?: string | null;
             /** Channel */
             channel?: ("protocol" | "browser") | null;
             /** Enabled */
@@ -2289,6 +2313,8 @@ export interface components {
             entity?: string | null;
             /** Name */
             name?: string | null;
+            /** Platform Shop Id */
+            platform_shop_id?: string | null;
         };
         /** ShopProductCounts */
         ShopProductCounts: {
@@ -2329,6 +2355,10 @@ export interface components {
         ShopRow: {
             /** Admin Name */
             admin_name: string | null;
+            /** Bank Name */
+            bank_name: string | null;
+            /** Bank Tail */
+            bank_tail: string | null;
             /** Egress Ip */
             egress_ip: string | null;
             /** Egress Ip Pending */
@@ -2354,6 +2384,8 @@ export interface components {
             not_ready_reasons: string[];
             /** Paused Reason */
             paused_reason: string | null;
+            /** Platform Shop Id */
+            platform_shop_id: string | null;
             /** Proxy Display */
             proxy_display: string | null;
             /** Proxy Expires At */
@@ -4648,6 +4680,37 @@ export interface operations {
         };
     };
     probe_shop_api_shops__shop_id__probe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopRow"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    scrape_profile_api_shops__shop_id__profile_scrape_post: {
         parameters: {
             query?: never;
             header?: never;

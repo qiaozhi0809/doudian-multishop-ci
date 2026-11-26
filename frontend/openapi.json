@@ -3899,6 +3899,28 @@
       },
       "ShopPatch": {
         "properties": {
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bank_tail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Tail"
+          },
           "channel": {
             "anyOf": [
               {
@@ -3946,6 +3968,17 @@
               }
             ],
             "title": "Name"
+          },
+          "platform_shop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Shop Id"
           }
         },
         "title": "ShopPatch",
@@ -4081,6 +4114,28 @@
             ],
             "title": "Admin Name"
           },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bank_tail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Tail"
+          },
           "egress_ip": {
             "anyOf": [
               {
@@ -4193,6 +4248,17 @@
             ],
             "title": "Paused Reason"
           },
+          "platform_shop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Shop Id"
+          },
           "proxy_display": {
             "anyOf": [
               {
@@ -4269,7 +4335,10 @@
           "ready_for_label",
           "not_ready_reasons",
           "admin_name",
-          "shop_name"
+          "shop_name",
+          "platform_shop_id",
+          "bank_name",
+          "bank_tail"
         ],
         "title": "ShopRow",
         "type": "object"
@@ -8394,6 +8463,49 @@
           }
         },
         "summary": "Probe Shop",
+        "tags": [
+          "shops"
+        ]
+      }
+    },
+    "/api/shops/{shop_id}/profile/scrape": {
+      "post": {
+        "description": "手动读取平台页面上可见、但没有接口的收款信息（开户行 + 卡号尾号）。",
+        "operationId": "scrape_profile_api_shops__shop_id__profile_scrape_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Scrape Profile",
         "tags": [
           "shops"
         ]

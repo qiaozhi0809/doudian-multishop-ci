@@ -28,6 +28,26 @@ def upsert(conn: sa.Connection, shop_id: int, now: str, **values: Any) -> None:
         )
 
 
+def patch(conn: sa.Connection, shop_id: int, now: str, **values: Any) -> None:
+    """只更新给定列；行不存在时补建。用于手工编辑与抓取兜底，不覆盖其它字段。"""
+    unknown = set(values) - (set(shop_profile.c.keys()) - {"shop_id", "synced_at"})
+    if unknown:
+        raise ValueError(f"未知列: {sorted(unknown)}")
+    exists = conn.execute(
+        sa.select(shop_profile.c.shop_id).where(shop_profile.c.shop_id == shop_id)
+    ).first()
+    if exists:
+        conn.execute(
+            sa.update(shop_profile)
+            .where(shop_profile.c.shop_id == shop_id)
+            .values(**values, synced_at=now)
+        )
+    else:
+        conn.execute(
+            sa.insert(shop_profile).values(shop_id=shop_id, **values, synced_at=now)
+        )
+
+
 def get(conn: sa.Connection, shop_id: int) -> Mapping[str, Any] | None:
     row = conn.execute(
         sa.select(shop_profile).where(shop_profile.c.shop_id == shop_id)

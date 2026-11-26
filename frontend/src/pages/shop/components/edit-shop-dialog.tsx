@@ -6,7 +6,13 @@ import { Input } from "@/components/arc/input/input";
 import type { ShopRow } from "@/lib/use-shops";
 import styles from "../shop-page.module.css";
 
-type Patch = { name: string };
+type Patch = {
+  name: string;
+  entity: string | null;
+  platform_shop_id: string | null;
+  bank_name: string | null;
+  bank_tail: string | null;
+};
 type Result = { ok: true; error: null } | { ok: false; error: string };
 
 interface EditShopDialogProps {
@@ -39,6 +45,10 @@ function EditShopForm({
   shop, pending, onSubmit, onDone,
 }: { shop: ShopRow; pending: boolean; onSubmit: (p: Patch) => Promise<Result>; onDone: () => void }) {
   const [name, setName] = useState(shop.name);
+  const [entity, setEntity] = useState(shop.entity ?? "");
+  const [platformShopId, setPlatformShopId] = useState(shop.platform_shop_id ?? "");
+  const [bankName, setBankName] = useState(shop.bank_name ?? "");
+  const [bankTail, setBankTail] = useState(shop.bank_tail ?? "");
   const [nameError, setNameError] = useState<string>();
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +61,13 @@ function EditShopForm({
     }
     setNameError(undefined);
     setError(null);
-    const r = await onSubmit({ name: trimmed });
+    const r = await onSubmit({
+      name: trimmed,
+      entity: entity.trim() || null,
+      platform_shop_id: platformShopId.trim() || null,
+      bank_name: bankName.trim() || null,
+      bank_tail: bankTail.trim() || null,
+    });
     if (r.ok) onDone();
     else setError(r.error);
   };
@@ -59,6 +75,14 @@ function EditShopForm({
   return (
     <form onSubmit={submit}>
       <Input label="店铺名称" value={name} error={nameError} onChange={(e) => setName(e.target.value)} />
+      <Input label="主体（公司名称）" value={entity} onChange={(e) => setEntity(e.target.value)} />
+      <Input label="店铺ID" value={platformShopId} onChange={(e) => setPlatformShopId(e.target.value)} />
+      <Input label="提现卡开户行" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+      <Input
+        label="提现卡尾号（后四位）"
+        value={bankTail}
+        onChange={(e) => setBankTail(e.target.value)}
+      />
       {error && <Alert tone="danger" title={error} />}
       <div className={styles.formActions}>
         <Button type="submit" loading={pending}>

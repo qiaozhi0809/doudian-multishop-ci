@@ -58,8 +58,21 @@ def patch_shop(
 ) -> ShopRow:
     _state(request).shop_admin.update(
         shop_id, name=body.name, entity=body.entity, channel=body.channel, enabled=body.enabled,
+        platform_shop_id=body.platform_shop_id, bank_name=body.bank_name, bank_tail=body.bank_tail,
         actor=admin,
     )
+    return _row(request, shop_id)
+
+
+@router.post("/{shop_id}/profile/scrape", response_model=ShopRow)
+async def scrape_profile(
+    shop_id: int, request: Request, admin: str = Depends(require_admin)
+) -> ShopRow:
+    """手动读取平台页面上可见、但没有接口的收款信息（开户行 + 卡号尾号）。"""
+    try:
+        await _state(request).shop_profile.scrape_card(shop_id)
+    except Exception as e:  # noqa: BLE001 - 浏览器或页面失败都归为可重试的读取失败
+        raise InvalidRequest("读取收款信息失败，可稍后重试或手工填写") from e
     return _row(request, shop_id)
 
 

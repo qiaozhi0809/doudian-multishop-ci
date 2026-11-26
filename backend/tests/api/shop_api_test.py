@@ -8,6 +8,7 @@ SHOP_ROW_KEYS = {
     "id", "name", "status", "health", "expires_at", "paused_reason", "egress_mode",
     "proxy_display", "egress_ip", "egress_ip_pending", "egress_status", "proxy_expires_at",
     "ready_for_label", "not_ready_reasons", "entity", "shop_no", "admin_name", "shop_name",
+    "platform_shop_id", "bank_name", "bank_tail",
 }
 TOKEN_A = "tok_" + "a" * 8
 
@@ -162,7 +163,22 @@ def test_login_flow_success_runs_probe_and_base_sync(api):
     assert profile.name == str(sid) and proxy == proxy_url(5)  # 扫码经该店出口
 
 
-def test_second_login_while_running_is_conflict(api):
+def test_patch_manual_profile_fields(api):
+    """平台无稳定接口的三项支持手工维护：主体、店铺ID、提现卡摘要。"""
+    sid = api.client.post("/api/shops", json={"name": "店D"}).json()["id"]
+
+    row = api.client.patch(f"/api/shops/{sid}", json={
+        "entity": "某主体",
+        "platform_shop_id": "141327228",
+        "bank_name": "中国工商银行",
+        "bank_tail": "7433",
+    }).json()
+
+    assert (row["entity"], row["platform_shop_id"], row["bank_name"], row["bank_tail"]) == (
+        "某主体", "141327228", "中国工商银行", "7433")
+
+
+
     sid = api.new_shop()
 
     async def slow_scan(*_):

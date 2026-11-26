@@ -126,7 +126,9 @@ class ShopAdminService:
 
     def update(
         self, shop_id: int, *, name: str | None = None, entity: str | None = None,
-        channel: str | None = None, enabled: bool | None = None, actor: str = "system",
+        channel: str | None = None, enabled: bool | None = None,
+        platform_shop_id: str | None = None, bank_name: str | None = None,
+        bank_tail: str | None = None, actor: str = "system",
     ) -> None:
         fields: dict[str, Any] = {}
         if name is not None:
@@ -143,6 +145,16 @@ class ShopAdminService:
             with self._engine.begin() as conn:
                 shop = self._get(conn, shop_id)
                 shop_store.update_fields(conn, shop_id, now, **fields)
+                profile_fields: dict[str, Any] = {}
+                for key, value in (
+                    ("platform_shop_id", platform_shop_id),
+                    ("bank_name", bank_name),
+                    ("bank_tail", bank_tail),
+                ):
+                    if value is not None:
+                        profile_fields[key] = value.strip() or None
+                if profile_fields:
+                    shop_profile_store.patch(conn, shop_id, now, **profile_fields)
                 if enabled is False and shop["status"] != DISABLED:
                     shop_store.set_status(conn, shop_id, DISABLED, now)
                     new_status = DISABLED
@@ -217,5 +229,8 @@ class ShopAdminService:
             "ready_for_label": ready, "not_ready_reasons": reasons,
             "admin_name": (profile or {}).get("admin_name"),
             "shop_name": (profile or {}).get("shop_name"),
+            "platform_shop_id": (profile or {}).get("platform_shop_id"),
+            "bank_name": (profile or {}).get("bank_name"),
+            "bank_tail": (profile or {}).get("bank_tail"),
         }
 

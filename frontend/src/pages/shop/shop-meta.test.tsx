@@ -79,7 +79,36 @@ describe("店铺字段展示与编辑", () => {
     await user.click(within(dialog).getByRole("button", { name: "保存" }));
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
-      expect(JSON.parse(String(call![1]!.body))).toEqual({ name: "新名" });
+      expect(JSON.parse(String(call![1]!.body))).toEqual({
+        name: "新名",
+        entity: null,
+        platform_shop_id: null,
+        bank_name: null,
+        bank_tail: null,
+      });
+    });
+  });
+
+  it("抓取收款信息：点菜单后 POST 到 profile/scrape", async () => {
+    const fetchMock = mockPageFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "POST /api/shops/1/profile/scrape": jsonResponse(
+        makeShop({ id: 1, bank_name: "中国工商银行", bank_tail: "7433" }),
+      ),
+    });
+    renderPage();
+    const user = userEvent.setup();
+    await user.click(
+      within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "抓取收款信息" }));
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(
+          ([input, init]) =>
+            init?.method === "POST" && String(input).includes("/api/shops/1/profile/scrape"),
+        ),
+      ).toBe(true);
     });
   });
 

@@ -85,6 +85,10 @@ shop_profile = sa.Table(
     sa.Column("settle_delay", sa.Text),
     sa.Column("admin_name", sa.Text),
     sa.Column("admin_mobile", sa.Text),  # 平台只返回脱敏值
+    # 迁移 0010：平台侧无稳定接口，支持手工维护；抓取仅作首次兜底
+    sa.Column("platform_shop_id", sa.Text),
+    sa.Column("bank_name", sa.Text),
+    sa.Column("bank_tail", sa.Text),  # 只存卡号后四位
     sa.Column("raw_json", sa.Text),
     sa.Column("synced_at", _NOW, nullable=False),
 )

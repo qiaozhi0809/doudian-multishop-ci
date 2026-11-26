@@ -66,7 +66,8 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         ov.client_factory or default_client_factory, **clock_kw,
     )
     base_data = BaseDataService(engine, runner, events)
-    shop_profile = ShopProfileService(engine, runner, **clock_kw)
+    shop_profile = ShopProfileService(
+        engine, runner, profiles_dir=settings.profiles_dir, **clock_kw)
     order_query = OrderQueryService(engine, runner, **clock_kw)
     login_kw = {"scan": ov.scan} if ov.scan else {}
     tasks = TaskRegistry()

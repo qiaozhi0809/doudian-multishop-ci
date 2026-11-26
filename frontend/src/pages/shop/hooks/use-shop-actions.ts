@@ -168,9 +168,16 @@ export function useShopActions(shops: ShopRow[]) {
       }
     });
 
-  /** 改本地别名：PATCH /api/shops/{id}。 */
+  /** 改本地别名与手工维护字段：PATCH /api/shops/{id}。 */
   const updateShop = async (
-    id: number, patch: { name: string },
+    id: number,
+    patch: {
+      name: string;
+      entity: string | null;
+      platform_shop_id: string | null;
+      bank_name: string | null;
+      bank_tail: string | null;
+    },
   ): Promise<{ ok: true; error: null } | { ok: false; error: string }> =>
     track(`edit:${id}`, async () => {
       try {
@@ -197,8 +204,21 @@ export function useShopActions(shops: ShopRow[]) {
     });
   };
 
+  /** 手动读取收款信息：平台只把它渲染在页面里，没有接口，失败可手填。 */
+  const scrapeCard = async (id: number): Promise<void> => {
+    await track(`scrape:${id}`, async () => {
+      try {
+        await api.post<ShopRow>(`/api/shops/${id}/profile/scrape`);
+        notify(`scrape:${id}`, "success", `${nameOf(id)}：收款信息已更新`);
+        await refreshShops();
+      } catch (e) {
+        notify(`scrape:${id}`, "danger", `${nameOf(id)}：${errorText(e)}`);
+      }
+    });
+  };
+
   return {
     notices, dismissNotice, pending, waitingShopIds, login, probe, syncBase, checkEgress,
-    resume, setEgress, addShop, updateShop, toggleEnabled,
+    resume, setEgress, addShop, updateShop, toggleEnabled, scrapeCard,
   };
 }

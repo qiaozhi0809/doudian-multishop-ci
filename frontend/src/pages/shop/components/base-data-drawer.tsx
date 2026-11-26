@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import type { components } from "@/lib/api-types";
 import type { ShopRow } from "@/lib/use-shops";
 import { BaseDataSections } from "./base-data-sections";
+import { ShopProfileSections } from "./shop-profile-sections";
 
 interface BaseDataDrawerProps {
   shop: ShopRow | null;
@@ -18,6 +19,7 @@ export function BaseDataDrawer({ shop, onOpenChange, state, onRetry }: BaseDataD
   return (
     <Drawer open={shop !== null} onOpenChange={onOpenChange}>
       <DrawerContent title="基础数据" description={shop?.name} side="right">
+        {shop && <ShopProfileSections shop={shop} />}
         {state.isLoading && <Skeleton label="正在读取基础数据" lines={6} />}
         {state.isError && (
           <div>
