@@ -119,3 +119,5 @@ h3 {
 /* 页面顶部的计数卡：不论几张都排成一行、等宽（所有者规定，2026-11-26） */
 :root { --metric-card-height: 44px; --metric-card-pad: 14px; }
 .count-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-3); }
+/* 窄窗口：一行放不下时按卡片最小宽度折行，不横向溢出（1024 以下也不裁掉最后一张） */
+@media (max-width: 1180px) { .count-row { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); } }

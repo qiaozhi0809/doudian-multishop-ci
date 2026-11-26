@@ -7,6 +7,7 @@ import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { ThreadState } from "../hooks/use-thread";
 import { formatWait, isOverdue, ordersLink, waitSecondsAt } from "../logic/message-page";
 import styles from "../message-page.module.css";
+import { avatarText } from "./conversation-row";
 import { MessageLine } from "./message-line";
 
 /** 消息记录：新消息到达或换会话时滚到最新一条。 */
@@ -58,10 +59,13 @@ export function ThreadPane({ thread, shopName, now }: { thread: ThreadState; sho
   return (
     <section className={styles.thread} aria-label="会话详情">
       <header className={styles.threadHead}>
-        <h2 className="section-title">{known?.buyer ?? "买家"}</h2>
-        {shop && <span className={styles.shop}>{shop}</span>}
+        <span className={styles.avatar} aria-hidden="true">{avatarText(known?.buyer ?? "买家")}</span>
+        <span className={styles.threadTitle}>
+          <h2 className="section-title">{known?.buyer ?? "买家"}</h2>
+          {shop && <span className={styles.shopTag}>{shop}</span>}
+        </span>
         {waited !== null && (
-          <span className={styles.wait} data-overdue={isOverdue(waited) || undefined}>{`等待 ${formatWait(waited)}`}</span>
+          <span className={styles.waitChip} data-overdue={isOverdue(waited) || undefined}>{`等待 ${formatWait(waited)}`}</span>
         )}
       </header>
       <Messages thread={thread} />

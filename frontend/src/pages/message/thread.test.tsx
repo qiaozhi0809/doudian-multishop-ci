@@ -109,7 +109,7 @@ describe("客服消息页：会话详情", () => {
     const { container } = renderPage();
     await openRow();
     await within(detail()).findByText("在的");
-    await screen.findByText("测试小铺：已停止");
+    await screen.findByLabelText("测试小铺：已停止");
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
     expect(container.querySelectorAll("textarea, input, [contenteditable]")).toHaveLength(0);
   });

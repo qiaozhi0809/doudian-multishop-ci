@@ -20,9 +20,9 @@ describe("客服消息页：接收状态", () => {
       "POST /api/im/shops/2/restart": () => jsonResponse(makeImStatus({ shop_id: 2, state: "queued", state_label: "排队中" })),
     });
     renderPage();
-    expect(await screen.findByText("测试小铺二：需重新连接")).toBeInTheDocument();
-    expect(screen.getByText("测试小铺三：启动中")).toBeInTheDocument();
-    expect(screen.queryByText(/测试小铺：/)).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("测试小铺二：需重新连接")).toBeInTheDocument();
+    expect(screen.getByLabelText("测试小铺三：启动中")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^测试小铺：/)).not.toBeInTheDocument();
     const buttons = screen.getAllByRole("button", { name: "重新连接" });
     expect(buttons).toHaveLength(1);
     const before = calls(fn, "/api/im/status").length;
@@ -34,8 +34,8 @@ describe("客服消息页：接收状态", () => {
   it("状态条跟随店铺筛选", async () => {
     mockIm({ [STATUS]: statuses });
     renderPage("/messages?shops=3");
-    expect(await screen.findByText("测试小铺三：启动中")).toBeInTheDocument();
-    expect(screen.queryByText("测试小铺二：需重新连接")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("测试小铺三：启动中")).toBeInTheDocument();
+    expect(screen.queryByLabelText("测试小铺二：需重新连接")).not.toBeInTheDocument();
   });
 
   it("重新连接失败时显示后端原因", async () => {
