@@ -82,7 +82,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
             engine, runner, sessions, events, on_synced=order_query.invalidate),
         "order_query": order_query,
         # M5 只读聚合：售后 / 商品与库存 / 资金
-        "aftersale": AftersaleService(engine, runner, **clock_kw),
+        "aftersale": AftersaleService(engine, runner, events=events, **clock_kw),
         "catalog": CatalogService(engine, runner, **clock_kw),
         "fund": FundService(engine, runner, **clock_kw),
         "label_preview": label_preview,

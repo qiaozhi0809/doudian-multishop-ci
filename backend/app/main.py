@@ -95,9 +95,14 @@ def create_app(
         sync_all = partial(
             for_each_active_shop, engine, lambda sid: order_sync.sync_pending(sid, SYSTEM_ACTOR)
         )
+        aftersale = app.state.aftersale
+        aftersale_all = partial(  # 售后定时检查：每轮一次计数，变了才完整同步
+            for_each_active_shop, engine, lambda sid: aftersale.check_new(sid, SYSTEM_ACTOR)
+        )
         tasks = [
             asyncio.create_task(run_every(PROBE_INTERVAL_S, probe_all, stop)),
             asyncio.create_task(run_every(ORDER_SYNC_INTERVAL_S, sync_all, stop)),
+            asyncio.create_task(run_every(ORDER_SYNC_INTERVAL_S, aftersale_all, stop)),
             asyncio.create_task(run_every(
                 settings.ship_deadline_scan_interval_s, _deadline_scan(app), stop)),
         ]

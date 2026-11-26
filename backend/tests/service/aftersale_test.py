@@ -146,3 +146,113 @@ async def test_sync_invalidates_counts_cache(env):
     await svc.sync([env.shop_id], "admin")
     await svc.counts([env.shop_id], "admin")
     assert counts_requests(env) == 2  # 同步后马上重新取
+
+
+# ---- 新售后识别、基线与定时检查（通知中心 6.3）----
+
+def list_of(*items: tuple[str, int]) -> object:
+    """(after_sale_id, status_deadline) → 售后列表响应；deadline 为 0 表示已完结。"""
+    body = fx("aftersale_list")
+    template = body["data"]["items"][0]
+    body["data"]["items"] = [
+        {**template, "after_sale_info": {
+            **template["after_sale_info"], "after_sale_id": sid, "status_deadline": deadline}}
+        for sid, deadline in items
+    ]
+    return reply(body)
+
+
+def counts_with(all_audit: int) -> object:
+    body = fx("aftersale_counts")
+    body["data"]["all_audit"] = all_audit
+    return reply(body)
+
+
+def list_requests(env) -> int:
+    return sum(1 for r in env.transport.requests if r.get("json"))
+
+
+def drain(sub, name: str) -> list[dict]:
+    out = []
+    while not sub._queue.empty():
+        event, data = sub._queue.get_nowait()
+        if event == name:
+            out.append(data)
+    return out
+
+
+def has_baseline(env) -> bool:
+    import sqlalchemy as sa
+    with env.engine.connect() as conn:
+        return conn.execute(sa.text(
+            "SELECT 1 FROM sync_baseline WHERE shop_id = :s AND kind = 'aftersales'"
+        ), {"s": env.shop_id}).first() is not None
+
+
+OPEN = 1764600000
+
+
+def checker(env, clock=None) -> AftersaleService:
+    return AftersaleService(env.engine, env.runner, clock=clock or Clock(), events=env.events)
+
+
+async def test_check_new_first_run_syncs_and_establishes_baseline(env):
+    svc = checker(env)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [counts_with(1), list_of(("a1", OPEN))]
+    assert await svc.check_new(env.shop_id) == 0  # 无基线：只入库不提醒
+    assert list_requests(env) == 1 and has_baseline(env)
+    assert drain(sub, "aftersales_new") == []
+
+
+async def test_check_new_skips_list_when_count_unchanged(env):
+    clock = Clock()
+    svc = checker(env, clock)
+    env.transport.responses[:] = [counts_with(1), list_of(("a1", OPEN))]
+    await svc.check_new(env.shop_id)
+    clock.advance(300)
+    env.transport.requests.clear()
+    env.transport.responses[:] = [counts_with(1)]
+    assert await svc.check_new(env.shop_id) == 0
+    assert (counts_requests(env), list_requests(env)) == (1, 0)
+
+
+async def test_check_new_counts_only_new_todo(env):
+    clock = Clock()
+    svc = checker(env, clock)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [counts_with(1), list_of(("a1", OPEN))]
+    await svc.check_new(env.shop_id)
+    clock.advance(300)
+    env.transport.responses[:] = [
+        counts_with(2), list_of(("a1", OPEN), ("a2", OPEN), ("old-closed", 0)),
+    ]
+    assert await svc.check_new(env.shop_id) == 1  # 已完结的新单不计
+    assert drain(sub, "aftersales_new") == [{"shop_id": env.shop_id, "count": 1}]
+
+
+async def test_check_new_counts_failure_skips_sync(env):
+    svc = checker(env)
+    env.transport.responses[:] = [BizRejected("100021", "售后数据不可用")]
+    assert await svc.check_new(env.shop_id) == 0
+    assert list_requests(env) == 0
+
+
+async def test_first_aftersale_after_empty_baseline_notifies(env):
+    """有订单但从没有售后的店：首次同步 0 条也建基线，之后第一笔售后能提醒（手动同步同口径）。"""
+    svc = checker(env)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [list_of()]
+    await svc.sync([env.shop_id], "admin")
+    assert has_baseline(env)
+    env.transport.responses[:] = [list_of(("first", OPEN))]
+    (outcome,) = await svc.sync([env.shop_id], "admin")
+    assert outcome.new == 1
+    assert drain(sub, "aftersales_new") == [{"shop_id": env.shop_id, "count": 1}]
+
+
+async def test_incomplete_aftersale_sync_no_baseline(env):
+    full = [(f"id{i}", OPEN) for i in range(50)]
+    env.transport.responses[:] = [list_of(*full), BizRejected("100021", "售后数据不可用")]
+    (outcome,) = await checker(env).sync([env.shop_id], "admin")
+    assert outcome.error and not has_baseline(env)

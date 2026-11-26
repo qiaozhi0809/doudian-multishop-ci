@@ -13,6 +13,16 @@ from app.store.sorting import SortOrder, order_by, shop_name_of
 OPEN_ONLY = "open_only"
 
 
+def existing_ids(conn: sa.Connection, shop_id: int, ids: Sequence[str]) -> set[str]:
+    """本店库里已有的售后单号（新售后识别用）。"""
+    if not ids:
+        return set()
+    rows = conn.execute(sa.select(aftersale.c.after_sale_id).where(
+        aftersale.c.shop_id == shop_id, aftersale.c.after_sale_id.in_(list(ids))
+    ))
+    return {r[0] for r in rows}
+
+
 def upsert_aftersales(
     conn: sa.Connection, shop_id: int, items: Sequence[AftersaleDTO], now: str
 ) -> int:

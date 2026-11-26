@@ -11,16 +11,17 @@ from app.adapter.doudian import endpoints as ep
 from app.adapter.doudian.client import FxgClient
 from app.adapter.doudian.parsers import parse_orders
 from app.domain.order_status import LocalOrderStatus, PlatformOrderStatus
-from app.service.events import SYNC_PROGRESS, EventBus
+from app.service.events import ORDERS_NEW, SYNC_PROGRESS, EventBus
 from app.service.session_manager import SessionManager
 from app.service.shop_runner import ShopRunner
-from app.store import order_store
+from app.store import order_store, sync_baseline_store
 
 log = structlog.get_logger()
 
 MAX_PAGES = 100
 MAX_RECHECK_PER_RUN = 50  # 补查是一单一请求：每轮设上限，其余留到下一轮
 NOT_FOUND_REASON = "平台查不到该订单"
+BASELINE_KIND = "orders"
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -60,11 +61,13 @@ class OrderSyncService:
                 self._on_synced(shop_id)
 
     async def _sync(self, client: FxgClient, shop_id: int) -> SyncResult:
-        fetched, seen, complete = 0, set[str](), False
+        fetched, seen, complete, new = 0, set[str](), False, 0
         for page in range(ep.SEARCHLIST_PAGE_BASE, ep.SEARCHLIST_PAGE_BASE + self._max_pages):
             resp = await client.call(ep.SEARCHLIST, params=ep.searchlist_pending_params(page))
             orders = parse_orders(resp)
             with self._engine.begin() as conn:  # 每页立即入库：后面的页失败也不丢
+                known = order_store.existing_order_nos(conn, shop_id, [o.order_no for o in orders])
+                new += len({o.order_no for o in orders} - known)
                 order_store.upsert_orders(conn, shop_id, orders, _now())
             fetched += len(orders)
             seen.update(o.order_no for o in orders)
@@ -75,9 +78,19 @@ class OrderSyncService:
                 complete = True
                 break
         rechecked, cancelled = 0, 0
-        if complete:  # 分页没拉全时，「没出现」不代表离开了待发货
+        if complete:  # 分页没拉全时，「没出现」不代表离开了待发货；新单也不报、不建基线
+            self._report_new(shop_id, new)
             rechecked, cancelled = await self._recheck_vanished(client, shop_id, seen)
         return SyncResult(fetched, fetched, cancelled, rechecked, complete)
+
+    def _report_new(self, shop_id: int, new: int) -> None:
+        """分页拉全后：有基线才报新单；没有基线（首次完整同步）只建基线，0 单也建。"""
+        with self._engine.begin() as conn:
+            if not sync_baseline_store.has(conn, shop_id, BASELINE_KIND):
+                sync_baseline_store.establish(conn, shop_id, BASELINE_KIND, _now())
+                return
+        if new > 0:
+            self._events.publish(ORDERS_NEW, {"shop_id": shop_id, "count": new})
 
     async def _recheck_vanished(
         self, client: FxgClient, shop_id: int, seen: set[str]

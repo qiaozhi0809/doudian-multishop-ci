@@ -32,6 +32,16 @@ def _platform_values(o: OrderDTO, now: str) -> dict[str, Any]:
     }
 
 
+def existing_order_nos(conn: sa.Connection, shop_id: int, order_nos: Sequence[str]) -> set[str]:
+    """本店库里已有的订单号（新订单识别用）。"""
+    if not order_nos:
+        return set()
+    rows = conn.execute(sa.select(orders.c.order_no).where(
+        orders.c.shop_id == shop_id, orders.c.order_no.in_(list(order_nos))
+    ))
+    return {r[0] for r in rows}
+
+
 def upsert_orders(conn: sa.Connection, shop_id: int, items: Sequence[OrderDTO], now: str) -> int:
     for o in items:
         values = _platform_values(o, now)
