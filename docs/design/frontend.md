@@ -70,10 +70,10 @@
 - 服务端状态全部用 TanStack Query；查询 key 统一带上店铺筛选条件，如 `['orders', shopIds, filters]`。
 - SSE 事件 → 对应 query key 失效；不手写轮询。
 - **通知中心**（`components/custom/notification-center/`，设计见 [通知中心设计](../superpowers/specs/2026-11-26-notification-center-design.md)）：
-  - **铃铛**：`GET /api/notifications/summary` 取未读数与未解决的强状态，`notification` SSE 事件到达时失效重取；有未解决的强状态时徽标为红色。
+  - **铃铛**：`GET /api/notifications/summary` 取未读数（不含未解决的状态类）与未解决的强状态，`notification` SSE 事件到达时失效重取；有未解决的强状态时徽标为红色。
   - **面板**（右侧弹出）：顶部「进行中」（打单 / 发货 / 打印的批量进度，内存状态机，由 `label_progress` `ship_progress` `print_progress` 等事件驱动，批次结束即移除，结果由后端写成通知），其下「待处理」（未解决的强状态，置顶），再下是通知列表（未读加粗、点击标已读并跳到 `link`、可只看未读、分页）、「全部已读」、提示音开关（存本地）。
-  - **横条**：未解决的强状态一店一行；超过 3 家合并成「N 家店需要处理」，点开铃铛面板；点单行按问题跳转（登录 / 出口 / 风控 → 店铺管理并高亮该店 `?shop=<id>`，临近超时 → 订单页 `quick=exp_ship`）。
-  - **右下角弹窗**：强档不自动关闭、问题恢复后自动收起，中档 5 秒自动关闭，弱档不弹。
+  - **横条**：未解决的强状态一店一行；超过 3 家合并成「N 家店需要处理」，点开铃铛面板；一行里每个问题单独可点，跳该问题的链接（登录 / 出口 / 风控 → 店铺管理并高亮该店 `?shop=<id>`，临近超时 → 订单页，该店有已超时订单时 `quick=ship_delay`、否则 `quick=exp_ship`）；面板「待处理」同样。
+  - **右下角弹窗**：强档不自动关闭、问题恢复后自动收起，中档 5 秒自动关闭，弱档不弹。按 `id:count` 去重（存 sessionStorage）：未读的新订单 / 新售后合并后数量变多会再弹一次、再响铃。
   - **提示音与系统通知**：只对强档；静音不响；系统通知只在页面不在前台时发，通知权限在用户点铃铛或切换提示音开关时申请。
 - **类型从后端生成**：用 openapi-typescript（或 orval）读 FastAPI 自动产出的 OpenAPI 描述，生成 `src/lib/api-types.ts`。前后端类型只有一个来源，后端改字段前端编译即报错。
 

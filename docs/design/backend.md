@@ -12,13 +12,13 @@
 
 | 层 | 模块 | 职责 |
 |---|---|---|
-| `api/` | `auth` `shop` `order` `label` `print` `shipping` `remark` `task` `event` `aftersale` `catalog` `fund` `reconcile` `audit` `setting` | 路由 + pydantic I/O schema，只调 service |
+| `api/` | `auth` `shop` `order` `label` `print` `shipping` `remark` `task` `event` `aftersale` `catalog` `fund` `reconcile` `audit` `setting` `notification` | 路由 + pydantic I/O schema，只调 service |
 | `service/` | `session_manager` `base_data` `order_sync` `labeling` `printing` `shipping` `reconcile` `aftersale` `catalog` `fund` `scheduler` `notifications` `notification_feed` | 业务编排、事务、状态机推进 |
 | `adapter/doudian/` | `client` `endpoints` `bid` `error_codes` `enums` `signing/` | 抖店 HTTP 协议的唯一出口 |
 | `adapter/browser/` | `login` `channel` `page_print` | Playwright：扫码登录、兜底 fetch、借页面打印 |
 | `adapter/print/` | `component` `ports` | 官方打印组件 WebSocket |
 | `store/` | 按表分文件 | SQLite CRUD，无业务判断 |
-| `domain/` | `order_status` `aftersale_status` `money` `idempotency` `reconcile_rules` | 纯模型与纯函数，无 IO |
+| `domain/` | `order_status` `aftersale_status` `money` `idempotency` `reconcile_rules` `notification_rules` | 纯模型与纯函数，无 IO |
 | `shared/` | `time_bj` `redact` | 跨模块工具，配单测 |
 
 ### 5.1 店铺会话管理（`service/session_manager.py`）
@@ -454,29 +454,29 @@ cookie、订单数据等仍只存本机。
 
 **`NotificationService`** 是唯一的写入口，写库后发 `notification` SSE 事件：
 
-- `emit(kind, ...)`：事件类。同店同类（同步类按同步类型、批量类不合并）最近一条仍未读的通知累加 `count` 与标题，不新增，也不再响铃。
-- `raise_state(family, kind, ...)`：状态类。无未解决记录则新建并提醒；已有则只更新正文与时间。恢复后 30 分钟内再犯，重开原记录（清 `resolved_at`），不响铃、不写新的「已恢复」。
+- `emit(kind, ...)`：事件类。同店同类（同步类按同步类型、批量类不合并）最近一条仍未读的通知累加 `count` 与标题，不新增；新订单 / 新售后合并后数量变多仍 `alert`（又来了新单，前端按 `id:count` 去重），其余合并不再响铃。
+- `raise_state(family, kind, ..., link=None)`：状态类。无未解决记录则新建并提醒；已有则只更新正文、链接与时间，内容（种类、标题、正文、数量、链接）都没变时什么都不做（不改时间、不发事件）。恢复后 30 分钟内再犯，重开原记录（清 `resolved_at`），不响铃、不写新的「已恢复」。
 - `resolve_state(family, ...)`：置 `resolved_at`；首次恢复写一条弱档「已恢复」（`recovered_notified_at` 标记已写过）。
-- `summary()`：未读数 + 未解决强状态按店分组（一店一行，列出该店所有问题）。
+- `summary()`：未读数 + 未解决强状态按店分组（一店一行，`problems` 列出该店每个问题及其链接）。未读数不含未解决的状态类（横条 / 待处理已代表它们，点它们不标已读），解决后照常计入。
 - `purge(now)`：删已读超过 30 天的事件类；挂在每日快照之后，未解决的状态类永不清理。
 
 **`NotificationFeed`** 在 lifespan 里订阅事件总线（订阅队列放大到 2000），把现有事件翻译成上面的调用，业务服务基本不直接写通知：
 
 | 事件 | 翻译 |
 |---|---|
-| `shop_status_changed` `shop_login_failed` | 按库里该店当前状态对账：登录失效（有过会话的店才算）、出口异常（正文写具体原因，不写 IP）、风控暂停；状态恢复或店铺停用 / 删除则解决 |
-| `ship_deadline_warning` | 按店 `deadline:{shop}` 状态类；该店数量为 0 或不再出现则恢复 |
+| `shop_status_changed` `shop_login_failed` | 按库里该店当前状态对账：登录失效（有过会话的店才算）、出口异常（正文写具体原因，不写 IP）、风控暂停；状态恢复则解决；店铺停用 / 删除则连同临近超时一起解决 |
+| `ship_deadline_warning` | 按店 `deadline:{shop}` 状态类（停用店的订单不计）；该店数量为 0 或不再出现则恢复；该店有已超时订单（`shop_overdue`）时链接为 `quick=ship_delay`，否则 `quick=exp_ship`，变化时更新 |
 | `label_done` `ship_done` `print_done` | 批量结果：有失败 / 待核实 / 需补打为中档 `batch_failed`，否则弱档 `batch_done`；演练模式（`simulated`）不写 |
 | `reconcile_done` | 弱档对账完成；全部店失败时不写 |
 | `orders_new` `aftersales_new` | 新订单（中）/ 新售后（强），按店合并 |
 | `sync_result` | 仅手动同步触发：成功弱档、失败中档（正文带失败原因）；定时同步成功不写 |
 
-事件处理在工作线程执行，单个事件出错只记日志，循环不退出。
+事件处理在工作线程执行，单个事件出错只记日志，循环不退出。启动时（feed 开始订阅后）在工作线程对每个店铺对账一次（`reconcile_all`），补上升级前已有的、或停机期间丢了事件的店铺问题。
 
 **新订单与新售后的识别**只在已有同步里比对，不增加请求：
 
-- `sync_baseline(shop_id, kind)`（`orders` / `aftersales`）记录某店某类数据完成过首次**完整**同步；没有基线时只入库不提醒，同步中途失败不建基线。有基线后，部分同步（没拉全）新入库的单也提醒。
+- `sync_baseline(shop_id, kind)`（`orders` / `aftersales`）记录某店某类数据完成过首次**完整**同步（售后拉满 `MAX_PAGES` 页仍未到底也算，记一条 warning）；没有基线时只入库不提醒，同步中途失败不建基线。有基线后，部分同步（没拉全）新入库的单也提醒。
 - 订单：`OrderSyncService` 入库前查出库里没有的订单号，按店发 `orders_new`。
-- 售后：`AftersaleService.check_new` 由定时任务每 5 分钟调用，每店只多一次售后计数请求（60 秒缓存）；各待办分组计数与上一轮不同才做完整售后同步，计数一直不变时每 6 轮（约 30 分钟）兜底同步一次。新增的「仍在流转」售后单（含等买家处理的）发 `aftersales_new`；已关闭的历史单只入库不提醒。完整同步失败的下一轮重试。
+- 售后：`AftersaleService.check_new` 由定时任务每 5 分钟调用，每店只多一次售后计数请求（60 秒缓存）；各待办分组计数与上一轮不同才做完整售后同步，计数一直不变时每 6 轮（约 30 分钟）兜底同步一次。新增的「仍在流转」售后单（含等买家处理的）发 `aftersales_new`；已关闭的历史单只入库不提醒。每次同步（拉全、拉满页数或出错）都算一轮重新计数：拉满页数时记下计数，计数不变不再重拉；出错时保留上次成功的计数，同样计数按 6 轮兜底再试，不每轮重拉。
 
 **接口**见 [local-api.md](local-api.md)。通知正文只写事实（店名、数量、原因），不含账号密码、cookie、完整手机号、卡号。

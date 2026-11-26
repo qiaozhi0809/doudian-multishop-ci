@@ -59,7 +59,7 @@
 | | `POST /api/tasks/{id}/retry` · `POST /api/tasks/{id}/cancel` | 重试 / 取消 |
 | | `GET /api/events` | SSE 推送 |
 | 通知 | `GET /api/notifications?unread=&page=` | 通知列表（新的在前，每页 50）：`{items, total, page, page_size}`，条目含 `kind` `level` `shop_id` `title` `body` `link` `count` `state_key` `resolved_at` `read_at` `created_at` `updated_at` |
-| | `GET /api/notifications/summary` | `{unread, strong_open: [{shop_id, shop_name, kinds, link}]}`：铃铛未读数与全站横条（未解决的强状态，一店一行） |
+| | `GET /api/notifications/summary` | `{unread, strong_open: [{shop_id, shop_name, kinds, link, problems: [{kind, link}]}]}`：铃铛未读数（不含未解决的状态类）与全站横条（未解决的强状态，一店一行，每个问题带自己的链接；`link` 为第一个问题的链接） |
 | | `POST /api/notifications/{id}/read` · `POST /api/notifications/read-all` | 标已读（204）；单条不存在 404 |
 | 售后（只读） | `GET /api/aftersale` · `GET /api/aftersale/todo` · `GET /api/aftersale/counts` · `GET /api/aftersale/statuses` · `GET /api/aftersale/{after_sale_id}?shop_id=` · `POST /api/aftersale/sync` | 快照列表 / 待办队列（按处理截止时间）、平台计数、状态筛选项、按需详情、同步 |
 | 商品 / 库存（只读） | `GET /api/catalog/products` · `GET /api/catalog/products/counts` · `GET /api/catalog/products/groups` · `GET /api/catalog/stock` · `GET /api/catalog/stock/summary` · `GET /api/catalog/stock/warehouses` · `POST /api/catalog/products/sync` · `POST /api/catalog/stock/sync` | 商品快照、状态计数、分组、库存快照、本地预警汇总、仓库列表、同步 |
