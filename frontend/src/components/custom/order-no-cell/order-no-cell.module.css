@@ -1,0 +1,22 @@
+.no {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.copied {
+  color: var(--success);
+  font-family: var(--font-body);
+}
+
+.failed {
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+}
