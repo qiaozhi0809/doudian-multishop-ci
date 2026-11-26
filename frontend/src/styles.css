@@ -33,11 +33,23 @@
   --scrollbar-thumb-hover: oklch(58% 0 0 / 0.85);
 }
 
-/* 细滚动条：默认 Chromium 滚动条约 15px，太粗 */
+/* 细滚动条：默认 Chromium 滚动条约 15px，太粗。
+   平时隐藏，滚动时才显示（lib/scroll-reveal.ts 给正在滚的元素加 data-scrolling，停下 0.8 秒后去掉）；
+   只改颜色不改宽度，显示与隐藏时内容不左右跳。鼠标停在滑块上也显示，方便拖动。 */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 999px; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 999px; }
+[data-scrolling]::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
 ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+/* Arc 抽屉正文自带 scrollbar-width: thin，Chromium 遇到标准属性会忽略上面的 ::-webkit-scrollbar，
+   滚动条就一直显示；在抽屉里改回 auto，跟全站一样滚动时才显示（Arc 源码不改） */
+[role="dialog"] [class^="_body_"],
+[role="dialog"] [class*=" _body_"] { scrollbar-width: auto; }
+/* 不支持 ::-webkit-scrollbar 的浏览器（Firefox）用标准属性做同样的事 */
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  [data-scrolling] { scrollbar-color: var(--scrollbar-thumb) transparent; }
+}
 
 html,
 body,
