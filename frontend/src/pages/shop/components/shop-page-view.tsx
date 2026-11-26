@@ -102,6 +102,17 @@ export function ShopPageView({ page }: { page: ShopPage }) {
         pending={pendingFor("edit", page.editShop)}
         onOpenChange={(open) => !open && dialogs.setEditShopId(null)}
         onSubmit={(patch) => actions.updateShop(page.editShop!.id, patch)}
+        onEnableIm={() => dialogs.setImShopId(page.editShop!.id)}
+      />
+      <ConfirmDialog
+        shop={page.imShop}
+        action="接收飞鸽消息"
+        shopInTitle={false}
+        description="开启后会在后台常驻该店飞鸽页面，有多个客服账号的店铺尚未验证"
+        confirmLabel="开启"
+        pending={pendingFor("edit", page.imShop)}
+        onOpenChange={(open) => !open && dialogs.setImShopId(null)}
+        onConfirm={() => actions.updateShop(page.imShop!.id, { im_enabled: true })}
       />
       <BaseDataDrawer
         shop={page.base.shop}
