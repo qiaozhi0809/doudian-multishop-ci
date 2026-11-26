@@ -79,7 +79,7 @@ export function buildEgressRequest(form: EgressForm): EgressBuild {
 }
 
 /**
- * 同一时间最多一家启用中的店直连：别的店已占用直连时返回禁用原因（放在悬停提示里），否则 null。
+ * 同一时间最多一家启用中的店直连：别的店已占用直连时返回禁用原因（放在提示气泡里），否则 null。
  * selfId：正在设置出口的店本身（它自己在直连不算占用）；添加店铺时不传。
  */
 export function directDisabledReason(shops: ShopRow[], selfId?: number): string | null {

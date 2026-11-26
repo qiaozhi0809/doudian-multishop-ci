@@ -28,7 +28,7 @@ export function useShopPage() {
   const actions = useShopActions(all);
   const dialogs = useShopDialogs();
   const base = useShopBase(dialogs.baseShopId);
-  const backup = useBackup();
+  const backup = useBackup(actions.notify);
   const byId = (id: number | null): ShopRow | null => all.find((s) => s.id === id) ?? null;
 
   return {

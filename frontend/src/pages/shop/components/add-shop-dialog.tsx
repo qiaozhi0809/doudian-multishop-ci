@@ -10,6 +10,7 @@ import { buildEgressRequest, directDisabledReason, emptyEgressForm, type EgressF
 import { platformShopIdError } from "../logic/shop-fields";
 import styles from "../shop-page.module.css";
 import { EgressFields } from "./egress-fields";
+import { ReasonTip } from "./reason-tip";
 
 type ShopCreate = components["schemas"]["ShopCreate"];
 type EgressChoice = "none" | "pool" | "paste" | "direct";
@@ -97,8 +98,8 @@ function AddShopForm({ pending, shops, onSubmit, onDone }: Pick<AddShopDialogPro
           setIdError(undefined);
         }}
       />
-      {/* 直连被别的店占用时禁用该项，原因放在悬停提示里 */}
-      <div title={directReason ?? undefined}>
+      {/* 直连被别的店占用时禁用该项，原因放在提示气泡里 */}
+      <ReasonTip reason={directReason}>
         <SegmentedControl
           label="出口"
           showLabel
@@ -112,7 +113,7 @@ function AddShopForm({ pending, shops, onSubmit, onDone }: Pick<AddShopDialogPro
             { value: "direct", label: "直连", disabled: directReason !== null },
           ]}
         />
-      </div>
+      </ReasonTip>
       {choice !== "none" && (
         <EgressFields
           form={egress}

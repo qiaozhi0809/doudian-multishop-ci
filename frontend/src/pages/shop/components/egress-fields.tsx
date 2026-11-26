@@ -59,7 +59,7 @@ export function EgressFields({ form, errors, onChange, showEntrySwitch = true }:
             <Input label="代理主机" value={form.host} error={errors.host} onChange={(e) => onChange({ host: e.target.value })} />
             <Input label="端口" inputMode="numeric" value={form.port} error={errors.port} onChange={(e) => onChange({ port: e.target.value })} />
           </div>
-          <Input label="账号（选填）" autoComplete="off" value={form.username} onChange={(e) => onChange({ username: e.target.value })} />
+          <Input label="账号" optional autoComplete="off" value={form.username} onChange={(e) => onChange({ username: e.target.value })} />
           <PasswordField
             label="密码"
             autoComplete="off"
@@ -69,7 +69,8 @@ export function EgressFields({ form, errors, onChange, showEntrySwitch = true }:
             onChange={(e) => onChange({ password: e.target.value })}
           />
           <Input
-            label="到期日（选填）"
+            label="到期日"
+            optional
             type="date"
             value={form.expiresAt}
             error={errors.expiresAt}

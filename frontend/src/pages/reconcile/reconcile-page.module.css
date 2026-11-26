@@ -1,37 +1,28 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4, 16px);
+  gap: var(--space-4);
 }
 
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-3, 12px);
+  gap: var(--space-3);
 }
 
+/* 两组分段切换并排：组间距要明显大于组内的 8，才看得出是两组 */
 .filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3, 12px);
-}
-
-.filter {
-  min-width: 160px;
-}
-
-.actions {
-  display: flex;
   align-items: center;
-  gap: var(--space-2, 8px);
+  gap: var(--space-3) var(--space-6);
 }
 
 .muted {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .tabular {
@@ -41,6 +32,15 @@
 
 .waybill {
   font-variant-numeric: tabular-nums;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
+/* 禁用按钮外层：悬停和键盘焦点落在这层上，用来显示原因 */
+.tip {
+  display: inline-flex;
+  cursor: not-allowed;
+}
+
+.tip > button:disabled {
+  pointer-events: none;
+}

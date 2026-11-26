@@ -95,7 +95,7 @@ export function PreviewDialog({ preview, mode, busy, onClose, onConfirm }: Previ
           </DialogClose>
           <HoldToConfirm
             label={`按住确认${MODE_LABELS[mode]}${preview.dry_run ? "（演练）" : ""}`}
-            confirmedLabel="已提交"
+            confirmedLabel={`已发起${MODE_LABELS[mode]}`}
             tone={mode === "void" ? "danger" : "accent"}
             onConfirm={onConfirm}
             disabled={busy || totals.ready === 0}

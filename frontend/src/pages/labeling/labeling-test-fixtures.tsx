@@ -1,8 +1,8 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { makeShop } from "@/test/fixtures";
-import { jsonResponse } from "@/test/mock-fetch";
+import { jsonResponse, type mockFetch } from "@/test/mock-fetch";
 import LabelingPage from "./index";
 
 /** 打单发货页测试共用的数据与渲染（index.test / ship-stage.test）。 */
@@ -116,4 +116,23 @@ export function renderPage(path = "/labeling") {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+/** 让指定接口一直不返回，用来观察「进行中」的界面。 */
+export function hang(fetchMock: ReturnType<typeof mockFetch>, path: string) {
+  const respond = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation((input, init) =>
+    String(input) === path ? new Promise<Response>(() => {}) : respond(input, init),
+  );
+}
+
+/** 禁用按钮的原因：按钮外包一层可聚焦的 span，聚焦后读悬停提示。 */
+export async function reasonOf(button: HTMLElement): Promise<string> {
+  expect(button).toBeDisabled();
+  const wrap = button.parentElement!;
+  expect(wrap).toHaveAttribute("tabindex", "0");
+  fireEvent.focus(wrap);
+  const text = (await screen.findByRole("tooltip")).textContent ?? "";
+  fireEvent.blur(wrap);
+  return text;
 }

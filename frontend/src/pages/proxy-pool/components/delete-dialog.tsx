@@ -36,7 +36,7 @@ function DeleteBody({ item, pending, onConfirm, onDone }: Omit<DeleteDialogProps
           </Button>
         </DialogClose>
         <Button
-          variant="destructive"
+          variant="danger"
           loading={pending}
           onClick={async () => {
             const r = await onConfirm(item.id);
@@ -44,7 +44,7 @@ function DeleteBody({ item, pending, onConfirm, onDone }: Omit<DeleteDialogProps
             else setError(r.error);
           }}
         >
-          确认删除
+          删除代理
         </Button>
       </div>
     </div>

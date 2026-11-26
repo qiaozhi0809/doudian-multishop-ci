@@ -1,6 +1,6 @@
 import { Button } from "@/components/arc/button/button";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
-import { Select } from "@/components/arc/select/select";
+import { Tooltip } from "@/components/arc/tooltip/tooltip";
 import {
   KIND_OPTIONS,
   STATUS_OPTIONS,
@@ -33,22 +33,20 @@ export function ReconcileToolbar(props: ReconcileToolbarProps) {
             if (isKind(value)) props.onKindChange(value);
           }}
         />
-        <Select
-          className={styles.filter}
+        <SegmentedControl
           label="处理状态"
+          options={[...STATUS_OPTIONS]}
           value={props.status}
           onValueChange={(value) => {
             if (isStatus(value)) props.onStatusChange(value);
           }}
-          options={[...STATUS_OPTIONS]}
         />
       </div>
-      <div className={styles.actions}>
-        <span className={styles.muted}>检查范围：最近 30 天</span>
-        <Button onClick={props.onRun} loading={props.running} disabled={props.running}>
+      <Tooltip content="检查范围：最近 30 天">
+        <Button onClick={props.onRun} loading={props.running}>
           立即检查
         </Button>
-      </div>
+      </Tooltip>
     </div>
   );
 }

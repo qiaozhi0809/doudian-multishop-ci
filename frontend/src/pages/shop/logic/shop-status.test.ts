@@ -121,7 +121,7 @@ describe("scanBlockedReason", () => {
     expect(scanBlockedReason(makeShop({ egress_mode: null, egress_status: "unchecked" }))).toBe("还没有设置出口，请先设置出口");
     expect(scanBlockedReason(makeShop({ egress_status: "unchecked" }))).toBe("出口未检查通过，不能扫码");
     expect(scanBlockedReason(makeShop({ egress_status: "unreachable" }))).toBe("出口不通，请检查代理是否到期或更换代理");
-    expect(scanBlockedReason(makeShop({ egress_status: "changed" }))).toBe("出口 IP 已变化，请先确认新 IP");
+    expect(scanBlockedReason(makeShop({ egress_status: "changed" }))).toBe("出口 IP 已变化，请先接受新 IP");
     expect(scanBlockedReason(makeShop({ egress_status: "duplicate" }))).toBe("出口 IP 与其他店重复，请更换出口");
   });
 });
@@ -146,11 +146,8 @@ describe("scanDisabledReason（按钮禁用说明）", () => {
   it("正常时为 null", () => {
     expect(scanDisabledReason(makeShop())).toBeNull();
   });
-  it("已停用、风控暂停优先于出口问题", () => {
+  it("已停用优先于出口问题", () => {
     expect(scanDisabledReason(makeShop({ status: "disabled", egress_status: "unreachable" }))).toBe("店铺已停用，不能扫码");
-    expect(scanDisabledReason(makeShop({ paused_reason: "risk_blocked:1", egress_status: "unreachable" }))).toBe(
-      "风控暂停中，请先恢复",
-    );
   });
   it("其余沿用出口原因", () => {
     expect(scanDisabledReason(makeShop({ egress_status: "unchecked" }))).toBe("出口未检查通过，不能扫码");
@@ -169,9 +166,12 @@ describe("primaryAction（行内直接显示的主操作）", () => {
   it("出口检查通过：扫码登录", () => {
     expect(primaryAction(makeShop({ egress_status: "ok" }))).toBe("login");
   });
-  it("已停用或风控暂停但出口正常：仍显示扫码登录（禁用并说明原因）", () => {
+  it("已停用但出口正常：仍显示扫码登录（禁用并说明原因）", () => {
     expect(primaryAction(makeShop({ status: "disabled" }))).toBe("login");
-    expect(primaryAction(makeShop({ paused_reason: "risk_blocked:1" }))).toBe("login");
+  });
+  it("风控暂停：不管出口状态，先恢复", () => {
+    expect(primaryAction(makeShop({ paused_reason: "risk_blocked:1" }))).toBe("resume");
+    expect(primaryAction(makeShop({ paused_reason: "risk_blocked:1", egress_mode: null, egress_status: "unchecked" }))).toBe("resume");
   });
 });
 

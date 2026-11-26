@@ -3,6 +3,7 @@ import { Badge } from "@/components/arc/badge/badge";
 import { ID_COL_WIDTH, TIME_COL_WIDTH } from "@/lib/table-columns";
 import { Button } from "@/components/arc/button/button";
 import type { DataColumn } from "@/components/arc/sortable-data-table/sortable-data-table";
+import { Tooltip } from "@/components/arc/tooltip/tooltip";
 import { DataTable } from "@/components/custom/data-table/data-table";
 import type { ListSort } from "@/lib/list-sort";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
@@ -52,11 +53,21 @@ export function FindingsTable({ rows, marking, onMarkHandled, sort, onSortChange
     },
     {
       key: "actions", label: "操作", width: 120,
-      render: (_, row) => (
-        <Button variant="ghost" size="sm" disabled={row.status === "handled" || marking} onClick={() => onMarkHandled(row.id)}>
-          标记已处理
-        </Button>
-      ),
+      render: (_, row) => {
+        const handled = row.status === "handled";
+        const action = (
+          <Button variant="secondary" size="sm" disabled={handled || marking} onClick={() => onMarkHandled(row.id)}>
+            标记已处理
+          </Button>
+        );
+        if (!handled) return action;
+        // 禁用元素收不到悬停和焦点，原因挂在外层 span 上
+        return (
+          <Tooltip content="这条已处理">
+            <span className={styles.tip} tabIndex={0}>{action}</span>
+          </Tooltip>
+        );
+      },
     },
   ];
   return (
