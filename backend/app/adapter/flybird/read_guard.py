@@ -6,6 +6,7 @@
 
 import json
 from pathlib import Path
+from weakref import WeakKeyDictionary
 
 from playwright.async_api import BrowserContext, Route
 
@@ -14,7 +15,8 @@ from app.adapter.flybird import endpoints as ep
 SCRIPT_PATH = Path(__file__).with_name("read_guard.js")
 _CONFIG_PLACEHOLDER = "__READ_GUARD_CONFIG__"
 
-_blocked = 0
+# 每个浏览器上下文（即每家店的每一轮）各记各的；上下文回收后记录一并消失
+_blocked: WeakKeyDictionary[BrowserContext, int] = WeakKeyDictionary()
 
 
 def render_script() -> str:
@@ -29,19 +31,18 @@ def render_script() -> str:
     return template.replace(_CONFIG_PLACEHOLDER, json.dumps(config))
 
 
-def blocked_count() -> int:
-    """本进程中止过的已读请求数（不记 URL，参数里有签名）。"""
-    return _blocked
-
-
-async def _abort(route: Route) -> None:
-    global _blocked
-    await route.abort()
-    _blocked += 1
+def blocked_count(context: BrowserContext) -> int:
+    """该浏览器上下文中止过的已读请求数（不记 URL，参数里有签名）。"""
+    return _blocked.get(context, 0)
 
 
 async def install(context: BrowserContext) -> None:
     """必须在页面打开工作台之前调用；失败就抛错。"""
+
+    async def _abort(route: Route) -> None:
+        await route.abort()
+        _blocked[context] = _blocked.get(context, 0) + 1
+
     await context.add_init_script(script=render_script())
     # 结尾用 **：单个 * 不跨斜杠，查询串里的签名带 / 时会漏掉已读请求
     await context.route("**" + ep.MARK_READ_PATH + "**", _abort)

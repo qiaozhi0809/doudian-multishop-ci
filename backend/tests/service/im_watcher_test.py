@@ -1,6 +1,7 @@
 """飞鸽常驻页生命周期：选店、关卡、名额、状态事件、让出、消息存库、审计与关机。"""
 
 import asyncio
+from datetime import timedelta
 
 import pytest
 
@@ -9,6 +10,7 @@ from app.adapter.browser.cloak_launch import PROFILE_IN_USE, CloakUnavailable
 from app.adapter.browser.login import playwright_proxy
 from app.adapter.doudian.errors import EgressUnavailable
 from app.service.events import SHOP_STATUS_CHANGED
+from app.store import im_message_store
 from tests.service.im_watcher_support import ADMIN, IM_PROXY, Rig, drain, until
 
 
@@ -332,3 +334,22 @@ async def test_status_of_untracked_shop_follows_gates(rig):
     assert rig.state() == "stopped"
     rig.update(rig.shop_id, im_enabled=0)
     assert rig.state() == "off"
+
+
+# ---- 消息清理 ----
+
+
+async def test_purge_messages_older_than_30_days(rig):
+    def saved(message_id: str, days_ago: int) -> None:
+        at = (rig.now - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        with rig.engine.begin() as conn:
+            im_message_store.insert_ignore(conn, rig.shop_id, [{
+                "conversation_id": "1001", "message_id": message_id, "sender_role": "buyer",
+                "text": "在吗", "sent_at": at,
+            }], at)
+
+    saved("msg-test-old", 31)
+    saved("msg-test-kept", 29)
+
+    assert rig.watcher.purge_messages(rig.now) == 1
+    assert [m["message_id"] for m in rig.messages()] == ["msg-test-kept"]

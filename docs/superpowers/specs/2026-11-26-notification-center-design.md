@@ -97,7 +97,7 @@
 ### 6.4 接口
 
 - `GET /api/notifications?unread=1&page=` 列表（新的在前）
-- `GET /api/notifications/summary` → `{unread, strong_open: [...]}`（铃铛数字 + 顶部横条）。`unread` 不含未解决的状态类（横条 / 待处理已代表它们），解决后照常计入；`strong_open` 每店带 `problems: [{kind, link}]`。
+- `GET /api/notifications/summary` → `{unread, strong_open: [...]}`（铃铛数字 + 顶部横条）。`unread` 不含未解决的强状态（横条 / 待处理已代表它们），解决后照常计入；`strong_open` 每店带 `problems: [{kind, link}]`。
 - `POST /api/notifications/{id}/read`、`POST /api/notifications/read-all`
 - SSE 事件 `notification`（新增 / 更新 / 恢复）
 

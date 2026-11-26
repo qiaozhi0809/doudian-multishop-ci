@@ -15,6 +15,7 @@ import sqlalchemy as sa
 
 from app.adapter.browser.browser_registry import BrowserRegistry, Purpose
 from app.adapter.browser.login import LoginResult
+from app.adapter.flybird import read_guard
 from app.service.events import IM_STOPPED, IM_WAIT_CHANGED
 from app.service.im_watcher import ImWatcher
 from app.store import im_message_store, shop_store
@@ -30,10 +31,27 @@ LOGIN = LoginResult(
 )
 
 
+class _AbortableRoute:
+    async def abort(self) -> None:
+        pass
+
+
 class FakeContext:
     def __init__(self) -> None:
         self.closed = False
         self._listeners: list[Callable[[object], None]] = []
+        self._routes: list[Callable[[Any], Any]] = []
+
+    async def add_init_script(self, script: str | None = None) -> None:
+        pass
+
+    async def route(self, _pattern: str, handler: Callable[[Any], Any]) -> None:
+        self._routes.append(handler)
+
+    async def mark_read(self) -> None:
+        """页面发出一次 HTTP 已读请求：走真实的拦截处理函数。"""
+        for handler in self._routes:
+            await handler(_AbortableRoute())
 
     def on(self, event: str, listener: Callable[[object], None]) -> None:
         assert event == "close"
@@ -110,6 +128,7 @@ class FakeAttach:
         self.during: Callable[[FakeImPage], None] | None = None  # 返回前页面已经收到的东西
 
     async def __call__(self, context, *, on_frame, on_list, on_messages) -> FakeImPage:
+        await read_guard.install(context)  # 与 ImPage.attach 一样，先装拦截
         if self.gate is not None:
             await self.gate.wait()
         if self.error is not None:

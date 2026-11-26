@@ -200,6 +200,10 @@ class ImWatcher:
             for shop in shops:
                 self._set(shop, self._blocked(shop.id) or "stopped")
 
+    def purge_messages(self, now: datetime) -> int:
+        """删除超过保留期的飞鸽消息（每日清理调用）。"""
+        return im_history.purge(self._engine, now)
+
     # ---- 一家店的循环 ----
 
     def _launch(self, shop: _Shop, actor: str, offscreen: bool) -> None:
