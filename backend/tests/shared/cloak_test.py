@@ -172,9 +172,12 @@ def test_launch_args_offscreen_window():
     assert "--window-position=-32000,-32000" in args
     assert "--disable-features=CalculateNativeWinOcclusion" in args
     assert "--disable-backgrounding-occluded-windows" in args
+    assert "--disable-renderer-backgrounding" in args
+    assert "--disable-background-timer-throttling" in args
 
 
 def test_launch_args_onscreen_keeps_occlusion_default():
     args = cloak_launch_args(12345)
     assert not any("Occlu" in a or "occluded" in a for a in args)
+    assert not any("backgrounding" in a or "throttling" in a for a in args)
     assert not any(a.startswith("--window-position") for a in cloak_launch_args(12345))

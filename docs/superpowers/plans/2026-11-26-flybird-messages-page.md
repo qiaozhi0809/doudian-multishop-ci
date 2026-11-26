@@ -115,27 +115,28 @@
 
 **Files:**
 - Create: `backend/app/adapter/flybird/focus.py`
-- Modify: `backend/app/adapter/flybird/endpoints.py`（`FOCUS_BOUNDS = {"left": 0, "top": 0, "windowState": "normal"}`；Step 0 的结论 `FOCUS_METHOD: Literal["cdp_bounds", "relaunch_visible"]`、`CONVERSATION_SELECTOR`、`CONV_ID_ATTR`）
+- Modify: `backend/app/adapter/flybird/endpoints.py`（`FOCUS_RESTORE = {"windowState": "normal"}`、`FOCUS_BOUNDS = {"left": 0, "top": 0, "width": 1400, "height": 900}`、`CONVERSATION_SELECTOR = '[data-kora="conversation"]'`；Step 0 已定：只有 `cdp_bounds` 一种做法，不需要 `relaunch_visible`，会话元素上**没有**会话编号属性，按买家昵称文本定位）
 - Modify: `backend/app/service/im_watcher.py`（`focus`）
 - Modify: `backend/app/api/im.py`、`backend/app/api/im_schemas.py`
 - Test: `backend/tests/adapter/flybird_focus_test.py`、`backend/tests/adapter/flybird_readonly_guard_test.py`、`backend/tests/service/im_watcher_test.py`、`backend/tests/api/im_api_test.py`、`backend/tests/api/openapi_test.py`
 
 **Interfaces:**
 - Produces（`focus.py`）：`async focus_conversation(page: Page, conversation_id: str) -> bool`
-  - `FOCUS_METHOD == "cdp_bounds"` 时：`page.context.new_cdp_session(page)`（同一浏览器连接，不另开连接）→ `Browser.getWindowForTarget` → `Browser.setWindowBounds(FOCUS_BOUNDS)`；随后 `page.bring_to_front()`
-  - 定位 `f'{CONVERSATION_SELECTOR}[{CONV_ID_ATTR}="{conversation_id}"]'`（`conversation_id` 先按 `ConversationId` 规则校验，不合规抛 `ValueError`）；找不到返回 `False`；找到则 `.click()` 一次，返回 `True`
+  - 签名改为 `async focus_conversation(page: Page, buyer_name: str | None) -> bool`
+  - `page.context.new_cdp_session(page)`（同一浏览器连接）→ `Browser.getWindowForTarget` → `Browser.setWindowBounds(FOCUS_RESTORE)`（先取消最小化：macOS 上常驻页是最小化的，最小化状态下不能直接设位置）→ `Browser.setWindowBounds(FOCUS_BOUNDS)` → `detach`；随后 `page.bring_to_front()`
+  - 定位：有昵称时 `page.locator(CONVERSATION_SELECTOR).filter(has_text=buyer_name)`；恰好 1 个才 `.click()` 一次并返回 `True`；0 个或多个返回 `False`。没有昵称时，列表里恰好只有 1 个会话才点它，否则返回 `False`
   - 不调用 `fill`、`type`、`press`、`keyboard`、`evaluate` 写操作
 - Produces（`ImWatcher`）：`async focus(shop_id: int, conversation_id: str, *, actor: str) -> Literal["opened", "not_found"]`
   - 该店没有运行中的常驻页 → `InvalidRequest("该店飞鸽未在接收")`
-  - 经 `runner.run(shop_id, job, actor=actor)`；`FOCUS_METHOD == "relaunch_visible"` 时 job 外先 `stop(shop_id, reason="preempted", actor=actor)` 再 `start(shop_id, actor=actor, offscreen=False)`，之后在新页面上 `focus_conversation`（窗口保持可见到下一次每日重启，届时按 `offscreen=True` 重开）
+  - 经 `runner.run(shop_id, job, actor=actor)`；昵称取该店快照里该会话的 `buyer_name`（不进审计）。窗口置前后留在屏幕上，到下一次每日重启时按 `offscreen=True` 重开
   - 审计 `CallRecord(shop_id, "im.focus", actor, {}, {"result": result}, "ok" | "error", 0)`，不记会话 ID、昵称、正文
 - Produces（API）：`POST /conversations/{shop_id}/{conversation_id}/open-in-flybird` → `ImFocusResult`（`result: Literal["opened", "not_found"]`）；未运行 → `InvalidRequest`；店不存在 → `NotFound`
 
-- [ ] **Step 0: 实测（所有者在场，测试店）**：U12，`offscreen=True` 的常驻页经同一浏览器连接移回屏幕并置前是否可行，成立则 `FOCUS_METHOD = "cdp_bounds"`，否则 `"relaunch_visible"`；在 DOM 里找会话元素上与消息帧会话 short ID 对应的属性，填 `CONV_ID_ATTR`（找不到则按会话行文本里的买家标识定位，在本任务里改写定位规则后再实现）；点开自己的测试会话一次，确认只打开、不发送、输入框为空。记录只留本机，结论写进 flybird.md §5。
+- [x] **Step 0: 实测（2026-11-26 已完成）**：窗口经 CDP 能移回屏幕并置前；会话元素只有 `data-kora`、`data-qa-id` 等通用属性，没有会话编号，按昵称文本恰好匹配 1 个；点开后输入框 0 字、无任何发送，已读拦截仍生效（未读角标保留）。原计划：U12，`offscreen=True` 的常驻页经同一浏览器连接移回屏幕并置前是否可行，成立则 `FOCUS_METHOD = "cdp_bounds"`，否则 `"relaunch_visible"`；在 DOM 里找会话元素上与消息帧会话 short ID 对应的属性，填 `CONV_ID_ATTR`（找不到则按会话行文本里的买家标识定位，在本任务里改写定位规则后再实现）；点开自己的测试会话一次，确认只打开、不发送、输入框为空。记录只留本机，结论写进 flybird.md §5。
 - [ ] **Step 1: 写失败测试**
-  - `flybird_focus_test.py`（`FakePage` / `FakeCdpSession` 记录调用）：`test_cdp_bounds_then_bring_to_front_then_single_click`（调用序列恰为 `getWindowForTarget`、`setWindowBounds`、`bring_to_front`、`click`）；`test_selector_uses_conversation_id_attr`；`test_missing_element_returns_false_without_click`；`test_invalid_conversation_id_rejected`；`test_relaunch_visible_skips_cdp`
+  - `flybird_focus_test.py`（`FakePage` / `FakeCdpSession` 记录调用）：`test_restore_then_bounds_then_bring_to_front_then_single_click`（调用序列恰为 `getWindowForTarget`、`setWindowBounds(normal)`、`setWindowBounds(bounds)`、`detach`、`bring_to_front`、`click`）；`test_locates_by_buyer_name`；`test_ambiguous_or_missing_returns_false_without_click`；`test_no_name_single_conversation_clicked`；`test_no_name_multiple_conversations_not_clicked`
   - `flybird_readonly_guard_test.py`：`test_click_only_in_focus_module` 现在 `focus.py` 存在，断言 `.click(` 只在该文件出现且只一次；`bring_to_front`、`setWindowBounds` 只在该文件；全包仍不含 `.fill(`、`.type(`、`keyboard`、`.press(`、`.send(`
-  - `im_watcher_test.py`：`test_focus_runs_in_shop_queue`；`test_focus_not_running_rejected`；`test_focus_relaunch_visible_reopens_with_offscreen_false`（`FakeRegistry.open_cloak` 第二次收到 `offscreen=False`）；`test_focus_audit_has_no_conversation_id`
+  - `im_watcher_test.py`：`test_focus_runs_in_shop_queue`；`test_focus_not_running_rejected`；`test_focus_passes_snapshot_buyer_name`；`test_focus_audit_has_no_conversation_id_or_name`
   - `im_api_test.py`：`test_open_in_flybird_ok`；`test_open_in_flybird_not_running_400`；`test_open_in_flybird_requires_admin`
   - `openapi_test.py`：路径集合加 `/api/im/conversations/{shop_id}/{conversation_id}/open-in-flybird`
 - [ ] **Step 2:** `cd backend && uv run pytest -q tests/adapter/flybird_focus_test.py tests/adapter/flybird_readonly_guard_test.py tests/service/im_watcher_test.py tests/api/im_api_test.py tests/api/openapi_test.py` → FAIL

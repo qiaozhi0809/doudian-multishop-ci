@@ -141,4 +141,5 @@ wss://ws.fxg.jinritemai.com/ws/v2?token=<token>&aid=1383&fpid=92&device_id=...&a
 | U9 | 哪些下行帧携带正文 | **成立**：cmd 500 类型 1000，字段见 §3 |
 | U10 | 不点击时页面是否自己按会话取消息 | 页面自动打开会话后会取（`get_by_conversation`，protobuf）；有 U9 后不解析 |
 | U11 | 发送方能否区分、别处回复本页能否收到 | **成立**：`sender_role` 1 / 2 / 4；别处回复本页收得到 |
-| U12 | `offscreen` 窗口能否移回屏幕并置前 | 未测，放到消息页阶段 |
+| U12 | `offscreen` 窗口能否移回屏幕并置前 | **成立**（2026-11-26）：同一浏览器连接经 CDP `Browser.setWindowBounds` 先恢复 `normal` 再设位置，`bring_to_front` 后可见；会话元素没有会话编号属性，按买家昵称（`uname`）文本定位；点开只打开会话，输入框为空 |
+| U8 补充 | macOS 上屏幕外坐标会被挪回屏幕内 | 后台窗口其实一直露在桌面。macOS 改为启动后最小化，加 `--disable-renderer-backgrounding`、`--disable-background-timer-throttling`；实测最小化 14 分钟页面仍判为可见、心跳与消息照常（断连后的消息经拉取约 25 秒到）。Windows 的屏幕外窗口未在 Windows 上实测 |

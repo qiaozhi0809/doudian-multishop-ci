@@ -5,6 +5,7 @@
 二进制是否已按部署文档预下载，没有就直接报错。
 """
 
+import sys
 from pathlib import Path
 
 import structlog
@@ -75,11 +76,38 @@ async def launch_cloak(profile_dir: Path, proxy: dict | None, *, offscreen: bool
         log.warning("cloak.profile_unwritable", error=type(exc).__name__)
         raise CloakUnavailable(PROFILE_UNWRITABLE) from None
     try:
-        return await launch_persistent_context_async(**kwargs)
+        context = await launch_persistent_context_async(**kwargs)
     except (OSError, PlaywrightError) as exc:
         reason = _launch_reason(exc)
         log.warning("cloak.launch_failed", error=type(exc).__name__, reason=reason)
         raise CloakUnavailable(reason) from None
+    if offscreen and _platform() in _MINIMIZE_PLATFORMS:
+        await _minimize(context)
+    return context
+
+
+# macOS 会把 --window-position 的屏幕外坐标挪回屏幕内，后台窗口一直露在桌面上，
+# 只能启动后最小化（渲染不降速靠 OFFSCREEN_RENDER）
+_MINIMIZE_PLATFORMS = frozenset({"darwin"})
+
+
+def _platform() -> str:
+    return sys.platform
+
+
+async def _minimize(context) -> None:
+    """经同一浏览器连接把窗口最小化；失败只记日志，不影响使用。"""
+    try:
+        page = context.pages[0] if context.pages else await context.new_page()
+        cdp = await context.new_cdp_session(page)
+        window = await cdp.send("Browser.getWindowForTarget")
+        await cdp.send(
+            "Browser.setWindowBounds",
+            {"windowId": window["windowId"], "bounds": {"windowState": "minimized"}},
+        )
+        await cdp.detach()
+    except Exception as e:  # noqa: BLE001 - 只影响窗口是否露出
+        log.warning("cloak.minimize_failed", error=type(e).__name__)
 
 
 def _launch_reason(exc: Exception) -> str:
