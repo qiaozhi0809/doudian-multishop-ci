@@ -1,4 +1,6 @@
-"""飞鸽接口：各店消息接收状态、手动重新连接、跨店会话列表与消息记录。只读聚合，不提供发送。
+"""飞鸽接口：各店消息接收状态、手动重新连接、跨店会话列表与消息记录、在飞鸽中回复。
+
+只读聚合，不提供发送：「在飞鸽中回复」只把该店的浏览器窗口置前并点开会话。
 
 异步端点：接收状态由事件循环里的后台任务维护，在同一个循环里读写。
 """
@@ -15,6 +17,7 @@ from app.api.im_schemas import (
     ImConversation,
     ImConversationPage,
     ImCounts,
+    ImFocusResult,
     ImShopStatus,
     ImThread,
 )
@@ -99,3 +102,17 @@ async def list_messages(
     shops.get_view(shop_id)  # 店不存在抛 NotFound
     query: ImQueryService = request.app.state.im_query
     return ImThread(**asdict(query.thread(shop_id, conversation_id)))
+
+
+@router.post(
+    "/conversations/{shop_id}/{conversation_id}/open-in-flybird", response_model=ImFocusResult
+)
+async def open_in_flybird(
+    shop_id: int, conversation_id: ConversationId, request: Request,
+    admin: str = Depends(require_admin),
+) -> ImFocusResult:
+    """排在该店队列里执行；该店没在接收时拒绝。"""
+    shops: ShopAdminService = request.app.state.shop_admin
+    shops.get_view(shop_id)  # 店不存在抛 NotFound
+    im: ImWatcher = request.app.state.im
+    return ImFocusResult(result=await im.focus(shop_id, conversation_id, actor=admin))

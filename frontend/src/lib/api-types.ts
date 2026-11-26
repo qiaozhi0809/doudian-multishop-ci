@@ -562,6 +562,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/im/conversations/{shop_id}/{conversation_id}/open-in-flybird": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open In Flybird
+         * @description 排在该店队列里执行；该店没在接收时拒绝。
+         */
+        post: operations["open_in_flybird_api_im_conversations__shop_id___conversation_id__open_in_flybird_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/im/shops/{shop_id}/restart": {
         parameters: {
             query?: never;
@@ -1730,6 +1750,17 @@ export interface components {
             unread: number;
             /** Waiting */
             waiting: number;
+        };
+        /**
+         * ImFocusResult
+         * @description 「在飞鸽中回复」的结果；not_found = 飞鸽会话列表里没定位到唯一的会话。
+         */
+        ImFocusResult: {
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "opened" | "not_found";
         };
         /** ImMessage */
         ImMessage: {
@@ -4035,6 +4066,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImThread"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    open_in_flybird_api_im_conversations__shop_id___conversation_id__open_in_flybird_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImFocusResult"];
                 };
             };
             /** @description 错误信封 */

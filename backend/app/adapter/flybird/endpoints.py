@@ -69,6 +69,12 @@ ATTENTION_METHOD = 5
 ATTENTION_PAYLOAD_TYPE = PAYLOAD_TYPE_JSON
 ATTENTION_TIME_FIELD = "attention_time"  # 位于 data 下，单位秒
 
+# 「在飞鸽中回复」，只给 focus.py 用（2026-11-26 实测）。常驻页窗口先恢复再移回屏幕
+FOCUS_RESTORE = {"windowState": "normal"}
+FOCUS_BOUNDS = {"left": 0, "top": 0, "width": 1400, "height": 900}
+# 会话列表里的会话元素；元素上没有会话编号属性，按买家昵称文本定位
+CONVERSATION_SELECTOR = '[data-kora="conversation"]'
+
 # 拦截（§4），只给 read_guard.py 用：标记已读、输入状态
 DROP_CMDS = frozenset({2002, 2031})
 MARK_READ_PATH = "/pigeon_im/*/conversation/mark_read"

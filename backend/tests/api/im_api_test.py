@@ -1,4 +1,4 @@
-"""飞鸽接口：接收状态、手动重新连接、会话列表与计数、消息记录。不打开真浏览器。"""
+"""飞鸽接口：接收状态、手动重新连接、会话列表与计数、消息记录、在飞鸽中回复。不打开真浏览器。"""
 
 from app.domain.im_rules import STATE_LABELS
 from app.service.im_session import ConvView
@@ -227,5 +227,63 @@ def test_messages_unknown_404(api):
     assert no_shop.status_code == 404 and no_shop.json()["error"]["shop_id"] == 999
 
 
+# ---- 在飞鸽中回复 ----
+
+
+def open_path(shop_id: int, conversation_id: str = "conv-test-1") -> str:
+    return f"/api/im/conversations/{shop_id}/{conversation_id}/open-in-flybird"
+
+
+def receiving_shop(api, monkeypatch) -> tuple[int, FakeAttach]:
+    """假浏览器上跑起一家店的常驻页。"""
+    attach = FakeAttach()
+    monkeypatch.setattr(api.app.state.im, "_browsers", FakeRegistry())
+    monkeypatch.setattr(api.app.state.im, "_attach", attach)
+    shop_id = api.new_shop("测试小铺")
+    api.login(shop_id, TOKEN_A)
+    assert api.client.patch(f"/api/shops/{shop_id}", json={"im_enabled": True}).status_code == 200
+    api.wait_for(
+        lambda: [r["state"] for r in api.client.get("/api/im/status").json()] == ["running"])
+    return shop_id, attach
+
+
+def test_open_in_flybird_ok(api, monkeypatch):
+    shop_id, attach = receiving_shop(api, monkeypatch)
+    page = attach.pages[0].page
+    page.conversations = ["测试买家 在吗"]
+
+    r = api.client.post(open_path(shop_id))
+
+    assert r.status_code == 200 and r.json() == {"result": "opened"}
+    assert page.clicked() == ["测试买家 在吗"]
+    page.conversations = []
+    assert api.client.post(open_path(shop_id)).json() == {"result": "not_found"}
+
+
+def test_open_in_flybird_not_running_422(api):
+    shop_id = enable(api, "测试小铺")  # 还没扫码登录：没有常驻页
+
+    r = api.client.post(open_path(shop_id))
+
+    assert r.status_code == 422
+    assert r.json()["error"]["type"] == "InvalidRequest"
+    assert r.json()["error"]["message"] == "该店飞鸽未在接收"
+
+
+def test_open_in_flybird_requires_admin(api):
+    shop_id = enable(api, "测试小铺")
+    api.client.cookies.clear()
+
+    assert api.client.post(open_path(shop_id)).status_code == 401
+
+
+def test_open_in_flybird_unknown_shop_404_and_bad_id_422(api, monkeypatch):
+    monkeypatch.setattr(api.app.state.im, "focus", _must_not_call)
+    shop_id = enable(api, "测试小铺")
+
+    assert api.client.post(open_path(999)).status_code == 404
+    assert api.client.post(open_path(shop_id, "conv$1")).status_code == 422
+
+
 async def _must_not_call(*_args, **_kwargs):
-    raise AssertionError("不该重新连接")
+    raise AssertionError("不该调用")

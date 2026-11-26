@@ -23,6 +23,12 @@ class ImShopStatus(BaseModel):
     last_error: str | None
 
 
+class ImFocusResult(BaseModel):
+    """「在飞鸽中回复」的结果；not_found = 飞鸽会话列表里没定位到唯一的会话。"""
+
+    result: Literal["opened", "not_found"]
+
+
 class ImConversation(BaseModel):
     shop_id: int
     shop_name: str

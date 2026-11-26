@@ -1243,6 +1243,24 @@
         "title": "ImCounts",
         "type": "object"
       },
+      "ImFocusResult": {
+        "description": "「在飞鸽中回复」的结果；not_found = 飞鸽会话列表里没定位到唯一的会话。",
+        "properties": {
+          "result": {
+            "enum": [
+              "opened",
+              "not_found"
+            ],
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "ImFocusResult",
+        "type": "object"
+      },
       "ImMessage": {
         "properties": {
           "message_id": {
@@ -7855,6 +7873,59 @@
           }
         },
         "summary": "List Messages",
+        "tags": [
+          "im"
+        ]
+      }
+    },
+    "/api/im/conversations/{shop_id}/{conversation_id}/open-in-flybird": {
+      "post": {
+        "description": "排在该店队列里执行；该店没在接收时拒绝。",
+        "operationId": "open_in_flybird_api_im_conversations__shop_id___conversation_id__open_in_flybird_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_:.\\-]{1,128}$",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImFocusResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Open In Flybird",
         "tags": [
           "im"
         ]

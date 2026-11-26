@@ -7,7 +7,7 @@
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
@@ -22,11 +22,12 @@ from app.adapter.doudian.errors import EgressUnavailable
 from app.adapter.flybird.page import ImPage
 from app.domain.audit import CallRecord
 from app.domain.im_rules import ImState, StopReason, block_reason
-from app.service import im_history
+from app.service import im_focus, im_history
 from app.service.events import IM_STOPPED, IM_WAIT_CHANGED, SHOP_STATUS_CHANGED, EventBus
-from app.service.im_retry import ShopRetry
+from app.service.im_focus import FocusResult
 from app.service.im_run import Run
 from app.service.im_session import ConvView, ImSession
+from app.service.im_shop import ImStatus, ShopSlot
 from app.service.periodic import SYSTEM_ACTOR, active_shop_ids
 from app.service.shop_runner import ShopRunner
 from app.store import audit_store, shop_store
@@ -46,28 +47,6 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-@dataclass
-class ImStatus:
-    shop_id: int
-    state: ImState
-    since: str
-    next_retry_at: str | None = None
-    last_error: str | None = None
-
-
-class _Shop:
-    def __init__(self, status: ImStatus) -> None:
-        self.status = status
-        self.retry = ShopRetry()
-        self.lock = asyncio.Lock()  # start / stop / restart / reconcile 逐个执行
-        self.task: asyncio.Task | None = None  # 接收中、启动中或在等下次重试
-        self.run: Run | None = None
-
-    @property
-    def id(self) -> int:
-        return self.status.shop_id
-
-
 class ImWatcher:
     def __init__(
         self, engine: Engine, runner: ShopRunner, events: EventBus, browsers: BrowserRegistry,
@@ -85,7 +64,7 @@ class ImWatcher:
         self._clock = clock
         self._sleep = sleep
         self._attach = attach
-        self._shops: dict[int, _Shop] = {}
+        self._shops: dict[int, ShopSlot] = {}
         self._reconciles: set[asyncio.Task] = set()
         self._closing = False
 
@@ -200,13 +179,19 @@ class ImWatcher:
             for shop in shops:
                 self._set(shop, self._blocked(shop.id) or "stopped")
 
+    async def focus(self, shop_id: int, conversation_id: str, *, actor: str) -> FocusResult:
+        """「在飞鸽中回复」：置前该店常驻页窗口并点开会话一次（im_focus）。"""
+        return await im_focus.open_conversation(
+            self._engine, self._runner, shop_id, conversation_id,
+            receiving=partial(self._receiving, shop_id), actor=actor, now=self._now_iso)
+
     def purge_messages(self, now: datetime) -> int:
         """删除超过保留期的飞鸽消息（每日清理调用）。"""
         return im_history.purge(self._engine, now)
 
     # ---- 一家店的循环 ----
 
-    def _launch(self, shop: _Shop, actor: str, offscreen: bool) -> None:
+    def _launch(self, shop: ShopSlot, actor: str, offscreen: bool) -> None:
         if self._closing or (shop.task is not None and not shop.task.done()):
             return
         if blocked := self._blocked(shop.id):
@@ -215,7 +200,7 @@ class ImWatcher:
         self._set(shop, "queued" if self._slots.locked() else "starting")
         shop.task = asyncio.create_task(self._drive(shop, actor, offscreen))
 
-    async def _halt(self, shop: _Shop, reason: StopReason, actor: str) -> None:
+    async def _halt(self, shop: ShopSlot, reason: StopReason, actor: str) -> None:
         if (run := shop.run) is not None and run.committed:  # 让这一轮自己收尾
             run.halted, run.stop_actor = True, actor
             run.request_stop(reason)
@@ -226,7 +211,7 @@ class ImWatcher:
             shop.task = None
         self._set(shop, self._blocked(shop.id) or "stopped")
 
-    async def _drive(self, shop: _Shop, actor: str, offscreen: bool) -> None:
+    async def _drive(self, shop: ShopSlot, actor: str, offscreen: bool) -> None:
         try:
             while (delay := await self._cycle(shop, actor, offscreen)) is not None:
                 await self._sleep(delay)
@@ -236,7 +221,7 @@ class ImWatcher:
             shop.status.last_error = type(e).__name__
             self._set(shop, "stopped")
 
-    async def _cycle(self, shop: _Shop, actor: str, offscreen: bool) -> float | None:
+    async def _cycle(self, shop: ShopSlot, actor: str, offscreen: bool) -> float | None:
         """跑一轮；返回多久后再来一轮，None 表示不再自动重试。"""
         if blocked := self._blocked(shop.id):
             self._set(shop, blocked)
@@ -259,7 +244,7 @@ class ImWatcher:
             shop.run = None
             run.done.set()
 
-    async def _receive(self, shop: _Shop, run: Run, offscreen: bool) -> StopReason:
+    async def _receive(self, shop: ShopSlot, run: Run, offscreen: bool) -> StopReason:
         self._set(shop, "starting")
         try:
             await self._runner.run(
@@ -275,7 +260,7 @@ class ImWatcher:
                 log.warning("im.start_failed", shop_id=shop.id, error=type(e).__name__)
             return "error"
 
-    async def _open(self, shop: _Shop, run: Run, offscreen: bool) -> None:
+    async def _open(self, shop: ShopSlot, run: Run, offscreen: bool) -> None:
         """在该店队列里打开页面并建好会话；返回后页面继续常驻。"""
         run.committed = True
         if self._blocked(shop.id):  # 排队期间开关或状态变了
@@ -313,7 +298,7 @@ class ImWatcher:
         self._set(shop, "running")
         self._audit(shop.id, "im.start", run.actor, "", run, "ok")
 
-    def _settle(self, shop: _Shop, run: Run, result: StopReason) -> float | None:
+    def _settle(self, shop: ShopSlot, run: Run, result: StopReason) -> float | None:
         """页面已关、名额已还：写审计，定下状态与下次重试。"""
         reason = run.close_reason or run.stop_reason or result
         outcome = "error" if reason in _FAILURES else "ok"
@@ -335,9 +320,9 @@ class ImWatcher:
 
     # ---- 内部 ----
 
-    def _shop(self, shop_id: int) -> _Shop:
+    def _shop(self, shop_id: int) -> ShopSlot:
         if shop_id not in self._shops:
-            self._shops[shop_id] = _Shop(ImStatus(shop_id, "stopped", self._now_iso()))
+            self._shops[shop_id] = ShopSlot(ImStatus(shop_id, "stopped", self._now_iso()))
         return self._shops[shop_id]
 
     def _receiving(self, shop_id: int) -> Run | None:
@@ -345,13 +330,13 @@ class ImWatcher:
         run = shop.run if shop else None
         return run if run and run.opened and run.session else None
 
-    def _set(self, shop: _Shop, state: ImState, retry_at: datetime | None = None) -> None:
+    def _set(self, shop: ShopSlot, state: ImState, retry_at: datetime | None = None) -> None:
         status = shop.status
         if status.state != state:
             status.state, status.since = state, self._now_iso()
         status.next_retry_at = retry_at.strftime(_ISO_FMT) if retry_at else None
 
-    def _back_off(self, shop: _Shop, seconds: float) -> None:
+    def _back_off(self, shop: ShopSlot, seconds: float) -> None:
         self._set(shop, "backoff", self._clock() + timedelta(seconds=seconds))
 
     def _now_iso(self) -> str:
