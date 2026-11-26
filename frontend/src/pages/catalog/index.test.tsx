@@ -81,6 +81,25 @@ describe("商品聚合页", () => {
     await waitFor(() => expect(screen.queryByText(/家店未取到/)).not.toBeInTheDocument());
   });
 
+  it("部分店铺计数失败：提示 N 家店未取到，可展开原因", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" }), makeShop({ id: 2, name: "店铺乙" })]),
+      "GET /api/catalog/products": jsonResponse({ items: [product()], total: 1, page: 1, page_size: 50 }),
+      "GET /api/catalog/products/counts": jsonResponse({
+        shops: [
+          { shop_id: 1, source: "upstream", error: null, fetched_at: null, counts: { onsale: 6 } },
+          { shop_id: 2, source: "error", error: "平台接口报错", fetched_at: null, counts: {} },
+        ],
+      }),
+      "GET /api/catalog/products/groups": groups,
+    });
+    renderPage();
+    expect(await screen.findByText("1 家店未取到")).toBeInTheDocument();
+    expect(screen.getByText("合计不含未取到的店铺")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "查看原因" }));
+    expect(screen.getByRole("listitem")).toHaveTextContent("店铺乙：平台接口报错");
+  });
+
   it("点计数卡筛列表：快捷筛选与关键字、排序一起发给后端，换筛选回到第 1 页，再点清除", async () => {
     const fetchMock = mockFetch({
       "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),

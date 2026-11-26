@@ -1,6 +1,8 @@
+import { Alert } from "@/components/arc/alert/alert";
 import { Badge } from "@/components/arc/badge/badge";
 import { ID_COL_WIDTH, TIME_COL_WIDTH } from "@/lib/table-columns";
 import { DataTable, type TableColumn } from "@/components/custom/data-table/data-table";
+import { OrderNoCell } from "@/components/custom/order-no-cell/order-no-cell";
 import type { ListSort } from "@/lib/list-sort";
 import { formatCents } from "@/lib/money-format";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
@@ -25,7 +27,7 @@ const unsettledColumns: TableColumn<UnsettledRow>[] = [
   { key: "shop_name", label: "店铺", sortable: true, width: 100, render: (v) => <span className="cell-ellipsis" title={String(v)}>{String(v)}</span> },
   {
     key: "shop_order_no", label: "订单号", width: ID_COL_WIDTH,
-    render: (v) => <span className={styles.tabular}>{String(v)}</span>,
+    render: (v) => <OrderNoCell value={v as string} />,
   },
   {
     key: "product", label: "商品", width: 200,
@@ -141,7 +143,7 @@ const billColumns: TableColumn<BillRow>[] = [
     sortValue: (row) => (row.amount_status === "pending" ? null : row.amount_cents),
     render: (_, row) =>
       row.amount_status === "pending" ? (
-        <Badge tone="warning" outline>待探明</Badge>
+        <Badge tone="warning" dot outline>待探明</Badge>
       ) : (
         billAmountText(row)
       ),
@@ -157,17 +159,18 @@ export function BillsTable({ shops, days, shopName }: { shops: ShopBills[]; days
   const pending = hasPendingAmount(shops);
   return (
     <div className={styles.bills}>
-      {pending && (
-        <Badge tone="warning" outline>
-          部分账单金额字段待探明：平台字段名未校准，金额显示为 0，拿到首笔账单后校准
-        </Badge>
-      )}
+      {pending && <Alert tone="warning" title="部分账单金额待探明" />}
       {shops.map((shop) => (
         <section key={shop.shop_id} className="section" aria-label={`${shopName(shop.shop_id)} 账单`}>
           <header className={styles.billHeader}>
             <h3 className="section-title">{shopName(shop.shop_id)}</h3>
             {shop.source !== "upstream" ? (
-              <Badge tone="danger" outline>{shop.error ?? "获取失败"}</Badge>
+              <>
+                <Badge tone="danger" dot outline>未取到</Badge>
+                {shop.error && (
+                  <span className={`cell-ellipsis ${styles.billError}`} title={shop.error}>{shop.error}</span>
+                )}
+              </>
             ) : shop.total > 0 ? (
               <Badge tone="neutral" outline>{shop.total} 条</Badge>
             ) : null}

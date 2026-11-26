@@ -22,40 +22,6 @@
 }
 
 
-.countMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
-
-.failList {
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--text-sm);
-}
-
-
-.mono {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--foreground);
-  font: inherit;
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.copied {
-  color: var(--success);
-  font-family: var(--font-body);
-}
-
 .tabular {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

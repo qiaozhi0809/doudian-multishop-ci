@@ -74,7 +74,7 @@ export function priceRange(row: ProductRow): string {
   if (prices.length === 0) return EMPTY_TEXT;
   const low = Math.min(...prices);
   const high = Math.max(...prices);
-  return low === high ? formatCents(low) : `${formatCents(low)} – ${formatCents(high)}`;
+  return low === high ? formatCents(low) : `${formatCents(low)} 至 ${formatCents(high)}`;
 }
 
 /**

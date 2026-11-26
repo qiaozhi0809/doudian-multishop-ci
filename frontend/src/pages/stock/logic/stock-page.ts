@@ -11,7 +11,7 @@ export const STOCK_SORT_KEYS = [
   "shop_name", "total_stock_num", "spot_stock_num", "future_stock_num",
   "total_occupied_stock_num", "total_unoccupied_stock_num", "status", "synced_at",
 ] as const;
-/** 计数卡快捷筛选，与后端 /api/catalog/stock 的 quick 白名单一致；「商品数」卡 = 清除筛选。 */
+/** 计数卡快捷筛选，与后端 /api/catalog/stock 的 quick 白名单一致。 */
 export const STOCK_QUICK_KEYS = ["alarm", "sold_out"] as const;
 export type StockQuick = (typeof STOCK_QUICK_KEYS)[number];
 
