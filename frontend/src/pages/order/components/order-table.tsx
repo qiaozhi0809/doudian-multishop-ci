@@ -3,13 +3,13 @@ import { ID_COL_WIDTH, TIME_COL_WIDTH } from "@/lib/table-columns";
 import { Tooltip } from "@/components/arc/tooltip/tooltip";
 import type { DataColumn } from "@/components/arc/sortable-data-table/sortable-data-table";
 import { DataTable } from "@/components/custom/data-table/data-table";
+import { OrderNoCell } from "@/components/custom/order-no-cell/order-no-cell";
 import type { ListSort } from "@/lib/list-sort";
 import type { components } from "@/lib/api-types";
 import { formatCents } from "@/lib/money-format";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import { itemSummary, localStatusBadge, platformStatusText } from "../logic/order-columns";
 import styles from "../order-page.module.css";
-import { OrderNoCell } from "./order-no-cell";
 import { EMPTY_TEXT } from "@/lib/empty-text";
 
 type OrderRow = components["schemas"]["OrderRow"];
@@ -38,7 +38,7 @@ function LocalStatusCell({ row }: { row: OrderRow }) {
 /** 分页列表：点表头改 URL 里的排序，由服务端排好再分页（默认按支付时间倒序）；商品摘要是长文本，不排序。 */
 const columns: DataColumn<OrderRow>[] = [
   { key: "shop_name", label: "店铺", sortable: true, width: 100, render: (v) => <span className="cell-ellipsis" title={String(v)}>{String(v)}</span> },
-  { key: "order_no", label: "订单号", width: ID_COL_WIDTH, render: (v) => <OrderNoCell value={String(v)} /> },
+  { key: "order_no", label: "订单号", width: ID_COL_WIDTH, render: (v) => <OrderNoCell value={v as string} /> },
   { key: "platform_status", label: "平台状态", sortable: true, width: 106, render: (v) => <span className={styles.muted}>{platformStatusText(v as number | null)}</span> },
   { key: "status", label: "本地状态", sortable: true, width: 106, render: (_, row) => <LocalStatusCell row={row} /> },
   { key: "amount_cents", label: "实付", sortable: true, numeric: true, width: 90, render: (v) => (v === null ? EMPTY_TEXT : formatCents(v as number)) },

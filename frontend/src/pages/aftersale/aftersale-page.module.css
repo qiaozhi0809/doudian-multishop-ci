@@ -30,22 +30,6 @@
 }
 
 
-.countMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
-
-.failList {
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--text-sm);
-}
-
-
 .tabular {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -57,7 +41,7 @@
 
 /* 视图切换按钮里的数量：文字后面隔一点，弱一级的颜色，选中时跟着按钮反白 */
 .viewCount {
-  margin-left: 6px;
+  margin-left: var(--space-1);
   font-variant-numeric: tabular-nums;
   opacity: 0.6;
 }

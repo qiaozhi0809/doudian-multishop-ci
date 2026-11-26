@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Badge } from "@/components/arc/badge/badge";
-import { Button } from "@/components/arc/button/button";
 import { MetricCard } from "@/components/arc/metric-card/metric-card";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
-import { withoutShops } from "@/lib/open-problem-shops";
-import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
+import { LoadError } from "@/components/custom/load-error/load-error";
+import { CountMeta } from "@/components/custom/shop-failure-alert/count-meta";
+import { ShopFailureAlert } from "@/components/custom/shop-failure-alert/shop-failure-alert";
 import {
   PRODUCT_COUNT_ITEMS,
   aggregateProductCounts,
@@ -29,40 +28,12 @@ interface CountsProps {
 
 /** 商品状态计数（平台口径），也是快捷筛选（点卡片筛下方本地列表）。 */
 export function ProductCounts({ loading, error, data, shopName, bannerShopIds, onRetry, cardProps }: CountsProps) {
-  const [expanded, setExpanded] = useState(false);
   if (loading) return <Skeleton label="正在读取商品计数" lines={2} />;
-  if (error || !data) {
-    return (
-      <div className={styles.counts}>
-        <Alert tone="danger" title="读取商品计数失败，请确认本地服务正常后重试" />
-        <div>
-          <Button variant="secondary" size="sm" onClick={onRetry}>
-            重新读取
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (error || !data) return <LoadError size="sm" title="读取商品计数失败，请确认本地服务正常后重试" onRetry={onRetry} />;
   const aggregated = aggregateProductCounts(data);
-  const shownFailures = withoutShops(aggregated.failures, bannerShopIds);
   return (
     <div className={styles.counts}>
-      {shownFailures.length > 0 && (
-        <Alert tone="warning" title={`${shownFailures.length} 家店未取到商品计数`}>
-          <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
-            {expanded ? "收起原因" : "查看原因"}
-          </Button>
-          {expanded && (
-            <ul className={styles.failList}>
-              {shownFailures.map((f) => (
-                <li key={f.shopId}>
-                  {shopName(f.shopId)}：{f.error ?? "原因未知，请稍后重试"}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Alert>
-      )}
+      <ShopFailureAlert failures={aggregated.failures} shopName={shopName} bannerShopIds={bannerShopIds} />
       {aggregated.hasData && (
         <>
           <div className="count-row">
@@ -76,14 +47,7 @@ export function ProductCounts({ loading, error, data, shopName, bannerShopIds, o
               />
             ))}
           </div>
-          <div className={styles.countMeta}>
-            {aggregated.fetchedAt && (
-              <span title={formatBjTime(aggregated.fetchedAt)}>
-                数据时间 {formatBjTimeSmart(aggregated.fetchedAt)}
-              </span>
-            )}
-            {aggregated.failedShopIds.length > 0 && <span>合计不含未取到的店铺</span>}
-          </div>
+          <CountMeta fetchedAt={aggregated.fetchedAt} partial={aggregated.failedShopIds.length > 0} />
         </>
       )}
     </div>

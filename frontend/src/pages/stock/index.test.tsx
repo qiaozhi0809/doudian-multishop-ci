@@ -62,7 +62,7 @@ describe("库存聚合页", () => {
     expect(screen.getByRole("row", { name: /商品 B/ })).toHaveTextContent("预警");
   });
 
-  it("点计数卡筛列表：预警卡带 quick=alarm 发给后端，再点清除；「商品数」卡也清除", async () => {
+  it("点计数卡筛列表：预警卡带 quick=alarm 发给后端，再点清除，换卡直接换筛选", async () => {
     const fetchMock = mockFetch({
       "GET /api/shops": jsonResponse([makeShop({ id: 1 })]),
       "GET /api/catalog/stock": jsonResponse({ items: [stock()], total: 1, page: 1, page_size: 50 }),
@@ -74,7 +74,6 @@ describe("库存聚合页", () => {
     const user = userEvent.setup();
     const alarm = screen.getByRole("button", { name: /库存预警/ });
     expect(alarm).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: /商品数/ })).toHaveAttribute("aria-pressed", "true");
     await user.click(alarm);
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("quick=alarm"));
     expect(screen.getByRole("button", { name: /库存预警/ })).toHaveAttribute("aria-pressed", "true");
@@ -85,8 +84,20 @@ describe("库存聚合页", () => {
     await waitFor(() => expect(screen.getByTestId("where")).not.toHaveTextContent("quick="));
     await user.click(screen.getByRole("button", { name: /售罄/ }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("quick=sold_out"));
-    await user.click(screen.getByRole("button", { name: /商品数/ }));
-    await waitFor(() => expect(screen.getByTestId("where")).not.toHaveTextContent("quick="));
+    await user.click(screen.getByRole("button", { name: /库存预警/ }));
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("quick=alarm"));
+  });
+
+  it("「商品数」卡不对应筛选，不可点", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1 })]),
+      "GET /api/catalog/stock": jsonResponse({ items: [stock()], total: 1, page: 1, page_size: 50 }),
+      "GET /api/catalog/stock/summary": jsonResponse({ total: 1, alarm_count: 0, sold_out_count: 0 }),
+      "GET /api/catalog/stock/warehouses": jsonResponse({ shops: [] }),
+    });
+    renderPage();
+    expect(await screen.findByText("商品数")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /商品数/ })).not.toBeInTheDocument();
   });
 
   it("空列表只显示「没有符合条件的库存记录」", async () => {

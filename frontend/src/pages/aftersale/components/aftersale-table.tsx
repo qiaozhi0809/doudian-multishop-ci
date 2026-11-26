@@ -2,6 +2,7 @@ import { Badge } from "@/components/arc/badge/badge";
 import { ID_COL_WIDTH, TIME_COL_WIDTH } from "@/lib/table-columns";
 import type { DataColumn } from "@/components/arc/sortable-data-table/sortable-data-table";
 import { DataTable } from "@/components/custom/data-table/data-table";
+import { OrderNoCell } from "@/components/custom/order-no-cell/order-no-cell";
 import type { ListSort } from "@/lib/list-sort";
 import { formatCents } from "@/lib/money-format";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
@@ -13,11 +14,11 @@ const columns: DataColumn<AftersaleRow>[] = [
   { key: "shop_name", label: "店铺", sortable: true, width: 100, render: (v) => <span className="cell-ellipsis" title={String(v)}>{String(v)}</span> },
   {
     key: "after_sale_id", label: "售后单号", width: ID_COL_WIDTH,
-    render: (v) => <span className={styles.tabular}>{String(v)}</span>,
+    render: (v) => <OrderNoCell value={v as string} noun="售后单号" />,
   },
   {
     key: "order_no", label: "订单号", width: ID_COL_WIDTH,
-    render: (v) => (v ? <span className={styles.tabular}>{String(v)}</span> : EMPTY_TEXT),
+    render: (v) => <OrderNoCell value={v as string | null} />,
   },
   { key: "type", label: "类型", sortable: true, width: 80, render: (_, row) => typeLabel(row) },
   { key: "status", label: "状态", sortable: true, width: 100, render: (_, row) => statusLabel(row) },
@@ -52,7 +53,7 @@ const columns: DataColumn<AftersaleRow>[] = [
   {
     key: "intervene", label: "平台介入", width: 80,
     render: (_, row) =>
-      row.display.platform_intervene ? <Badge tone="warning">介入</Badge> : EMPTY_TEXT,
+      row.display.platform_intervene ? <Badge tone="warning" dot>介入</Badge> : EMPTY_TEXT,
   },
 ];
 interface AftersaleTableProps {
