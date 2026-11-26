@@ -157,9 +157,23 @@ def test_batch_titles_distinguish_operation(feed, svc):
     feed.handle(LABEL_DONE, {"preview_id": "p2", "mode": "void", "ok": 1, "failed": 0})
     titles = {r["title"]: r["kind"] for r in rows(svc)}
     assert titles == {
-        "发货完成：成功 2，失败 0": "batch_done",
+        "发货完成：成功 2": "batch_done",
         "打印完成：成功 1，失败 2": "batch_failed",
-        "作废面单完成：成功 1，失败 0": "batch_done",
+        "作废面单完成：成功 1": "batch_done",
+    }
+
+
+def test_verifying_and_manual_count_as_follow_up(feed, svc):
+    feed.handle(LABEL_DONE, {"preview_id": "p3", "mode": "obtain", "ok": 12, "failed": 1,
+                             "verifying": 2, "skipped": 0})
+    feed.handle(PRINT_DONE, {"ok": 8, "failed": 0, "manual": 1, "skipped": 0})
+    feed.handle(LABEL_DONE, {"preview_id": "p4", "mode": "obtain", "ok": 1, "failed": 0,
+                             "verifying": 1})
+    titles = {r["title"]: r["kind"] for r in rows(svc)}
+    assert titles == {
+        "打单完成：成功 12，失败 1，待核实 2": "batch_failed",
+        "打印完成：成功 8，需补打 1": "batch_failed",
+        "打单完成：成功 1，待核实 1": "batch_failed",
     }
 
 

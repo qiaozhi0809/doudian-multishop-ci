@@ -74,7 +74,7 @@ def test_店铺类标题逐字一致(kind, count, detail, expected):
 def test_打单标题():
     done = title_for("batch_done", shop_name=None, count=12, detail=None)
     failed = title_for("batch_failed", shop_name=None, count=12, detail="1")
-    assert done == "打单完成：成功 12，失败 0"
+    assert done == "打单完成：成功 12"
     assert failed == "打单完成：成功 12，失败 1"
 
 
@@ -93,6 +93,18 @@ def test_state_key与静默窗口():
 def test_batch_title_names_operation():
     from app.domain.notification_rules import batch_detail
     assert title_for("batch_failed", shop_name=None, count=3,
-                     detail=batch_detail("ship", 1)) == "发货完成：成功 3，失败 1"
+                     detail=batch_detail("ship", failed=1)) == "发货完成：成功 3，失败 1"
     assert title_for("batch_done", shop_name=None, count=2,
-                     detail=batch_detail("print", 0)) == "打印完成：成功 2，失败 0"
+                     detail=batch_detail("print")) == "打印完成：成功 2"
+
+
+def test_batch_title_shows_follow_ups_and_omits_zero_parts():
+    from app.domain.notification_rules import batch_detail
+    assert title_for("batch_failed", shop_name=None, count=12,
+                     detail=batch_detail("obtain", failed=1, verifying=2)
+                     ) == "打单完成：成功 12，失败 1，待核实 2"
+    assert title_for("batch_failed", shop_name=None, count=8,
+                     detail=batch_detail("print", manual=1)) == "打印完成：成功 8，需补打 1"
+    assert title_for("batch_failed", shop_name=None, count=0,
+                     detail=batch_detail("print", failed=2, manual=1)
+                     ) == "打印完成：成功 0，失败 2，需补打 1"

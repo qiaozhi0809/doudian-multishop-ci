@@ -140,10 +140,14 @@ class NotificationFeed:
     def _batch(self, op: str, data: dict[str, Any]) -> None:
         if data.get("simulated"):  # 演练模式没有真实操作
             return
-        failed = int(data.get("failed") or 0)
+        failed, verifying, manual = (
+            int(data.get(k) or 0) for k in ("failed", "verifying", "manual"))
+        # 待核实 / 转手动补打与失败一样需要人工跟进 → 中档
+        follow_up = failed + verifying + manual > 0
         self._n.emit(
-            "batch_failed" if failed > 0 else "batch_done", shop_id=None,
-            count=int(data.get("ok") or 0), detail=batch_detail(op, failed))
+            "batch_failed" if follow_up else "batch_done", shop_id=None,
+            count=int(data.get("ok") or 0),
+            detail=batch_detail(op, failed, verifying, manual))
 
     def _on_sync_result(self, data: dict[str, Any]) -> None:
         self._n.emit(

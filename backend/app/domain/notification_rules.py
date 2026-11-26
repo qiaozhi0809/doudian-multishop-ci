@@ -49,18 +49,23 @@ _SHOP_STATE_TITLES = {
     "risk_paused": "风控暂停",
 }
 
-# 批量操作 → 标题前缀；detail 写成 batch_detail(op, 失败数)，旧格式「失败数」按打单
+# 批量操作 → 标题前缀；detail 写成 batch_detail(...)，旧格式「失败数」按打单
 _BATCH_LABELS = {"obtain": "打单", "fetch_and_ship": "打单发货", "void": "作废面单",
                  "ship": "发货", "print": "打印"}
+# 需人工跟进的几类（为 0 的不写进标题）：失败、打单待核实、打印转手动补打
+_FOLLOW_UP_LABELS = ("失败", "待核实", "需补打")
 
 
-def batch_detail(op: str, failed: int) -> str:
-    return f"{op}:{failed}"
+def batch_detail(op: str, failed: int = 0, verifying: int = 0, manual: int = 0) -> str:
+    return f"{op}:{failed},{verifying},{manual}"
 
 
 def _batch_title(count: int, detail: str | None) -> str:
-    op, _, failed = (detail or "").rpartition(":")
-    return f"{_BATCH_LABELS.get(op, '打单')}完成：成功 {count}，失败 {failed or 0}"
+    op, _, nums = (detail or "").rpartition(":")
+    counts = [int(n) for n in nums.split(",") if n.strip().isdigit()] if nums else []
+    parts = [f"成功 {count}"] + [
+        f"{label} {n}" for label, n in zip(_FOLLOW_UP_LABELS, counts, strict=False) if n > 0]
+    return f"{_BATCH_LABELS.get(op, '打单')}完成：" + "，".join(parts)
 
 
 def state_key(kind_family: KindFamily, shop_id: int) -> str:
