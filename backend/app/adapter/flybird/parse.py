@@ -191,17 +191,50 @@ def _message(data: bytes) -> Message | None:
     return Message(conversation_id, message_id, role, text, sent_at)
 
 
+def _repeated(data: bytes, number: int) -> list[bytes]:
+    return [value for n, value in _fields(data) if n == number and isinstance(value, bytes)]
+
+
+def _chat_messages(bodies: list[bytes]) -> list[Message]:
+    messages = [_message(body) for body in bodies]
+    return [message for message in messages if message is not None]
+
+
 def parse_message_frame(raw: bytes) -> list[Message]:
     try:
         payload = _payload(raw)
         if payload.get(ep.PAYLOAD_CMD) != ep.CMD_MESSAGE:
             return []
         push = dict(_fields(_submessage(payload, ep.PAYLOAD_PUSH)))
-        messages = [
-            _message(value)
-            for number, value in _fields(_submessage(push, ep.CMD_MESSAGE))
-            if number == ep.PUSH_MESSAGE and isinstance(value, bytes)
-        ]
+        return _chat_messages(_repeated(_submessage(push, ep.CMD_MESSAGE), ep.PUSH_MESSAGE))
     except _Malformed:
         return []
-    return [message for message in messages if message is not None]
+
+
+# ---- 增量拉取响应 ----
+
+
+def is_msg_pull_url(url: str) -> bool:
+    parts = urlsplit(url)
+    return parts.hostname == ep.MSG_PULL_HOST and parts.path in ep.MSG_PULL_PATHS
+
+
+def parse_message_pull(body: bytes) -> list[Message]:
+    """页面自己拉到的增量消息（get_user_message 响应体）；解析不了返回 []。"""
+    try:
+        payload = dict(_fields(body))
+        if payload.get(ep.PAYLOAD_CMD) != ep.CMD_PULL:
+            return []
+        push = dict(_fields(_submessage(payload, ep.PAYLOAD_PUSH)))
+        result = _submessage(push, ep.CMD_PULL)
+        bodies = [
+            message
+            for item in _repeated(result, ep.PULL_CONVERSATIONS)
+            for conv in _repeated(item, ep.PULL_CONV)
+            for message in _repeated(conv, ep.PULL_CONV_MESSAGES)
+        ]
+        for extra in _repeated(result, ep.PULL_EXTRA):
+            bodies.extend(_repeated(extra, ep.PULL_EXTRA_MESSAGES))
+        return _chat_messages(bodies)
+    except _Malformed:
+        return []

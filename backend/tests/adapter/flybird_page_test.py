@@ -13,6 +13,7 @@ from tests.adapter.flybird_parse_test import (
     load,
     message_body,
     message_frame,
+    pull_body,
 )
 
 WORKSPACE_URL = "https://im.jinritemai.com/pc_seller_v2/main/workspace"
@@ -48,6 +49,12 @@ class FakeResponse:
         self.reads = 0
 
     async def json(self):
+        self.reads += 1
+        if self._error:
+            raise self._error
+        return self._body
+
+    async def body(self):
         self.reads += 1
         if self._error:
             raise self._error
@@ -324,3 +331,34 @@ async def test_does_not_close_context():
     await page.user_closes()
 
     assert "close" not in names(context)
+
+
+# ---- 增量拉取 ----
+
+PULL_URL = "https://fxg.jinritemai.com/pigeon_im/v3/message/get_user_message?PIGEON_BIZ_TYPE=2"
+
+
+async def test_pull_response_messages_forwarded():
+    _, page, sinks = await attach(FakeContext())
+
+    await page.emit("response", FakeResponse(PULL_URL, pull_body([message_body()])))
+
+    assert sinks.received == [
+        ("messages", [Message("1001", "msg-test-1", "buyer", "在吗", SENT_ISO)]),
+    ]
+
+
+async def test_empty_pull_response_not_forwarded():
+    _, page, sinks = await attach(FakeContext())
+
+    await page.emit("response", FakeResponse(PULL_URL, pull_body()))
+
+    assert sinks.received == []
+
+
+async def test_pull_body_unavailable_ignored():
+    _, page, sinks = await attach(FakeContext())
+
+    await page.emit("response", FakeResponse(PULL_URL, error=RuntimeError("页面已关闭")))
+
+    assert sinks.received == []

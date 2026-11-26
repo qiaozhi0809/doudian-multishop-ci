@@ -12,9 +12,11 @@ from app.adapter.flybird.parse import (
     Message,
     frame_cmd,
     is_conv_list_url,
+    is_msg_pull_url,
     is_new_message_frame,
     parse_conv_list,
     parse_message_frame,
+    parse_message_pull,
 )
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "flybird"
@@ -232,3 +234,55 @@ def test_message_repr_hides_text():
     assert "在吗" not in repr(message)
     assert "在吗" not in str(message)
     assert "msg-test-1" in repr(message)
+
+
+# ---- 增量拉取响应（get_user_message） ----
+
+PULL_PATH = "/pigeon_im/v3/message/get_user_message"
+
+
+def pull_body(*conversations: list[bytes], extra: list[bytes] = (), cmd: int = 12048) -> bytes:
+    """响应体：{1: cmd, 6: {cmd: {1: [{1: 游标, 2: {1: 会话, 2: 消息...}}], 2: {1: 消息...}}}}。"""
+    items = b"".join(
+        pb(1, pb(1, 99) + pb(2, pb(1, 1001) + b"".join(pb(2, body) for body in bodies)))
+        for bodies in conversations
+    )
+    if extra:
+        items += pb(2, b"".join(pb(1, body) for body in extra))
+    return pb(1, cmd) + pb(2, 10068) + pb(6, pb(cmd, items))
+
+
+def test_msg_pull_url_requires_fxg_host_and_path():
+    assert is_msg_pull_url(f"https://fxg.jinritemai.com{PULL_PATH}?PIGEON_BIZ_TYPE=2")
+    assert not is_msg_pull_url(f"https://pigeon.jinritemai.com{PULL_PATH}")
+    assert not is_msg_pull_url("https://fxg.jinritemai.com/pigeon_im/v1/message/get_by_conversation")
+
+
+def test_parse_message_pull_buyer_messages_across_conversations():
+    body = pull_body(
+        [message_body(), message_body(message_id="msg-test-2", text="还在吗")],
+        [message_body(message_id="msg-test-3", conversation=1002, role="2", text="在的")],
+    )
+    got = parse_message_pull(body)
+    assert [(m.conversation_id, m.message_id, m.sender_role, m.text) for m in got] == [
+        ("1001", "msg-test-1", "buyer", "在吗"),
+        ("1001", "msg-test-2", "buyer", "还在吗"),
+        ("1002", "msg-test-3", "agent", "在的"),
+    ]
+    assert got[0].sent_at == SENT_ISO
+
+
+def test_parse_message_pull_drops_system_types_in_extra_group():
+    body = pull_body([message_body()], extra=[message_body(message_id="cmd-1", msg_type=50002)])
+    assert [m.message_id for m in parse_message_pull(body)] == ["msg-test-1"]
+
+
+def test_parse_message_pull_empty_result():
+    assert parse_message_pull(pb(1, 12048) + pb(6, pb(12048, b""))) == []
+
+
+@pytest.mark.parametrize(
+    "body", [b"", b"\xff\xff", pb(1, 500), pull_body([message_body()], cmd=500)]
+)
+def test_parse_message_pull_bad_or_other_body_returns_empty(body):
+    assert parse_message_pull(body) == []

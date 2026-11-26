@@ -46,6 +46,17 @@ EXT_KEY = 1
 EXT_VALUE = 2
 CHAT_MSG_TYPE = 1000  # 其他类型是系统命令
 
+# 增量拉取（§2）：页面自己每 30 秒、以及收到 504 通知后请求；响应体与业务帧 payload 同构
+# （字段 1 = cmd 12048，字段 6 = {12048: {...}}）。长连接断开期间与重连后的消息只从这里来
+MSG_PULL_HOST = "fxg.jinritemai.com"
+MSG_PULL_PATHS = frozenset({"/pigeon_im/v3/message/get_user_message"})
+CMD_PULL = 12048
+PULL_CONVERSATIONS = 1  # 重复：{1: 游标, 2: 会话}
+PULL_CONV = 2
+PULL_CONV_MESSAGES = 2  # 会话里重复的消息体，字段同 MSG_FIELDS
+PULL_EXTRA = 2  # 另一组：{1: 重复的消息体}，实测为系统命令
+PULL_EXTRA_MESSAGES = 1
+
 # 发送方：扩展键 sender_role；没有该键是平台消息
 ROLE_EXT_KEY = "sender_role"
 ROLE_BY_VALUE = {"1": "buyer", "2": "agent", "4": "robot"}

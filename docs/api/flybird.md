@@ -30,7 +30,7 @@ GET https://pigeon.jinritemai.com/chat/api/backstage/conversation/get_current_co
 | 用途 | 路径 | 何时出现 |
 |---|---|---|
 | 初次加载历史 | `POST fxg.jinritemai.com/pigeon_im/v1/message/get_message_by_init` | 加载时 |
-| 增量拉取 | `POST fxg.jinritemai.com/pigeon_im/v3/message/get_user_message` | **每 30 秒一次**（三个收件箱各一次），也在收到通知帧后立即拉 |
+| 增量拉取 | `POST fxg.jinritemai.com/pigeon_im/v3/message/get_user_message` | **每 30 秒一次**（三个收件箱各一次），也在收到 504 通知后立即拉；响应体结构见 §3「增量拉取响应」 |
 | 按会话取 | `POST fxg.jinritemai.com/pigeon_im/v1/message/get_by_conversation` | 打开会话时 |
 | 标记已读 | `POST fxg.jinritemai.com/pigeon_im/v3/conversation/mark_read` | 长连接上的已读请求没有回应时的兜底（见 §4） |
 | 会话打开 | `POST fxg.jinritemai.com/pigeon_im/v2/conversation/create` | 自动打开会话时 |
@@ -92,6 +92,15 @@ wss://ws.fxg.jinritemai.com/ws/v2?token=<token>&aid=1383&fpid=92&device_id=...&a
 
 已读通知：类型 50001、扩展键 `s:command_type=1`，正文 JSON 含 `read_index`、`read_badge_count`、`conv_unread_union`，发送方是**做了已读的那一方**。
 
+### 增量拉取响应（冒烟实测 2026-11-26）
+
+`get_user_message` 的响应体与业务帧 payload 同构：字段 1 = cmd **12048**，字段 6 = `{12048: {...}}`，其中：
+
+- 字段 1（重复）：`{1: 游标, 2: {1: 会话 short ID, 2: 消息体（重复）}}`，消息体字段与 cmd 500 完全相同（含扩展键 `sender_role`，另有买家昵称 `uname`）
+- 字段 2：`{1: 消息体（重复）}`，实测都是系统命令（类型 50002）
+
+**哪些消息只从这里来**：长连接因已读拦截断开期间、以及重连之后的买家消息，服务端只推 504（类型 58002 或 50013，不带正文），正文要靠页面随后的拉取。新会话人工接入前的第一条也是这样。所以只听 cmd 500 会漏消息，必须同时读页面自己收到的拉取响应。
+
 ### 平台等待提醒（payload 编码 `json`）
 
 ```
@@ -113,7 +122,7 @@ wss://ws.fxg.jinritemai.com/ws/v2?token=<token>&aid=1383&fpid=92&device_id=...&a
   1. 页面加载前注入脚本，包装 `WebSocket.prototype.send`（用 `Proxy`，`toString` 仍显示原生），只丢掉发往 `ws.fxg.jinritemai.com`、cmd 为 2002 的帧；
   2. 页面等不到回执，约 3 秒后改用 HTTP `pigeon_im/v3/conversation/mark_read` 兜底（连续两次），用 Playwright `context.route` 直接 `abort`。
   3. 结果：服务端没有推已读通知，消息保持未读。
-- **副作用（所有者接受）**：每来一条买家消息，页面会主动断开长连接，约 12 秒后重连；断开期间靠 30 秒拉取补上，不丢消息。
+- **副作用（所有者接受）**：每来一条买家消息，页面会主动断开长连接，3 到 12 秒后重连；之后的消息走 504 通知 + 页面拉取，本系统读拉取响应补上（§3），不丢消息。
 - 输入状态（cmd 2031）同样拦掉，**未单独验证页面对此的反应**，在实施冒烟里确认。
 - Playwright `page.route_web_socket` **不能用**：接管后页面不再建立长连接，只剩 30 秒拉取。
 

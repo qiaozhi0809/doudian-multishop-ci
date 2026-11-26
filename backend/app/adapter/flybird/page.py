@@ -15,8 +15,10 @@ from app.adapter.flybird.parse import (
     ConvListResult,
     Message,
     is_conv_list_url,
+    is_msg_pull_url,
     parse_conv_list,
     parse_message_frame,
+    parse_message_pull,
 )
 
 FrameSink = Callable[[bytes], None]
@@ -78,6 +80,9 @@ class ImPage:
             self._on_messages(messages)
 
     async def _read_response(self, response: Response) -> None:
+        if is_msg_pull_url(response.url):
+            await self._read_pull(response)
+            return
         if not is_conv_list_url(response.url):
             return
         try:
@@ -85,3 +90,13 @@ class ImPage:
         except Exception:  # noqa: BLE001 - 非 JSON，或页面刷新、关闭时正文已取不到
             return
         self._on_list(parse_conv_list(body))
+
+    async def _read_pull(self, response: Response) -> None:
+        """长连接断开期间与重连后的消息只经页面自己的增量拉取到达（flybird.md §4）。"""
+        try:
+            body = await response.body()
+        except Exception:  # noqa: BLE001 - 页面刷新、关闭时正文已取不到
+            return
+        messages = parse_message_pull(body)
+        if messages:
+            self._on_messages(messages)
