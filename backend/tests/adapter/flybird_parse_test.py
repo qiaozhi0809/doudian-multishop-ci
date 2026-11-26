@@ -65,6 +65,7 @@ def message_body(
     text: str | bytes | None = "在吗",
     role: str | None = "1",
     sent_ms: int | None = SENT_MS,
+    uname: str | bytes | None = None,
 ) -> bytes:
     """cmd 500 消息体；传 None 表示不带该字段。"""
     fields = [(3, message_id), (5, conversation), (6, msg_type), (8, text), (10, sent_ms)]
@@ -72,6 +73,8 @@ def message_body(
     body += pb(9, pb(1, "other_key") + pb(2, "x"))
     if role is not None:
         body += pb(9, pb(1, "sender_role") + pb(2, role))
+    if uname is not None:
+        body += pb(9, pb(1, "uname") + pb(2, uname))
     return body
 
 
@@ -236,6 +239,38 @@ def test_message_repr_hides_text():
     assert "msg-test-1" in repr(message)
 
 
+# ---- 买家昵称（扩展键 uname） ----
+
+
+def test_buyer_name_from_uname_for_buyer_only():
+    raw = message_frame(
+        message_body(message_id="msg-test-1", uname="测试买家"),
+        message_body(message_id="msg-test-2", uname="测试客服", role="2"),
+        message_body(message_id="msg-test-3", uname="测试机器人", role="4"),
+        message_body(message_id="msg-test-4", uname="测试平台", role=None),
+    )
+    assert [m.buyer_name for m in parse_message_frame(raw)] == ["测试买家", None, None, None]
+
+
+def test_buyer_name_independent_of_ext_order():
+    body = message_body(role=None, uname="测试买家") + pb(9, pb(1, "sender_role") + pb(2, "1"))
+    [message] = parse_message_frame(message_frame(body))
+    assert message.buyer_name == "测试买家"
+
+
+@pytest.mark.parametrize("uname", [None, "", b"\xff\xfe"])
+def test_buyer_name_missing_or_unreadable_keeps_message(uname):
+    [message] = parse_message_frame(message_frame(message_body(uname=uname)))
+    assert (message.text, message.buyer_name) == ("在吗", None)
+
+
+def test_buyer_name_hidden_in_repr():
+    [message] = parse_message_frame(message_frame(message_body(uname="测试买家")))
+    assert message.buyer_name == "测试买家"
+    assert "测试买家" not in repr(message)
+    assert "测试买家" not in str(message)
+
+
 # ---- 增量拉取响应（get_user_message） ----
 
 PULL_PATH = "/pigeon_im/v3/message/get_user_message"
@@ -270,6 +305,11 @@ def test_parse_message_pull_buyer_messages_across_conversations():
         ("1002", "msg-test-3", "agent", "在的"),
     ]
     assert got[0].sent_at == SENT_ISO
+
+
+def test_parse_message_pull_carries_buyer_name():
+    [message] = parse_message_pull(pull_body([message_body(uname="测试买家")]))
+    assert message.buyer_name == "测试买家"
 
 
 def test_parse_message_pull_drops_system_types_in_extra_group():

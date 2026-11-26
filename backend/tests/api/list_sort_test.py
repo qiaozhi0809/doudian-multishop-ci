@@ -5,6 +5,7 @@ from typing import get_args
 import pytest
 
 from app.api import list_sort
+from app.domain import im_view_rules
 from app.store import (
     aftersale_store,
     catalog_store,
@@ -38,6 +39,11 @@ LISTS = [
 ])
 def test_whitelist_matches_store_mapping(literal, mapping):
     assert set(get_args(literal)) == set(mapping)
+
+
+def test_im_whitelist_matches_view_rules():
+    assert set(get_args(list_sort.ImConversationSort)) == set(im_view_rules.SORT_KEYS)
+    assert set(get_args(list_sort.ImQuick)) == set(im_view_rules.QUICK_FILTERS)
 
 
 @pytest.mark.parametrize("path", LISTS)

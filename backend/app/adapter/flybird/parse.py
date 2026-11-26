@@ -14,6 +14,7 @@ from app.shared.time_bj import parse_platform_time
 SenderRole = Literal["buyer", "agent", "robot", "platform"]
 
 _PLATFORM: SenderRole = "platform"
+_BUYER: SenderRole = "buyer"
 _NO_CODE = -1  # 响应里没有可用的 code：按失败处理
 
 # protobuf wire type
@@ -40,6 +41,7 @@ class Message:
     sender_role: SenderRole
     text: str = field(repr=False)  # 正文不进日志
     sent_at: str
+    buyer_name: str | None = field(default=None, repr=False)  # 只有买家消息带；不入库、不进日志
 
 
 class _Malformed(ValueError):
@@ -172,14 +174,14 @@ def _sent_at(value: int | bytes | None) -> str | None:
 def _message(data: bytes) -> Message | None:
     """单条消息体；不是聊天消息或缺字段返回 None。"""
     fields: _Fields = {}
-    role = _PLATFORM
+    ext: dict[str | None, str | None] = {}
     for number, value in _fields(data):
         if number != ep.MSG_FIELDS["ext"]:
             fields[number] = value
         elif isinstance(value, bytes):
             pair = dict(_fields(value))
-            if _text(pair.get(ep.EXT_KEY)) == ep.ROLE_EXT_KEY:
-                role = ep.ROLE_BY_VALUE.get(_text(pair.get(ep.EXT_VALUE)), _PLATFORM)
+            ext[_text(pair.get(ep.EXT_KEY))] = _text(pair.get(ep.EXT_VALUE))
+    role = ep.ROLE_BY_VALUE.get(ext.get(ep.ROLE_EXT_KEY), _PLATFORM)
     if fields.get(ep.MSG_FIELDS["type"]) != ep.CHAT_MSG_TYPE:
         return None
     conversation_id = _wire_id(fields.get(ep.MSG_FIELDS["conversation_id"]))
@@ -188,7 +190,8 @@ def _message(data: bytes) -> Message | None:
     sent_at = _sent_at(fields.get(ep.MSG_FIELDS["sent_at_ms"]))
     if conversation_id is None or message_id is None or text is None or sent_at is None:
         return None
-    return Message(conversation_id, message_id, role, text, sent_at)
+    buyer_name = ext.get(ep.BUYER_NAME_EXT_KEY) if role == _BUYER else None
+    return Message(conversation_id, message_id, role, text, sent_at, buyer_name or None)
 
 
 def _repeated(data: bytes, number: int) -> list[bytes]:

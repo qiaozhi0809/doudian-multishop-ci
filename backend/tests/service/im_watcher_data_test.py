@@ -1,5 +1,6 @@
 """飞鸽常驻页的数据：打开期间的回调不丢、历史基线、消息存库、审计。"""
 
+from dataclasses import replace
 from datetime import timedelta
 
 import pytest
@@ -78,6 +79,22 @@ async def test_save_failure_logs_count_only_and_keeps_running(rig, monkeypatch):
     assert (failed["shop_id"], failed["count"]) == (rig.shop_id, 2)
     assert "在吗" not in str(logs)
     assert rig.state() == "running"
+
+
+async def test_buyer_name_stays_in_memory(rig):
+    with capture_logs() as logs:
+        await rig.start()
+        rig.attach.pages[0].on_messages([replace(msg("msg-test-1"), buyer_name="测试买家")])
+        await until(lambda: rig.messages())
+        assert rig.watcher.snapshot(rig.shop_id)[0].buyer_name == "测试买家"
+        await rig.watcher.stop(rig.shop_id, reason="ineligible", actor=ADMIN)
+
+    assert "测试买家" not in str(rig.messages()) + str(logs) + str(rig.published)
+    assert "测试买家" not in str(rig.audits("im.start") + rig.audits("im.stop"))
+
+    await rig.start()  # 重启后从库里读回的历史没有昵称
+    view = rig.watcher.snapshot(rig.shop_id)[0]
+    assert (view.conversation_id, view.buyer_name) == ("1001", None)
 
 
 async def test_history_is_loaded_as_baseline(rig):

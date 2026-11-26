@@ -60,6 +60,8 @@ PULL_EXTRA_MESSAGES = 1
 # 发送方：扩展键 sender_role；没有该键是平台消息
 ROLE_EXT_KEY = "sender_role"
 ROLE_BY_VALUE = {"1": "buyer", "2": "agent", "4": "robot"}
+# 买家昵称：买家消息的扩展键（推送与拉取都有）。个人信息，只留在内存
+BUYER_NAME_EXT_KEY = "uname"
 
 # 平台等待提醒（§3）：只记录结构，不作为计时来源
 ATTENTION_SERVICE = 1
