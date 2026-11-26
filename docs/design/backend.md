@@ -408,6 +408,7 @@ class Signer(Protocol):
 |---|---|
 | 浏览器 profile | 每店一个持久化用户目录 `data/profiles/<shop_id>/`（5.1），cookie 与登录态互不串号 |
 | 出口方式 | `direct`（商家自有宽带直连）或 `proxy`（独享静态 IP）；**不使用轮换代理池** |
+| 飞鸽常驻页 | 经浏览器登记表（`Purpose.IM`，24 小时到期即每日重启）、`launch_cloak` 与该店出口打开；启动经 `ShopRunner`；扫码与抓取前经 `close_shop` 让出资料目录。只读，见 [flybird.md](../api/flybird.md) |
 | 浏览器 | 统一使用 CloakBrowser 定制 Chromium（`cloakbrowser==0.3.30`，Chromium 146）；二进制随程序目录（`backend/browser/`，**不放 `%LOCALAPPDATA%`**——Windows 会拒绝执行该目录下的 exe）；每店固定指纹种子存 `profiles/<shop_id>/.cloak-seed` |
 | 代理协议 | 一律按 `http://账号:密码@主机:端口` 配置。CloakBrowser（Chromium 内核）不支持带账号密码的 SOCKS5，扫码浏览器无法使用；带凭证的 `socks5://` 在配置时即拒绝 |
 | 粘贴导入 | 出口设置可直接粘贴代理商格式 `IP\|端口\|账号\|密码\|到期日`，解析为 `http://` URL 与到期日 |
@@ -451,7 +452,7 @@ cookie、订单数据等仍只存本机。
 
 | 项 | 规则 |
 |---|---|
-| 登记 | 扫码（`login`）、同步收款信息（`scrape`）、飞鸽只读（`im`，预留）都经 `BrowserRegistry.open()` / `open_cloak()` 启动（含非 CloakBrowser 的系统浏览器扫码分支）。**先登记后启动**，按店铺目录登记用途、浏览器主进程 pid、启动时间、最长存活时间；退出 `async with` 即关闭并注销。同一店铺目录已登记时直接报「资料目录正被占用」，不再起第二个 |
+| 登记 | 扫码（`login`）、同步收款信息（`scrape`）、飞鸽只读（`im`）都经 `BrowserRegistry.open()` / `open_cloak()` 启动（含非 CloakBrowser 的系统浏览器扫码分支）。**先登记后启动**，按店铺目录登记用途、浏览器主进程 pid、启动时间、最长存活时间；退出 `async with` 即关闭并注销。同一店铺目录已登记时直接报「资料目录正被占用」，不再起第二个 |
 | 最长存活 | 由最坏耗时推导（`browser_timing.py`），不会各改各的：`login` = max(10 分钟, 导航 30 秒 + 扫码等待 + 加载 10 秒 + 余量 120 秒)，按本次扫码超时计算；`scrape` = max(2 分钟, 3×(45+8)+4 = 163 秒 + 余量 120 秒) = 283 秒；`im` 24 小时（常驻，到期由巡检关闭，持有方重新打开，即每天重启一次）。扫码窗口被系统关闭时按关闭原因提示（超时、被让出、后台退出），而不是「浏览器已关闭」 |
 | 进程身份 | 登记 (pid, 创建时间, `--user-data-dir`)。查活与强杀前都重新核对，pid 被复用给别的进程（含用户自己的 Edge/Chrome）时按「已不在」处理，**绝不去杀** |
 | 关闭 | `ctx.close()` 限时 15 秒；超时、或关完主进程仍在 → 结束整棵进程树：先挂起主进程（防止重新拉起子进程），按快照逐个结束，仍存活的逐个兜底（Windows 用不带 `/T` 的 `taskkill /PID <它> /F`），主进程最终没杀掉就恢复运行（不留在挂起状态）；最后补杀漏网子进程，条件是父进程为刚杀掉的某个进程、创建时间不早于**该父进程**、命令行带同一个 `--user-data-dir`（Windows 上 ppid 不随父进程退出更新、pid 会被复用，宁可漏杀不可误杀）；`kill` 抛 AccessDenied 时 Windows 仍走 taskkill 兜底。关闭中途出错也一定注销并回调 `on_close`；`close_all` 并行关闭 |
@@ -469,26 +470,31 @@ cookie、订单数据等仍只存本机。
 
 ### 5.18 通知中心（`service/notifications.py`、`service/notification_feed.py`、`api/notification.py`）
 
-设计见 [通知中心设计](../superpowers/specs/2026-11-26-notification-center-design.md)。两类通知：**事件类**（一次性，`state_key` 为空）与**状态类**（登录失效、出口异常、风控暂停、临近超时；每店每类至多一条未解决记录，恢复时写 `resolved_at`）。档位、标题、跳转链接都在 `domain/notification_rules.py`（纯函数）：强 = 新售后、登录失效、出口异常（不通 / 变化 / 重复）、风控暂停、临近超时；中 = 新订单、批量操作有失败或待核实或转手动补打、同步失败；弱 = 批量全部成功、同步完成、对账完成、已恢复。
+设计见 [通知中心设计](../superpowers/specs/2026-11-26-notification-center-design.md)。两类通知：**事件类**（一次性，`state_key` 为空）与**状态类**（登录失效、出口异常、风控暂停、临近超时、飞鸽等待超时；每店每类至多一条未解决记录，恢复时写 `resolved_at`）。档位、标题、跳转链接都在 `domain/notification_rules.py`（纯函数）：强 = 新售后、登录失效、出口异常（不通 / 变化 / 重复）、风控暂停、临近超时、飞鸽等待超时；中 = 新订单、批量操作有失败或待核实或转手动补打、同步失败、飞鸽新消息、飞鸽消息停止接收；弱 = 批量全部成功、同步完成、对账完成、已恢复。
 
 **`NotificationService`** 是唯一的写入口，写库后发 `notification` SSE 事件：
 
-- `emit(kind, ...)`：事件类。同店同类（同步类按同步类型、批量类不合并）最近一条仍未读的通知累加 `count` 与标题，不新增；新订单 / 新售后合并后数量变多仍 `alert`（又来了新单，前端按 `id:count` 去重），其余合并不再响铃。
+- `emit(kind, ...)`：事件类。同店同类（同步类按同步类型、批量类不合并）最近一条仍未读的通知累加 `count` 与标题，不新增；新订单 / 新售后 / 飞鸽新消息合并后数量变多仍 `alert`（又来了新单或新消息，前端按 `id:count` 去重），其余合并不再响铃。
 - `raise_state(family, kind, ..., link=None)`：状态类。无未解决记录则新建并提醒；已有则只更新正文、链接与时间，内容（种类、标题、正文、数量、链接）都没变时什么都不做（不改时间、不发事件）。恢复后 30 分钟内再犯，重开原记录（清 `resolved_at`），不响铃、不写新的「已恢复」。
 - `resolve_state(family, ...)`：置 `resolved_at`；首次恢复写一条弱档「已恢复」（`recovered_notified_at` 标记已写过）。
-- `summary()`：未读数 + 未解决强状态按店分组（一店一行，`problems` 列出该店每个问题及其链接）。未读数不含未解决的状态类（横条 / 待处理已代表它们，点它们不标已读），解决后照常计入。
+- `summary()`：未读数 + 未解决强状态按店分组（一店一行，`problems` 列出该店每个问题及其链接）。未读数不含未解决的强状态（横条 / 待处理已代表它们，点它们不标已读），解决后照常计入；状态类若改为中档（如飞鸽等待超时），不上横条，照常计入未读。
 - `purge(now)`：删已读超过 30 天的事件类；挂在每日快照之后，未解决的状态类永不清理。
 
 **`NotificationFeed`** 在 lifespan 里订阅事件总线（订阅队列放大到 2000），把现有事件翻译成上面的调用，业务服务基本不直接写通知：
 
 | 事件 | 翻译 |
 |---|---|
-| `shop_status_changed` `shop_login_failed` | 按库里该店当前状态对账：登录失效（有过会话的店才算）、出口异常（正文写具体原因，不写 IP）、风控暂停；状态恢复则解决；店铺停用 / 删除则连同临近超时一起解决 |
+| `shop_status_changed` `shop_login_failed` | 按库里该店当前状态对账：登录失效（有过会话的店才算）、出口异常（正文写具体原因，不写 IP）、风控暂停；状态恢复则解决；店铺停用 / 删除则连同临近超时、飞鸽等待超时一起解决 |
 | `ship_deadline_warning` | 按店 `deadline:{shop}` 状态类（停用店的订单不计）；该店数量为 0 或不再出现则恢复；该店有已超时订单（`shop_overdue`）时链接为 `quick=ship_delay`，否则 `quick=exp_ship`，变化时更新 |
 | `label_done` `ship_done` `print_done` | 批量结果：有失败 / 待核实 / 需补打为中档 `batch_failed`，否则弱档 `batch_done`；演练模式（`simulated`）不写 |
 | `reconcile_done` | 弱档对账完成；全部店失败时不写 |
 | `orders_new` `aftersales_new` | 新订单（中）/ 新售后（强），按店合并 |
 | `sync_result` | 仅手动同步触发：成功弱档、失败中档（正文带失败原因）；定时同步成功不写 |
+| `im_unread_changed` | `new > 0` 时中档 `new_message`（数量为 `new`），按店合并；只有待回复数变化不写 |
+| `im_wait_changed` | `overdue > 0` 时按店 `im_wait:{shop}` 强状态 `im_waiting`（数量为超 3 分钟未回复的会话数），链接带 `quick=overdue`；为 0 则解决。档位可在 `LEVEL_BY_KIND` 改为中 |
+| `im_stopped` | 中档 `im_stopped`，标题带停止状态（`domain/im_rules.STATE_LABELS`） |
+
+飞鸽三个事件的载荷只有店铺、数量与状态，通知里没有消息内容与买家昵称。
 
 事件处理在工作线程执行，单个事件出错只记日志，循环不退出。启动时（feed 开始订阅后）在工作线程对每个店铺对账一次（`reconcile_all`），补上升级前已有的、或停机期间丢了事件的店铺问题。
 

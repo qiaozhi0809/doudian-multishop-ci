@@ -8,7 +8,7 @@ SHOP_ROW_KEYS = {
     "id", "name", "status", "health", "expires_at", "paused_reason", "egress_mode",
     "proxy_display", "egress_ip", "egress_ip_pending", "egress_status", "proxy_expires_at",
     "ready_for_label", "not_ready_reasons", "entity", "shop_no", "admin_name", "shop_name",
-    "platform_shop_id", "bank_name", "bank_tail",
+    "platform_shop_id", "bank_name", "bank_tail", "im_enabled",
 }
 TOKEN_A = "tok_" + "a" * 8
 
@@ -54,6 +54,18 @@ def test_create_and_patch_shop(api):
         "disabled")
     assert api.client.patch(f"/api/shops/{sid}", json={"enabled": True}).json()["status"] == (
         "needs_login")
+
+
+def test_patch_im_enabled_roundtrip(api):
+    sid = api.new_shop(ip_n=None)
+    assert api.shop(sid)["im_enabled"] is False  # 开关默认关
+    r = api.client.patch(f"/api/shops/{sid}", json={"im_enabled": True})
+    assert r.status_code == 200 and r.json()["im_enabled"] is True
+    # 省略该字段 = 不改
+    assert api.client.patch(f"/api/shops/{sid}", json={"name": "改名"}).json()["im_enabled"] is True
+    assert api.client.patch(f"/api/shops/{sid}", json={"im_enabled": False}).json()[
+        "im_enabled"] is False
+    assert api.shop(sid)["im_enabled"] is False
 
 
 def test_create_and_patch_validation(api):

@@ -36,6 +36,8 @@ shop = sa.Table(
     sa.Column("updated_at", _NOW, nullable=False),
     # 迁移 0008：代理信息只存在 proxy_pool，shop 只记引用
     sa.Column("proxy_pool_id", sa.Integer, sa.ForeignKey("proxy_pool.id")),
+    # 迁移 0012：接收飞鸽消息开关，默认关
+    sa.Column("im_enabled", sa.Integer, nullable=False, server_default="0"),
 )
 sa.Index(
     "uq_shop_direct",

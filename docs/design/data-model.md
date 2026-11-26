@@ -57,6 +57,7 @@ CREATE TABLE shop (
   egress_ip_pending TEXT,                   -- changed / duplicate 时检查到的新 IP，人工确认后转正
   paused_reason TEXT,                       -- 风控暂停原因（如 risk_blocked:602502151）；NULL = 未暂停
   paused_at     TEXT,
+  im_enabled    INTEGER NOT NULL DEFAULT 0,  -- 接收飞鸽消息开关，默认关（迁移 0012）
   created_at    TEXT NOT NULL,
   updated_at    TEXT NOT NULL
 );
@@ -476,6 +477,21 @@ CREATE TABLE sync_baseline (
   established_at  TEXT NOT NULL,
   PRIMARY KEY (shop_id, kind)
 );
+
+-- ㉕ 飞鸽消息（只读采集；迁移 0012）。正文只存本表，按 captured_at 保留 30 天
+CREATE TABLE im_message (
+  id              INTEGER PRIMARY KEY,
+  shop_id         INTEGER NOT NULL REFERENCES shop(id),
+  conversation_id TEXT NOT NULL,
+  message_id      TEXT NOT NULL,
+  sender_role     TEXT NOT NULL,       -- buyer / agent / robot / platform
+  text            TEXT NOT NULL,
+  sent_at         TEXT NOT NULL,
+  captured_at     TEXT NOT NULL
+);
+CREATE UNIQUE INDEX uq_im_message_shop_msg ON im_message(shop_id, message_id);
+CREATE INDEX idx_im_message_conv ON im_message(shop_id, conversation_id, sent_at);
+CREATE INDEX idx_im_message_captured ON im_message(captured_at);
 ```
 
 ### 6.3 关键约束
@@ -491,6 +507,7 @@ CREATE TABLE sync_baseline (
 8. 取号与官方组件打印**不依赖**收货地址解密（DEC-06）。收件人明文**不写入数据库**，只在内存中短暂缓存。
 9. `uq_shop_pool` 保证一个代理池项同一时间只绑一家启用店铺；`proxy_pool.identity` 唯一，保证同一代理不会在池里重复。
 10. `uq_notification_open_state` 保证同一 `state_key` 同时只有一条未解决的状态类通知；已读超过 30 天的事件类通知由每日快照之后的清理删除，未解决的状态类不清理。
+11. `uq_im_message_shop_msg` 保证同一店铺同一消息只存一次；`im_message` 超过 30 天（按 `captured_at`）的记录删除，消息正文不进日志、审计、事件与通知。
 
 ### 6.4 只读聚合与存储说明（DM-06 ~ DM-09）
 

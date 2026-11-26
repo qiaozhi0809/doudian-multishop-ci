@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import pytest
 
+from app.domain.notification_rules import LEVEL_BY_KIND
 from app.service.events import NOTIFICATION, EventBus
 from app.service.notifications import NotificationService
 from tests.service.label_support import add_shop
@@ -63,6 +64,27 @@ def test_merge_alerts_again_only_for_new_items(svc, shop_a, published):
     assert [(p["item"]["kind"], p["action"], p["alert"]) for p in published] == [
         ("new_aftersale", "created", True), ("new_aftersale", "updated", True),
         ("sync_failed", "created", True), ("sync_failed", "updated", False)]
+
+
+def test_new_message_merges_per_shop_and_realerts_on_growth(svc, engine, shop_a, published):
+    shop_b = add_shop(engine, name="店B")
+    first = svc.emit("new_message", shop_id=shop_a, count=2)
+    second = svc.emit("new_message", shop_id=shop_a, count=3)
+    other = svc.emit("new_message", shop_id=shop_b, count=1)
+
+    assert first == second != other
+    (row,) = [r for r in _rows(svc, "new_message") if r["shop_id"] == shop_a]
+    assert row["count"] == 5 and row["title"] == "店A 新增 5 条未读消息"
+    assert (published[1]["action"], published[1]["alert"]) == ("updated", True)
+
+
+def test_im_waiting_recovered_title_drops_count(svc, shop_a):
+    """恢复时已没有超时会话，「已恢复」不带数量（同临近发货超时）。"""
+    svc.raise_state("im_wait", "im_waiting", shop_id=shop_a, count=2)
+    svc.resolve_state("im_wait", shop_id=shop_a)
+    (recovered,) = _rows(svc, "recovered")
+    assert recovered["title"] == "店A 已恢复：超 3 分钟未回复"
+    assert recovered["link"] == f"/shops?shop={shop_a}"
 
 
 def test_emit_after_read_creates_new(svc, shop_a):
@@ -194,6 +216,19 @@ def test_summary_groups_strong_open_by_shop(svc, engine, shop_a):
     }]
     # 未解决的强状态由横条 / 待处理代表，不计未读：已解决的风控 + 已恢复 + 新订单
     assert s["unread"] == 3
+
+
+def test_state_downgraded_to_medium_leaves_banner(svc, shop_a, monkeypatch):
+    """所有者把「超时未回复」改成中档（只改 LEVEL_BY_KIND 一行）后横条也消失。"""
+    monkeypatch.setitem(LEVEL_BY_KIND, "im_waiting", "medium")
+    svc.raise_state("im_wait", "im_waiting", shop_id=shop_a, count=2)
+    svc.raise_state("login", "login_expired", shop_id=shop_a)
+
+    summary = svc.summary()
+
+    (group,) = summary["strong_open"]
+    assert group["kinds"] == ["login_expired"]
+    assert summary["unread"] == 1  # 中档的那条改由铃铛未读数代表
 
 
 def test_summary_problem_links_per_kind(svc, shop_a):

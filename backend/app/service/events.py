@@ -24,6 +24,11 @@ ORDERS_NEW = "orders_new"
 AFTERSALES_NEW = "aftersales_new"
 SYNC_RESULT = "sync_result"  # 手动同步一店结束 {kind, shop_id, ok, error}；定时同步不发
 NOTIFICATION = "notification"  # 通知新增 / 更新 / 恢复 / 已读
+# 飞鸽消息：载荷只有数量与状态，不含消息内容
+# 待回复变化 {shop_id, unread, new}：unread 为各会话待回复数之和，new 为本次新到的买家消息数
+IM_UNREAD_CHANGED = "im_unread_changed"
+IM_WAIT_CHANGED = "im_wait_changed"  # 买家等待变化 {shop_id, waiting, overdue}
+IM_STOPPED = "im_stopped"  # 停止接收且不再自动重试 {shop_id, state}
 
 DEFAULT_QUEUE_SIZE = 100
 

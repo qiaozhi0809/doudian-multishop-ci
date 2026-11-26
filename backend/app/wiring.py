@@ -9,6 +9,7 @@ from argon2 import PasswordHasher
 from sqlalchemy import Engine
 
 from app.adapter.browser.browser_registry import REGISTRY, BrowserRegistry
+from app.adapter.flybird.page import ImPage
 from app.adapter.print.component import PrintComponent
 from app.config import Settings
 from app.service.aftersale import AftersaleService
@@ -21,6 +22,7 @@ from app.service.egress import EgressService
 from app.service.egress_probe import FetchIp, Probe, make_fetch_ip, make_probe
 from app.service.events import EventBus
 from app.service.fund import FundService
+from app.service.im_watcher import ImWatcher
 from app.service.label_pool import LabelPoolService
 from app.service.label_preview import LabelPreviewService
 from app.service.labeling import LabelingService
@@ -46,7 +48,7 @@ from app.shared.secret_box import make_secret_box
 @dataclass
 class Overrides:
     """测试用：替换时钟、哈希器、抖店客户端工厂、出口探测（fetch_ip / probe）、扫码、打印组件、
-    浏览器登记表。"""
+    浏览器登记表、飞鸽页面接入。"""
 
     clock: Callable[[], datetime] | None = None
     hasher: PasswordHasher | None = None
@@ -56,6 +58,7 @@ class Overrides:
     print_component: PrintComponent | None = None
     probe: Probe | None = None  # 放在末尾：测试按位置传参
     browsers: BrowserRegistry | None = None  # 浏览器登记表（默认进程唯一的 REGISTRY）
+    im_attach: Callable | None = None  # 打开飞鸽工作台（默认 ImPage.attach）
 
 
 def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[str, Any]:
@@ -71,9 +74,13 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         ov.client_factory or default_client_factory, **clock_kw,
     )
     base_data = BaseDataService(engine, runner, events)
-    browsers = ov.browsers or REGISTRY  # 扫码、读页面、巡检共用同一个登记表
-    shop_profile = ShopProfileService(
-        engine, runner, profiles_dir=settings.profiles_dir, browsers=browsers, **clock_kw)
+    browsers = ov.browsers or REGISTRY  # 扫码、读页面、飞鸽常驻页、巡检共用同一个登记表
+    im = ImWatcher(
+        engine, runner, events, browsers, profiles_dir=settings.profiles_dir,
+        max_browsers=settings.im_max_browsers, attach=ov.im_attach or ImPage.attach, **clock_kw)
+    shop_profile = ShopProfileService(  # 读页面、扫码要用资料目录：先让常驻页让出
+        engine, runner, profiles_dir=settings.profiles_dir, browsers=browsers,
+        yield_profile=im.yield_profile, **clock_kw)
     order_query = OrderQueryService(engine, runner, **clock_kw)
     login_kw = {"scan": ov.scan} if ov.scan else {}
     tasks = TaskRegistry()
@@ -82,7 +89,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
     notifications = NotificationService(engine, events, **clock_kw)
     return {
         "engine": engine, "events": events, "sessions": sessions, "egress": egress,
-        "browsers": browsers,
+        "browsers": browsers, "im": im,
         "proxy_pool": ProxyPoolService(
             engine, box, events, ov.probe or make_probe(settings.egress_echo_url), **clock_kw),
         "runner": runner, "base_data": base_data, "shop_profile": shop_profile, "tasks": tasks,
@@ -126,7 +133,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,
             settings.browser_channel, use_cloak=settings.use_cloak,
-            profile=shop_profile, browsers=browsers, **login_kw,
+            profile=shop_profile, browsers=browsers, yield_profile=im.yield_profile, **login_kw,
         ),
         "auth": AuthService(
             engine, **clock_kw, **({"hasher": ov.hasher} if ov.hasher else {})

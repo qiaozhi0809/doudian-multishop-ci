@@ -23,6 +23,7 @@
 | `metric-card/`、`animated-counter/`、`pagination/`、`select/` | Free | `uiarc/registry/components/<id>/`（Task 6：订单列表页） |
 | `hold-to-confirm/`、`checkbox/` | Free | `uiarc/registry/components/<id>/`（M2：打单台危险操作确认与跨页勾选） |
 | `bar-chart/` | Free | `uiarc/registry/components/<id>/`（M6：仪表盘各店待发货 / 待结算分布） |
+| `switch/` | Free | `uiarc/registry/components/<id>/`（编辑店铺「接收飞鸽消息」开关） |
 
 npm 依赖：`@radix-ui/react-dialog`（card、dialog）、`react-dropdown-menu`、`react-popover`、`react-tooltip`、`react-select`、
-`@radix-ui/react-checkbox`（M2）。随任务增加，在此表追加。
+`@radix-ui/react-checkbox`（M2）、`@radix-ui/react-switch`（飞鸽开关）。随任务增加，在此表追加。

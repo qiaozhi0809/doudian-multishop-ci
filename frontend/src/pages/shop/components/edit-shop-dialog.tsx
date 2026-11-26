@@ -4,6 +4,7 @@ import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { Input } from "@/components/arc/input/input";
+import { Switch } from "@/components/arc/switch/switch";
 import type { ActionResult } from "@/lib/action-result";
 import type { ShopRow } from "@/lib/use-shops";
 import type { ShopPatch } from "../hooks/use-shop-actions";
@@ -15,10 +16,12 @@ interface EditShopDialogProps {
   pending: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (patch: ShopPatch) => Promise<ActionResult>;
+  /** 打开飞鸽开关：由外层先确认，确认后才提交。 */
+  onEnableIm: () => void;
 }
 
-/** 编辑店铺：本地别名，以及平台没有稳定接口、需要手工维护的主体、店铺ID、收款账户。 */
-export function EditShopDialog({ shop, pending, onOpenChange, onSubmit }: EditShopDialogProps) {
+/** 编辑店铺：本地别名，平台没有稳定接口、需要手工维护的主体、店铺ID、收款账户，以及飞鸽消息开关。 */
+export function EditShopDialog({ shop, pending, onOpenChange, onSubmit, onEnableIm }: EditShopDialogProps) {
   const shown = useLastPresent(shop);
   return (
     <Dialog open={shop != null} onOpenChange={onOpenChange} busy={pending}>
@@ -29,6 +32,7 @@ export function EditShopDialog({ shop, pending, onOpenChange, onSubmit }: EditSh
             shop={shop}
             pending={pending}
             onSubmit={onSubmit}
+            onEnableIm={onEnableIm}
             onDone={() => onOpenChange(false)}
           />
         )}
@@ -38,8 +42,8 @@ export function EditShopDialog({ shop, pending, onOpenChange, onSubmit }: EditSh
 }
 
 function EditShopForm({
-  shop, pending, onSubmit, onDone,
-}: { shop: ShopRow; pending: boolean; onSubmit: (p: ShopPatch) => Promise<ActionResult>; onDone: () => void }) {
+  shop, pending, onSubmit, onEnableIm, onDone,
+}: Pick<EditShopDialogProps, "pending" | "onSubmit" | "onEnableIm"> & { shop: ShopRow; onDone: () => void }) {
   const [name, setName] = useState(shop.name);
   const [entity, setEntity] = useState(shop.entity ?? "");
   const [platformShopId, setPlatformShopId] = useState(shop.platform_shop_id ?? "");
@@ -67,6 +71,14 @@ function EditShopForm({
     const r = await onSubmit(patch);
     if (r.ok) onDone();
     else setError(r.error);
+  };
+
+  /** 开关即时生效，不随「保存」提交；打开要确认，关掉直接提交。 */
+  const toggleIm = async (on: boolean) => {
+    if (on) return onEnableIm();
+    setError(null);
+    const r = await onSubmit({ im_enabled: false });
+    if (!r.ok) setError(r.error);
   };
 
   return (
@@ -107,6 +119,13 @@ function EditShopForm({
           setBankTail(e.target.value.replace(/\D/g, "").slice(0, 4));
           setTailError(undefined);
         }}
+      />
+      <Switch
+        className={styles.formSwitch}
+        label="接收飞鸽消息"
+        checked={shop.im_enabled}
+        disabled={pending}
+        onCheckedChange={(on) => void toggleIm(on)}
       />
       {error && <Alert tone="danger" title={error} />}
       <div className={styles.formActions}>

@@ -508,6 +508,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/im/shops/{shop_id}/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restart
+         * @description 手动「重新连接」：不等页面打开，返回当前状态（排队中 / 启动中等）。
+         */
+        post: operations["restart_api_im_shops__shop_id__restart_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/im/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Status */
+        get: operations["list_status_api_im_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/labels/execute": {
         parameters: {
             query?: never;
@@ -1594,6 +1631,26 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** ImShopStatus */
+        ImShopStatus: {
+            /** Last Error */
+            last_error: string | null;
+            /** Next Retry At */
+            next_retry_at: string | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Since */
+            since: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "off" | "queued" | "starting" | "running" | "backoff" | "needs_refresh" | "stopped";
+            /** State Label */
+            state_label: string;
+        };
         /** LabelOrderRow */
         LabelOrderRow: {
             /** Amount Cents */
@@ -1699,7 +1756,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered";
+            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered" | "new_message" | "im_stopped" | "im_waiting";
             /**
              * Level
              * @enum {string}
@@ -2459,6 +2516,8 @@ export interface components {
             enabled?: boolean | null;
             /** Entity */
             entity?: string | null;
+            /** Im Enabled */
+            im_enabled?: boolean | null;
             /** Name */
             name?: string | null;
             /** Platform Shop Id */
@@ -2526,6 +2585,8 @@ export interface components {
             health: ("healthy" | "expiring" | "expired") | null;
             /** Id */
             id: number;
+            /** Im Enabled */
+            im_enabled: boolean;
             /** Name */
             name: string;
             /** Not Ready Reasons */
@@ -2653,7 +2714,7 @@ export interface components {
          */
         StrongOpenShop: {
             /** Kinds */
-            kinds: ("new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered")[];
+            kinds: ("new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered" | "new_message" | "im_stopped" | "im_waiting")[];
             /** Link */
             link: string | null;
             /** Problems */
@@ -2669,7 +2730,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered";
+            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered" | "new_message" | "im_stopped" | "im_waiting";
             /** Link */
             link: string | null;
         };
@@ -3751,6 +3812,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    restart_api_im_shops__shop_id__restart_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImShopStatus"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_status_api_im_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImShopStatus"][];
                 };
             };
             /** @description 错误信封 */

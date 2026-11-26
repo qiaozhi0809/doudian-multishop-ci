@@ -15,6 +15,7 @@ from app.adapter.doudian.client import FxgClient
 from app.domain.audit import CallRecord
 from app.domain.errors import InvalidRequest
 from app.domain.shop_profile_rules import clean_scraped
+from app.service.shop_login import YieldProfile
 from app.service.shop_runner import ShopRunner
 from app.store import audit_store, shop_profile_store, shop_store
 
@@ -32,8 +33,10 @@ class ShopProfileService:
     def __init__(
         self, engine: Engine, runner: ShopRunner, *, profiles_dir: Path,
         clock: Callable[[], datetime] | None = None, browsers: BrowserRegistry | None = None,
+        yield_profile: YieldProfile | None = None,
     ) -> None:
         self._browsers = browsers
+        self._yield_profile = yield_profile
         self._engine = engine
         self._runner = runner
         self._profiles_dir = profiles_dir
@@ -51,6 +54,8 @@ class ShopProfileService:
         """
 
         async def job(_client: object) -> dict[str, str]:
+            if self._yield_profile is not None:  # 已在该店队列里，让出后不会被别的任务插队
+                await self._yield_profile(shop_id)
             try:
                 return await scrape_platform_info(
                     self._profiles_dir / str(shop_id), self._runner.proxy_for(shop_id),

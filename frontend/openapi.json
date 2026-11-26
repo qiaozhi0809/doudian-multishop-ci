@@ -1109,6 +1109,72 @@
         "title": "Health",
         "type": "object"
       },
+      "ImShopStatus": {
+        "properties": {
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "next_retry_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Retry At"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "since": {
+            "title": "Since",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "off",
+              "queued",
+              "starting",
+              "running",
+              "backoff",
+              "needs_refresh",
+              "stopped"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "state_label": {
+            "title": "State Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "state",
+          "state_label",
+          "since",
+          "next_retry_at",
+          "last_error"
+        ],
+        "title": "ImShopStatus",
+        "type": "object"
+      },
       "LabelOrderRow": {
         "properties": {
           "amount_cents": {
@@ -1493,7 +1559,10 @@
               "sync_failed",
               "sync_done",
               "reconcile_done",
-              "recovered"
+              "recovered",
+              "new_message",
+              "im_stopped",
+              "im_waiting"
             ],
             "title": "Kind",
             "type": "string"
@@ -4158,6 +4227,17 @@
             ],
             "title": "Entity"
           },
+          "im_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Im Enabled"
+          },
           "name": {
             "anyOf": [
               {
@@ -4426,6 +4506,10 @@
             "title": "Id",
             "type": "integer"
           },
+          "im_enabled": {
+            "title": "Im Enabled",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -4538,7 +4622,8 @@
           "shop_name",
           "platform_shop_id",
           "bank_name",
-          "bank_tail"
+          "bank_tail",
+          "im_enabled"
         ],
         "title": "ShopRow",
         "type": "object"
@@ -4862,7 +4947,10 @@
                 "sync_failed",
                 "sync_done",
                 "reconcile_done",
-                "recovered"
+                "recovered",
+                "new_message",
+                "im_stopped",
+                "im_waiting"
               ],
               "type": "string"
             },
@@ -4923,7 +5011,10 @@
               "sync_failed",
               "sync_done",
               "reconcile_done",
-              "recovered"
+              "recovered",
+              "new_message",
+              "im_stopped",
+              "im_waiting"
             ],
             "title": "Kind",
             "type": "string"
@@ -7331,6 +7422,84 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/im/shops/{shop_id}/restart": {
+      "post": {
+        "description": "手动「重新连接」：不等页面打开，返回当前状态（排队中 / 启动中等）。",
+        "operationId": "restart_api_im_shops__shop_id__restart_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImShopStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Restart",
+        "tags": [
+          "im"
+        ]
+      }
+    },
+    "/api/im/status": {
+      "get": {
+        "operationId": "list_status_api_im_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImShopStatus"
+                  },
+                  "title": "Response List Status Api Im Status Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Status",
+        "tags": [
+          "im"
+        ]
       }
     },
     "/api/labels/execute": {

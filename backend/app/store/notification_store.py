@@ -13,8 +13,13 @@ _UPDATABLE = frozenset({
 })
 
 
-def _open_strong():
+def _open_state():
     return sa.and_(n.c.state_key.is_not(None), n.c.resolved_at.is_(None))
+
+
+def _open_strong():
+    """横条代表的记录：未解决且为强档的状态类。"""
+    return sa.and_(_open_state(), n.c.level == "strong")
 
 
 def _one(conn: sa.Connection, stmt: sa.Select) -> Mapping[str, Any] | None:
@@ -83,7 +88,10 @@ def list_page(
 
 
 def unread_count(conn: sa.Connection) -> int:
-    """未读数；未解决的强状态不计（横条 / 待处理代表它们），解决后照常计入。"""
+    """未读数；未解决的强状态不计（横条 / 待处理代表它们），解决后照常计入。
+
+    状态类若是中档、弱档，横条不显示，照常计入未读。
+    """
     return int(conn.execute(
         sa.select(sa.func.count()).select_from(n).where(n.c.read_at.is_(None), ~_open_strong())
     ).scalar_one())
@@ -109,10 +117,10 @@ def mark_all_read(conn: sa.Connection, now: str) -> None:
 
 
 def purge_read_events_before(conn: sa.Connection, cutoff: str) -> int:
-    """删除 updated_at 早于 cutoff 的已读记录；未读与未解决的强状态一律保留。"""
+    """删除 updated_at 早于 cutoff 的已读记录；未读与未解决的状态类一律保留。"""
     res = conn.execute(
         sa.delete(n).where(
-            n.c.read_at.is_not(None), n.c.updated_at < cutoff, ~_open_strong()
+            n.c.read_at.is_not(None), n.c.updated_at < cutoff, ~_open_state()
         )
     )
     return int(res.rowcount)

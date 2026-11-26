@@ -29,6 +29,7 @@
 | [aftersale.md](api/aftersale.md) | 附录 E 售后 |
 | [fund.md](api/fund.md) | 附录 F 资金 |
 | [reconcile.md](api/reconcile.md) | 附录 G 跨店对账逻辑 |
+| [flybird.md](api/flybird.md) | 飞鸽客服（IM）工作台入口、HTTP/WS 协议实测记录与未解决问题（阶段三） |
 
 ## 实施计划（`superpowers/plans/`）
 
@@ -39,6 +40,8 @@
 | [2026-11-25-m1-frontend.md](superpowers/plans/2026-11-25-m1-frontend.md) | M1 前端任务级计划（6 个任务，含登录页与路由守卫） |
 | [2026-11-25-m2-backend.md](superpowers/plans/2026-11-25-m2-backend.md) | M2 后端任务级计划（7 个任务：两步提交、取号 / 一体 / 作废、查回恢复、按需解密） |
 | [2026-11-25-m2-frontend.md](superpowers/plans/2026-11-25-m2-frontend.md) | M2 前端任务级计划（3 个任务：打单台） |
+| [2026-11-26-flybird-readonly-im.md](superpowers/plans/2026-11-26-flybird-readonly-im.md) | 飞鸽只读聚合第一阶段（12 个任务：Task 0 实测 go / no-go、迁移 0012 与消息记录、常驻页只读采集、新消息与等待超时提醒；依赖 `feat/browser-lifecycle`） |
+| [2026-11-26-flybird-messages-page.md](superpowers/plans/2026-11-26-flybird-messages-page.md) | 飞鸽只读聚合第二阶段（5 个任务：会话与消息接口、在飞鸽中回复、「客服 > 消息」页） |
 
 ## 其他
 

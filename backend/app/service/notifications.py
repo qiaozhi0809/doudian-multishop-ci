@@ -28,9 +28,10 @@ READ_RETENTION = timedelta(days=30)
 _NO_MERGE: frozenset[str] = frozenset({"recovered"})  # 每条对应一个具体问题与链接
 _MERGE_BY_LINK: frozenset[str] = frozenset({"sync_done", "sync_failed"})  # 链接区分同步类型
 MAX_PAGE_SIZE = 200
-_DEADLINE_LABEL = "临近发货超时"
-# 未读时合并后数量变多仍要再提醒的种类（又来了新单）
-_ALERT_ON_GROWTH: frozenset[str] = frozenset({"new_order", "new_aftersale"})
+# 标题带数量的强状态：「已恢复」里不带数量（恢复时已为 0）
+_COUNTLESS_LABELS = {"ship_deadline": "临近发货超时", "im_waiting": "超 3 分钟未回复"}
+# 未读时合并后数量变多仍要再提醒的种类（又来了新单 / 新消息）
+_ALERT_ON_GROWTH: frozenset[str] = frozenset({"new_order", "new_aftersale", "new_message"})
 _STATE_FIELDS = ("kind", "level", "link", "title", "body", "count")
 
 
@@ -54,9 +55,9 @@ def _shop_name(conn: sa.Connection, shop_id: int | None) -> str | None:
 
 
 def _problem_label(row: dict[str, Any]) -> str:
-    """原标题去掉店名的问题部分；临近超时去掉数量（恢复时已为 0）。"""
-    if row["kind"] == "ship_deadline":
-        return _DEADLINE_LABEL
+    """原标题去掉店名的问题部分；带数量的种类换成不带数量的说法。"""
+    if row["kind"] in _COUNTLESS_LABELS:
+        return _COUNTLESS_LABELS[row["kind"]]
     return title_for(row["kind"], shop_name=None, count=row["count"], detail=row["body"])
 
 
