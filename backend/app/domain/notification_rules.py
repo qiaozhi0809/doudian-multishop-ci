@@ -97,10 +97,10 @@ def link_for(
         return _with_query("/shops", [("shop", str(shop_id))] if shop_id is not None else [])
     if kind in ("batch_done", "batch_failed"):
         return "/labeling"
-    if kind in ("new_message", "im_stopped", "im_waiting"):
-        # 消息页（第二阶段）上线前先指向店铺页；上线后改为
-        # /messages?shops=<id>，im_waiting 再加 quick=overdue
-        return _with_query("/shops", [("shop", str(shop_id))] if shop_id is not None else [])
+    if kind in ("new_message", "im_stopped"):
+        return _with_query("/messages", shop)
+    if kind == "im_waiting":
+        return _with_query("/messages", [*shop, ("quick", "overdue")])
     if kind in ("sync_done", "sync_failed"):
         return _with_query(_SYNC_PAGES.get(sync_type or "", "/dashboard"), shop)
     if kind == "reconcile_done":

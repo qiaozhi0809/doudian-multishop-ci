@@ -112,21 +112,21 @@ def test_batch_title_shows_follow_ups_and_omits_zero_parts():
 
 def test_new_message_level_link_title():
     assert LEVEL_BY_KIND["new_message"] == "medium"
-    assert link_for("new_message", 3) == "/shops?shop=3"
+    assert link_for("new_message", 3) == "/messages?shops=3"
     assert title_for("new_message", shop_name="测试小铺", count=4, detail=None
                      ) == "测试小铺 新增 4 条未读消息"
 
 
 def test_im_stopped_level_link_title():
     assert LEVEL_BY_KIND["im_stopped"] == "medium"
-    assert link_for("im_stopped", 3) == "/shops?shop=3"
+    assert link_for("im_stopped", 3) == "/messages?shops=3"
     assert title_for("im_stopped", shop_name="测试小铺", count=1, detail="需重新连接"
                      ) == "测试小铺 飞鸽消息已停止接收：需重新连接"
 
 
 def test_im_waiting_strong_link_quick_overdue_title():
     assert LEVEL_BY_KIND["im_waiting"] == "strong"
-    assert link_for("im_waiting", 3) == "/shops?shop=3"
+    assert link_for("im_waiting", 3) == "/messages?shops=3&quick=overdue"
     assert title_for("im_waiting", shop_name="测试小铺", count=2, detail=None
                      ) == "测试小铺 2 个会话超 3 分钟未回复"
     assert state_key("im_wait", 3) == "im_wait:3"

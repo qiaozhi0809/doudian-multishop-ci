@@ -31,6 +31,11 @@ export interface PageFilter extends SortFilter {
   page: number;
 }
 
+export interface ImFilters extends SortFilter {
+  unread?: boolean;
+  page: number;
+}
+
 export interface ReconcileFilters extends SortFilter {
   kind: string;
   status: string;
@@ -85,6 +90,12 @@ export const queryKeys = {
   backupSnapshots: () => ["backup", "snapshots"] as const,
   // ---- 代理池 ----
   proxyPool: () => ["proxyPool"] as const,
+  // ---- 客服消息 ----
+  imRoot: () => ["im"] as const,
+  imStatus: () => ["im", "status"] as const,
+  imConversations: (shopIds: number[], filters: ImFilters) => ["im", "conversations", shopIds, filters] as const,
+  imCounts: (shopIds: number[]) => ["im", "counts", shopIds] as const,
+  imThread: (shopId: number, conversationId: string) => ["im", "thread", shopId, conversationId] as const,
   // ---- 通知中心 ----
   notificationsRoot: () => ["notifications"] as const,
   notifications: (unreadOnly: boolean, page: number) => ["notifications", "list", unreadOnly, page] as const,
