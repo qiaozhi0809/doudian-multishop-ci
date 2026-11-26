@@ -1,0 +1,128 @@
+/* 登录页右侧内容区（参考壹帆智播 login-aside）：深色面板，内容从上到下排满，不留大块空白。 */
+.aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-6);
+  min-width: 0;
+  height: 100%;
+  padding: clamp(28px, 5vh, 52px) clamp(28px, 3.4vw, 52px) clamp(24px, 4vh, 40px);
+  border-radius: var(--radius-surface);
+  background: var(--foreground);
+  color: var(--background);
+  --aside-secondary: color-mix(in oklch, var(--background) 72%, transparent);
+  --aside-muted: color-mix(in oklch, var(--background) 52%, transparent);
+  --aside-line: color-mix(in oklch, var(--background) 14%, transparent);
+  --aside-tile: color-mix(in oklch, var(--background) 7%, transparent);
+}
+
+.intro { display: grid; gap: var(--space-2); }
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.lead { margin: 0; max-width: 34em; color: var(--aside-secondary); font-size: 15px; line-height: 1.7; }
+
+/* 登录后的概览示意 */
+.preview {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--aside-line);
+  border-radius: var(--radius-panel);
+  background: var(--aside-tile);
+}
+.previewLabel { margin: 0; color: var(--aside-muted); font-size: var(--text-xs); }
+.previewRow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.previewCell {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--aside-tile);
+}
+.previewName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--aside-secondary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.previewValue {
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 功能介绍：左边组名，右边两列功能 */
+.groups { display: grid; gap: 14px; }
+.group { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: var(--space-3); align-items: start; }
+.groupName { margin: 2px 0 0; color: var(--aside-muted); font-size: var(--text-xs); font-weight: 500; }
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.feature { display: grid; gap: 2px; min-width: 0; }
+.featureName { font-size: var(--text-sm); font-weight: 500; }
+.featureText { color: var(--aside-secondary); font-size: var(--text-xs); line-height: 1.6; }
+
+/* 上手三步 */
+.steps { display: grid; gap: var(--space-3); padding-top: 20px; border-top: 1px solid var(--aside-line); }
+.stepsTitle { margin: 0; color: var(--aside-muted); font-size: var(--text-xs); font-weight: 500; }
+.stepList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: var(--radius-panel);
+  background: var(--aside-tile);
+}
+.stepNo {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--aside-muted);
+  border-radius: 50%;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.stepName { font-size: var(--text-sm); font-weight: 500; }
+.stepText { color: var(--aside-secondary); font-size: var(--text-xs); line-height: 1.6; }
+
+/* 窗口矮时先收掉每步说明、收紧间距，再收掉概览示意，最后收掉功能说明，保证不出现滚动条 */
+@media (max-height: 860px) {
+  .aside { gap: 18px; }
+  .stepText { display: none; }
+  .groups { gap: 10px; }
+  .features { gap: 8px var(--space-6); }
+}
+@media (max-height: 720px) {
+  .preview { display: none; }
+}
+@media (max-height: 600px) {
+  .featureText { display: none; }
+}

@@ -112,7 +112,9 @@ describe("登录页", () => {
     await user.type(await screen.findByLabelText("账号"), "admin");
     await user.type(screen.getByLabelText("密码"), "password-1");
     await user.click(screen.getByRole("button", { name: "登录" }));
-    expect(await screen.findByRole("heading", { name: "店铺页" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "登录成功" })).toBeInTheDocument();
+    // 完成动画播完才跳转
+    expect(await screen.findByRole("heading", { name: "店铺页" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByTestId("where")).toHaveTextContent("/shops?shops=1");
   });
 
@@ -131,7 +133,8 @@ describe("登录页", () => {
     await user.type(await screen.findByLabelText("账号"), "admin");
     await user.type(screen.getByLabelText("密码"), "password-1");
     await user.click(screen.getByRole("button", { name: "创建账号" }));
-    expect(await screen.findByRole("heading", { name: "订单页" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "管理员已创建" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "订单页" }, { timeout: 3000 })).toBeInTheDocument();
   });
 
   it("状态读取失败时给出出错提示与重试按钮", async () => {

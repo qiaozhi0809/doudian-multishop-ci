@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Card } from "@/components/arc/card/card";
 import { Input } from "@/components/arc/input/input";
 import { PasswordField } from "@/components/arc/password-field/password-field";
 import { validatePassword } from "../logic/auth-messages";
+import styles from "../auth-page.module.css";
 
 export interface CredentialsFormProps {
   title: string;
@@ -25,6 +25,9 @@ export function CredentialsForm(props: CredentialsFormProps) {
   const [password, setPassword] = useState("");
   const [usernameError, setUsernameError] = useState<string>();
   const [passwordError, setPasswordError] = useState<string>();
+  // 报错收起时还要显示原来的文字，直到收起动画结束
+  const [lastError, setLastError] = useState(error);
+  if (error && error !== lastError) setLastError(error);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -37,13 +40,18 @@ export function CredentialsForm(props: CredentialsFormProps) {
   }
 
   return (
-    <Card title={title} description={description}>
-      <form onSubmit={handleSubmit} noValidate className="mt-[var(--space-4)] flex flex-col gap-[var(--space-4)]">
+    <>
+      <div className={styles.heading}>
+        <h1>{title}</h1>
+        {description && <p>{description}</p>}
+      </div>
+      <form onSubmit={handleSubmit} noValidate className={styles.form}>
         <Input
           label="账号"
           name="username"
           autoComplete="username"
           value={username}
+          readOnly={pending}
           error={usernameError}
           onChange={(e) => {
             setUsername(e.target.value);
@@ -56,6 +64,7 @@ export function CredentialsForm(props: CredentialsFormProps) {
           name="password"
           autoComplete={passwordAutoComplete}
           value={password}
+          readOnly={pending}
           messages={{ showPassword: "显示密码", hidePassword: "隐藏密码" }}
           aria-invalid={passwordError ? true : undefined}
           description={passwordError}
@@ -65,11 +74,11 @@ export function CredentialsForm(props: CredentialsFormProps) {
             onEdit();
           }}
         />
-        {error && <Alert tone="danger" title={error} />}
-        <Button type="submit" loading={pending}>
+        <Alert open={!!error} tone="danger" title={error ?? lastError ?? ""} />
+        <Button type="submit" size="lg" className={styles.wide} loading={pending}>
           {submitLabel}
         </Button>
       </form>
-    </Card>
+    </>
   );
 }

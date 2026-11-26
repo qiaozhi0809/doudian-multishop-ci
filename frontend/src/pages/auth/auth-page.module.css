@@ -1,0 +1,78 @@
+/* 登录 / 初始化页：左右分栏（参考壹帆智播 login-centered 的分栏模式）。左边品牌与表单，右边深色内容区。 */
+.screen {
+  display: grid;
+  grid-template-columns: minmax(420px, 0.9fr) minmax(0, 1.1fr);
+  min-height: 100dvh;
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.pane { display: grid; grid-template-rows: 64px minmax(0, 1fr); min-width: 0; }
+
+.bar { display: flex; align-items: center; padding: 0 var(--space-6); }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+}
+.mark {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: var(--radius-control);
+  background: var(--foreground);
+  color: var(--background);
+}
+
+/* 表单从固定高度往下排，不做垂直居中：视图高度不同，居中的话一换视图标题就会上下跳 */
+.stage {
+  display: grid;
+  min-width: 0;
+  place-items: start center;
+  padding: clamp(40px, 15vh, 150px) var(--space-8) var(--space-6);
+}
+
+/* 视口只在高度过渡时裁切离场的视图；向外让出 4px，键盘焦点框不被裁掉 */
+.viewport { width: min(100%, 408px); margin: -4px; overflow: hidden; }
+.track { position: relative; }
+.step { display: grid; min-width: 0; padding: 4px; }
+
+.heading { display: grid; gap: var(--space-2); margin-bottom: var(--space-6); }
+.heading h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-display);
+}
+.heading h1:focus { outline: none; }
+.heading p { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
+
+.form { display: grid; gap: var(--space-4); }
+.wide { width: 100%; }
+
+.success { display: block; width: 48px; height: 48px; margin-bottom: var(--space-6); overflow: visible; color: var(--success); }
+
+/* 深色面板四周留白，与左侧白底隔开；随窗口高度铺满，不出现滚动条 */
+.aside { display: grid; min-width: 0; height: 100dvh; padding: var(--space-4) var(--space-4) var(--space-4) 0; position: sticky; top: 0; }
+
+/* 单栏（路由守卫的加载 / 出错）与窄窗口：卡片居中 */
+.solo { grid-template-columns: minmax(0, 1fr); }
+.solo .stage { place-items: center; padding-bottom: calc(64px + var(--space-6)); }
+
+/* 窄窗口：收起内容区，卡片居中 */
+@media (max-width: 899px) {
+  .screen { grid-template-columns: minmax(0, 1fr); }
+  .aside { display: none; }
+  .stage { place-items: center; padding: var(--space-6) var(--space-4) calc(64px + var(--space-6)); }
+}
+@media (max-width: 400px) {
+  .bar { padding-inline: var(--space-4); }
+  .stage { padding-inline: var(--space-3); }
+}

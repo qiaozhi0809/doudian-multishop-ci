@@ -10,14 +10,14 @@ export function RequireAuth() {
   if (gate.target) return <Navigate to={gate.target} replace />;
   if (gate.isError) {
     return (
-      <AuthLayout>
+      <AuthLayout view="error">
         <AuthStatusError onRetry={() => void gate.refetch()} />
       </AuthLayout>
     );
   }
   if (gate.isLoading) {
     return (
-      <AuthLayout>
+      <AuthLayout view="loading">
         <AuthLoading />
       </AuthLayout>
     );

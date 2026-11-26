@@ -5,7 +5,7 @@ type Props = Pick<CredentialsFormProps, "pending" | "error" | "onSubmit" | "onEd
 export function SetupForm(props: Props) {
   return (
     <CredentialsForm
-      title="创建管理员"
+      title="初始化管理员"
       description="密码至少 8 位"
       submitLabel="创建账号"
       passwordAutoComplete="new-password"
