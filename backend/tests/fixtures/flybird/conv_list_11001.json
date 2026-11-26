@@ -1,0 +1,8 @@
+{
+  "code": 11001,
+  "msg": "飞鸽版本过低，浏览器用户请刷新页面",
+  "data": [
+    { "subConversationId": "conv-test-1", "parentConShortId": "1001" }
+  ],
+  "total": 1
+}
