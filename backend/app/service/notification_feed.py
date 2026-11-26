@@ -11,9 +11,13 @@ from typing import Any
 import structlog
 from sqlalchemy import Engine
 
+from app.domain.im_rules import STATE_LABELS
 from app.domain.notification_rules import Kind, batch_detail, link_for
 from app.service.events import (
     AFTERSALES_NEW,
+    IM_STOPPED,
+    IM_UNREAD_CHANGED,
+    IM_WAIT_CHANGED,
     LABEL_DONE,
     ORDERS_NEW,
     PRINT_DONE,
@@ -59,6 +63,10 @@ class NotificationFeed:
             AFTERSALES_NEW: lambda d: self._n.emit(
                 "new_aftersale", shop_id=d["shop_id"], count=d["count"]),
             SYNC_RESULT: self._on_sync_result,
+            IM_UNREAD_CHANGED: self._on_im_unread,
+            IM_WAIT_CHANGED: self._on_im_wait,
+            IM_STOPPED: lambda d: self._n.emit(
+                "im_stopped", shop_id=d["shop_id"], detail=STATE_LABELS[d["state"]]),
         }
 
     def handle(self, event: str, data: dict[str, Any]) -> None:
@@ -108,7 +116,7 @@ class NotificationFeed:
             shop = shop_store.get(conn, shop_id)
             had_session = session_store.load(conn, shop_id) is not None
         if shop is None or shop["status"] == DISABLED:  # 已删除 / 停用：不再报该店问题
-            for family in ("login", "egress", "risk", "deadline"):
+            for family in ("login", "egress", "risk", "deadline", "im_wait"):
                 self._n.resolve_state(family, shop_id=shop_id)
             return
         if shop["status"] == NEEDS_LOGIN and had_session:  # 从未登录过的新店不算失效
@@ -164,6 +172,20 @@ class NotificationFeed:
             }
         for shop_id in sorted(open_ids - set(per_shop)):
             self._n.resolve_state("deadline", shop_id=shop_id)
+
+    # ---- 飞鸽消息 ----
+
+    def _on_im_unread(self, data: dict[str, Any]) -> None:
+        new = int(data["new"])
+        if new > 0:  # 只有待回复数变化（如客服已回复）不提醒
+            self._n.emit("new_message", shop_id=int(data["shop_id"]), count=new)
+
+    def _on_im_wait(self, data: dict[str, Any]) -> None:
+        shop_id, overdue = int(data["shop_id"]), int(data["overdue"])
+        if overdue > 0:
+            self._n.raise_state("im_wait", "im_waiting", shop_id=shop_id, count=overdue)
+        else:
+            self._n.resolve_state("im_wait", shop_id=shop_id)
 
     # ---- 批量结果 / 同步结果 ----
 

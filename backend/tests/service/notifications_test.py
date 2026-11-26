@@ -65,6 +65,27 @@ def test_merge_alerts_again_only_for_new_items(svc, shop_a, published):
         ("sync_failed", "created", True), ("sync_failed", "updated", False)]
 
 
+def test_new_message_merges_per_shop_and_realerts_on_growth(svc, engine, shop_a, published):
+    shop_b = add_shop(engine, name="店B")
+    first = svc.emit("new_message", shop_id=shop_a, count=2)
+    second = svc.emit("new_message", shop_id=shop_a, count=3)
+    other = svc.emit("new_message", shop_id=shop_b, count=1)
+
+    assert first == second != other
+    (row,) = [r for r in _rows(svc, "new_message") if r["shop_id"] == shop_a]
+    assert row["count"] == 5 and row["title"] == "店A 新增 5 条未读消息"
+    assert (published[1]["action"], published[1]["alert"]) == ("updated", True)
+
+
+def test_im_waiting_recovered_title_drops_count(svc, shop_a):
+    """恢复时已没有超时会话，「已恢复」不带数量（同临近发货超时）。"""
+    svc.raise_state("im_wait", "im_waiting", shop_id=shop_a, count=2)
+    svc.resolve_state("im_wait", shop_id=shop_a)
+    (recovered,) = _rows(svc, "recovered")
+    assert recovered["title"] == "店A 已恢复：超 3 分钟未回复"
+    assert recovered["link"] == f"/messages?shops={shop_a}&quick=overdue"
+
+
 def test_emit_after_read_creates_new(svc, shop_a):
     first = svc.emit("new_order", shop_id=shop_a, count=3)
     svc.mark_read(first)

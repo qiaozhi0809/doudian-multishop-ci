@@ -1493,7 +1493,10 @@
               "sync_failed",
               "sync_done",
               "reconcile_done",
-              "recovered"
+              "recovered",
+              "new_message",
+              "im_stopped",
+              "im_waiting"
             ],
             "title": "Kind",
             "type": "string"
@@ -4862,7 +4865,10 @@
                 "sync_failed",
                 "sync_done",
                 "reconcile_done",
-                "recovered"
+                "recovered",
+                "new_message",
+                "im_stopped",
+                "im_waiting"
               ],
               "type": "string"
             },
@@ -4923,7 +4929,10 @@
               "sync_failed",
               "sync_done",
               "reconcile_done",
-              "recovered"
+              "recovered",
+              "new_message",
+              "im_stopped",
+              "im_waiting"
             ],
             "title": "Kind",
             "type": "string"

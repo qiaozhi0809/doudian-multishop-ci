@@ -7,6 +7,9 @@ import sqlalchemy as sa
 
 from app.service.events import (
     AFTERSALES_NEW,
+    IM_STOPPED,
+    IM_UNREAD_CHANGED,
+    IM_WAIT_CHANGED,
     LABEL_DONE,
     ORDERS_NEW,
     PRINT_DONE,
@@ -269,6 +272,53 @@ def test_sync_result_done_and_failed(feed, svc, shop_a):
     assert by_kind["sync_done"]["title"] == "店A 库存同步完成"
     assert by_kind["sync_failed"]["title"] == "店A 资金同步失败"
     assert by_kind["sync_failed"]["link"] == f"/fund?shops={shop_a}"
+
+
+# ---- 飞鸽消息 ----
+
+def test_im_unread_changed_new_zero_writes_nothing(feed, svc, shop_a):
+    feed.handle(IM_UNREAD_CHANGED, {"shop_id": shop_a, "unread": 3, "new": 0})
+    assert rows(svc) == []
+
+
+def test_im_unread_changed_writes_new_message(feed, svc, shop_a):
+    feed.handle(IM_UNREAD_CHANGED, {"shop_id": shop_a, "unread": 5, "new": 2})
+    (row,) = rows(svc)
+    assert row["kind"] == "new_message" and row["level"] == "medium"
+    assert row["count"] == 2 and row["title"] == "店A 新增 2 条未读消息"  # 用 new，不用 unread
+    assert row["body"] is None and row["link"] == f"/messages?shops={shop_a}"
+
+
+def test_im_stopped_writes_medium_event(feed, svc, shop_a):
+    feed.handle(IM_STOPPED, {"shop_id": shop_a, "state": "needs_refresh"})
+    (row,) = rows(svc)
+    assert row["kind"] == "im_stopped" and row["level"] == "medium"
+    assert row["title"] == "店A 飞鸽消息已停止接收：需重新连接"
+    assert row["state_key"] is None and row["body"] is None
+
+
+def test_im_wait_overdue_raises_one_state_per_shop(feed, svc, shop_a):
+    feed.handle(IM_WAIT_CHANGED, {"shop_id": shop_a, "waiting": 2, "overdue": 2})
+    feed.handle(IM_WAIT_CHANGED, {"shop_id": shop_a, "waiting": 4, "overdue": 3})
+    (row,) = rows(svc)
+    assert row["state_key"] == f"im_wait:{shop_a}" and row["kind"] == "im_waiting"
+    assert row["level"] == "strong" and row["resolved_at"] is None
+    assert row["count"] == 3 and row["title"] == "店A 3 个会话超 3 分钟未回复"
+
+
+def test_im_wait_zero_resolves(feed, svc, shop_a):
+    feed.handle(IM_WAIT_CHANGED, {"shop_id": shop_a, "waiting": 1, "overdue": 1})
+    feed.handle(IM_WAIT_CHANGED, {"shop_id": shop_a, "waiting": 1, "overdue": 0})
+    (row,) = rows(svc, "im_waiting")
+    assert row["resolved_at"] is not None
+    assert len(rows(svc, "recovered")) == 1
+
+
+def test_disabled_shop_resolves_im_wait(feed, svc, engine, shop_a):
+    feed.handle(IM_WAIT_CHANGED, {"shop_id": shop_a, "waiting": 1, "overdue": 1})
+    set_shop(engine, shop_a, status="disabled")
+    feed.handle(SHOP_STATUS_CHANGED, {"shop_id": shop_a})
+    assert rows(svc, "im_waiting")[0]["resolved_at"] is not None
 
 
 def test_unknown_event_ignored(feed, svc):

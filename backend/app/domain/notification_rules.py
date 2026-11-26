@@ -7,9 +7,10 @@ Kind = Literal[
     "new_order", "new_aftersale", "login_expired", "egress_unreachable", "egress_changed",
     "egress_duplicate", "risk_paused", "ship_deadline", "batch_done", "batch_failed",
     "sync_failed", "sync_done", "reconcile_done", "recovered",
+    "new_message", "im_stopped", "im_waiting",
 ]
 Level = Literal["strong", "medium", "weak"]
-KindFamily = Literal["login", "egress", "risk", "deadline"]
+KindFamily = Literal["login", "egress", "risk", "deadline", "im_wait"]
 
 LEVEL_BY_KIND: dict[Kind, Level] = {
     "new_aftersale": "strong",
@@ -19,7 +20,10 @@ LEVEL_BY_KIND: dict[Kind, Level] = {
     "egress_duplicate": "strong",
     "risk_paused": "strong",
     "ship_deadline": "strong",
+    "im_waiting": "strong",  # 所有者可降为 "medium"
     "new_order": "medium",
+    "new_message": "medium",
+    "im_stopped": "medium",
     "batch_failed": "medium",
     "sync_failed": "medium",
     "batch_done": "weak",
@@ -93,6 +97,10 @@ def link_for(
         return _with_query("/shops", [("shop", str(shop_id))] if shop_id is not None else [])
     if kind in ("batch_done", "batch_failed"):
         return "/labeling"
+    if kind in ("new_message", "im_stopped"):
+        return _with_query("/messages", shop)
+    if kind == "im_waiting":
+        return _with_query("/messages", [*shop, ("quick", "overdue")])
     if kind in ("sync_done", "sync_failed"):
         return _with_query(_SYNC_PAGES.get(sync_type or "", "/dashboard"), shop)
     if kind == "reconcile_done":
@@ -109,6 +117,12 @@ def title_for(kind: Kind, *, shop_name: str | None, count: int, detail: str | No
         return f"{prefix}新增 {count} 个售后"
     if kind == "ship_deadline":
         return f"{prefix}{count} 单临近发货超时"
+    if kind == "new_message":
+        return f"{prefix}新增 {count} 条未读消息"
+    if kind == "im_stopped":
+        return f"{prefix}飞鸽消息已停止接收：{detail}"
+    if kind == "im_waiting":
+        return f"{prefix}{count} 个会话超 3 分钟未回复"
     if kind in _SHOP_STATE_TITLES:
         return f"{prefix}{_SHOP_STATE_TITLES[kind]}"
     if kind == "recovered":
