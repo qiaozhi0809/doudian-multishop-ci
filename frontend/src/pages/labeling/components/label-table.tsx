@@ -1,6 +1,7 @@
 import { Badge } from "@/components/arc/badge/badge";
 import { Button } from "@/components/arc/button/button";
 import { Checkbox } from "@/components/arc/checkbox/checkbox";
+import { OrderNoCell } from "@/components/custom/order-no-cell/order-no-cell";
 import { formatCents } from "@/lib/money-format";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import {
@@ -114,7 +115,7 @@ export function LabelTable({
                   </td>
                   <td className={styles.seqCol}>{seqOffset + index + 1}</td>
                   <td>{row.shop_name}</td>
-                  <td className={styles.tabular}>{row.order_no}</td>
+                  <td><OrderNoCell value={row.order_no} /></td>
                   <td><Badge tone={badge.tone} dot>{badge.label}</Badge></td>
                   <td>
                     <span className={`cell-ellipsis ${styles.itemCell}`} title={itemSummary(row.items)}>{itemSummary(row.items)}</span>

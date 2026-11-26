@@ -1,9 +1,7 @@
-import { MessageSquare } from "lucide-react";
-import { Alert } from "@/components/arc/alert/alert";
-import { Button } from "@/components/arc/button/button";
-import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { ListPager } from "@/components/custom/list-pager/list-pager";
+import { LoadError } from "@/components/custom/load-error/load-error";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { MessagePageState } from "../hooks/use-message-page";
 import { PAGE_SIZE, selectionKey } from "../logic/message-page";
 import styles from "../message-page.module.css";
@@ -17,20 +15,16 @@ export function ConversationList({ page }: { page: MessagePageState }) {
     <div className={styles.listColumn}>
       <div className={styles.listBox}>
         <div className={styles.listScroll}>
-          {page.list.isLoading && <Skeleton label="正在读取会话" lines={6} />}
+          {page.list.isLoading && <Skeleton label="正在读取会话" lines={SKELETON_LINES.list} />}
           {page.list.isError && (
-            <div className={styles.inset}>
-              <Alert tone="danger" title="读取会话失败，请确认本地服务正常后重试" />
-              <div>
-                <Button variant="secondary" size="sm" onClick={() => void page.list.refetch()}>
-                  重新读取
-                </Button>
-              </div>
-            </div>
+            <LoadError
+              size="sm"
+              className={styles.inset}
+              title="读取会话失败，请确认本地服务正常后重试"
+              onRetry={() => void page.list.refetch()}
+            />
           )}
-          {data && data.items.length === 0 && (
-            <EmptyState icon={<MessageSquare size={24} strokeWidth={1.75} aria-hidden="true" />} title="暂无会话" />
-          )}
+          {data && data.items.length === 0 && <p className="panel-empty">暂无会话</p>}
           {data && data.items.length > 0 && (
             <ul className={styles.rows} aria-label="会话列表">
               {data.items.map((item) => {

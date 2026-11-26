@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { Alert } from "@/components/arc/alert/alert";
 import { BarChart } from "@/components/arc/bar-chart/bar-chart";
-import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { LoadError } from "@/components/custom/load-error/load-error";
 import { formatCents } from "@/lib/money-format";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { SectionState } from "../hooks/use-dashboard";
 import type { ChartBar } from "../logic/dashboard";
 import styles from "../dashboard-page.module.css";
@@ -22,21 +22,14 @@ function ChartState({ title, section, empty }: { title: string; section: Section
   if (section.state === "loading") {
     return (
       <ChartFrame title={title}>
-        <Skeleton label={`正在读取${title}`} lines={4} />
+        <Skeleton label={`正在读取${title}`} lines={SKELETON_LINES.card} />
       </ChartFrame>
     );
   }
   if (section.state === "error") {
     return (
       <ChartFrame title={title}>
-        <div className={styles.chartError}>
-          <Alert tone="danger" title={`读取${title}失败，请确认本地服务正常后重试`} />
-          <div>
-            <Button variant="secondary" size="sm" onClick={section.retry}>
-              重新读取
-            </Button>
-          </div>
-        </div>
+        <LoadError size="sm" title={`读取${title}失败，请确认本地服务正常后重试`} onRetry={section.retry} />
       </ChartFrame>
     );
   }

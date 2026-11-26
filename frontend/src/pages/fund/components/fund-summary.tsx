@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { LoadError } from "@/components/custom/load-error/load-error";
 import { CountMeta } from "@/components/custom/shop-failure-alert/count-meta";
 import { formatCents } from "@/lib/money-format";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import { settledMarginTotal, type FundSummary } from "../logic/fund-page";
 import { KpiDot, type KpiTone } from "@/lib/kpi-tone";
 import styles from "../fund-page.module.css";
@@ -37,7 +38,7 @@ export function FundSummaryCards({
   data: FundSummary | undefined;
   onRetry: () => void;
 }) {
-  if (loading) return <Skeleton label="正在读取资金概览" lines={2} />;
+  if (loading) return <Skeleton label="正在读取资金概览" lines={SKELETON_LINES.count} />;
   if (error || !data) return <LoadError size="sm" title="读取资金概览失败，请确认本地服务正常后重试" onRetry={onRetry} />;
   const synced = data.shops.filter((shop) => shop.synced_at).length;
   const latest = data.shops

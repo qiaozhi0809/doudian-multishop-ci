@@ -30,7 +30,7 @@ describe("打单发货", () => {
       ]),
     });
     renderPage();
-    expect(await screen.findByText("6900000" + "1")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "69000001" })).toHaveAttribute("title", "点击复制订单号");
     expect(screen.getByText("缺少合单 ID（combine_id）")).toBeInTheDocument();
     expect(screen.getByLabelText("选择订单 69000002")).toBeDisabled();
     expect(screen.getByText("¥1,234.56")).toBeInTheDocument();

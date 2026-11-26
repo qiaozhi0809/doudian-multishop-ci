@@ -1,7 +1,10 @@
 import { useId } from "react";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/arc/button/button";
+import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { LoadError } from "@/components/custom/load-error/load-error";
 import { formatBjTime } from "@/lib/time-format";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { BackupState } from "../hooks/use-backup";
 import styles from "../shop-page.module.css";
 
@@ -34,11 +37,19 @@ export function BackupCard({ backup }: { backup: BackupState }) {
         </Button>
       </div>
       {backup.open && (
-        <p id={detailId} className={styles.backupHint}>
-          {latest && backup.list
-            ? `最近快照：${formatBjTime(latest.created_at)} · ${sizeText(latest.size_bytes)} · 保留最近 ${backup.list.keep} 份`
-            : "暂无快照"}
-        </p>
+        <div id={detailId}>
+          {backup.loading ? (
+            <Skeleton label="正在读取快照" lines={SKELETON_LINES.card} />
+          ) : backup.failed ? (
+            <LoadError size="sm" title="读取快照失败，请确认本地服务正常后重试" onRetry={backup.retry} />
+          ) : latest && backup.list ? (
+            <p className={styles.backupHint}>
+              {`最近快照：${formatBjTime(latest.created_at)} · ${sizeText(latest.size_bytes)} · 保留最近 ${backup.list.keep} 份`}
+            </p>
+          ) : (
+            <p className="panel-empty">暂无快照</p>
+          )}
+        </div>
       )}
     </section>
   );

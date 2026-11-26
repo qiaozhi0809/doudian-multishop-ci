@@ -105,8 +105,8 @@ describe("客服消息页：列表与计数", () => {
   it("没有会话时显示「暂无会话」，右栏「选择一个会话」", async () => {
     mockIm({ [LIST]: () => listPage([]) });
     renderPage();
-    expect(await screen.findByText("暂无会话")).toBeInTheDocument();
-    expect(within(detail()).getByText("选择一个会话")).toBeInTheDocument();
+    expect(await screen.findByText("暂无会话")).toHaveClass("panel-empty");
+    expect(within(detail()).getByText("选择一个会话")).toHaveClass("panel-empty");
     expect(screen.queryByRole("button", { name: "在飞鸽中回复" })).not.toBeInTheDocument();
   });
 

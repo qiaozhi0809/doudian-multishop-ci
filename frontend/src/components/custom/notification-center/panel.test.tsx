@@ -111,7 +111,7 @@ describe("通知面板", () => {
   it("没有通知时只写暂无通知，不显示进行中与待处理", async () => {
     setup();
     const { panel } = await openPanel();
-    expect(await within(panel).findByText("暂无通知")).toBeInTheDocument();
+    expect(await within(panel).findByText("暂无通知")).toHaveClass("panel-empty");
     expect(within(panel).queryByRole("region", { name: "进行中" })).not.toBeInTheDocument();
     expect(within(panel).queryByRole("region", { name: "待处理" })).not.toBeInTheDocument();
   });

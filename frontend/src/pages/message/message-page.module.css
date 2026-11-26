@@ -52,10 +52,8 @@
   overflow-y: auto;
 }
 
+/* 会话栏里的读取失败块要内边距（布局由 LoadError 自带） */
 .inset {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
   padding: var(--space-3);
 }
 

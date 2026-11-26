@@ -2,6 +2,7 @@ import { Badge } from "@/components/arc/badge/badge";
 import { MetricCard } from "@/components/arc/metric-card/metric-card";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { LoadError } from "@/components/custom/load-error/load-error";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { ShopWarehouses, StockQuick, StockSummary } from "../logic/stock-page";
 import styles from "../stock-page.module.css";
 
@@ -20,7 +21,7 @@ export function StockSummaryCards({
   /** 快捷筛选：预警 / 售罄卡筛下方列表，再点清除；「商品数」卡不对应筛选。 */
   cardProps: (key: StockQuick) => { selected: boolean; onSelect: () => void };
 }) {
-  if (loading) return <Skeleton label="正在读取库存汇总" lines={2} />;
+  if (loading) return <Skeleton label="正在读取库存汇总" lines={SKELETON_LINES.count} />;
   if (error || !data) return <LoadError size="sm" title="读取库存汇总失败，请确认本地服务正常后重试" onRetry={onRetry} />;
   return (
     <div className="count-row">

@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { LoadError } from "@/components/custom/load-error/load-error";
 import { CountMeta } from "@/components/custom/shop-failure-alert/count-meta";
 import { ShopFailureAlert } from "@/components/custom/shop-failure-alert/shop-failure-alert";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import { COUNT_ITEMS, type AggregatedCounts, type CountKey } from "../logic/aggregate-counts";
 import styles from "../order-page.module.css";
 
@@ -19,7 +20,7 @@ interface CountTabsProps {
 
 /** 平台口径的四项计数，也是快捷筛选（点卡片筛下方本地列表）。部分店铺取不到时在合计旁提示，不当 0 合计。 */
 export function CountTabs({ state, data, shopName, bannerShopIds, onRetry, cardProps }: CountTabsProps) {
-  if (state === "loading") return <Skeleton label="正在读取订单计数" lines={2} />;
+  if (state === "loading") return <Skeleton label="正在读取订单计数" lines={SKELETON_LINES.count} />;
   if (state === "error" || !data) return <LoadError size="sm" title="读取订单计数失败，请确认本地服务正常后重试" onRetry={onRetry} />;
   return (
     <div className={styles.counts}>

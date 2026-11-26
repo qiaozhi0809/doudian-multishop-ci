@@ -1,9 +1,8 @@
-import { Alert } from "@/components/arc/alert/alert";
-import { Button } from "@/components/arc/button/button";
 import { MetricCard } from "@/components/arc/metric-card/metric-card";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { LoadError } from "@/components/custom/load-error/load-error";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { Counts, ImQuick } from "../logic/message-page";
-import styles from "../message-page.module.css";
 
 interface ImMetricsProps {
   data: Counts | undefined;
@@ -14,19 +13,8 @@ interface ImMetricsProps {
 }
 
 export function ImMetrics({ data, loading, onRetry, cardProps }: ImMetricsProps) {
-  if (loading) return <Skeleton label="正在读取会话计数" lines={2} />;
-  if (!data) {
-    return (
-      <div className={styles.stack}>
-        <Alert tone="danger" title="读取会话计数失败，请确认本地服务正常后重试" />
-        <div>
-          <Button variant="secondary" size="sm" onClick={onRetry}>
-            重新读取
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Skeleton label="正在读取会话计数" lines={SKELETON_LINES.count} />;
+  if (!data) return <LoadError size="sm" title="读取会话计数失败，请确认本地服务正常后重试" onRetry={onRetry} />;
   return (
     <div className="count-row">
       <MetricCard label="未读会话" value={data.unread} tone="info" {...cardProps("unread")} />

@@ -198,21 +198,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.empty {
-  margin: 0;
-  padding: var(--space-4) var(--space-2);
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  text-align: center;
-}
-
-.error {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
 .foot {
   display: flex;
   justify-content: center;

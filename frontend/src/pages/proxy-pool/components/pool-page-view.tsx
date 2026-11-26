@@ -1,8 +1,10 @@
-import { Alert } from "@/components/arc/alert/alert";
+import { Network } from "lucide-react";
 import { Button } from "@/components/arc/button/button";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { LoadError } from "@/components/custom/load-error/load-error";
 import { NoticeList } from "@/components/custom/notice/notice-list";
+import { SKELETON_LINES } from "@/lib/skeleton-lines";
 import type { PoolPage } from "../hooks/use-pool-page";
 import styles from "../proxy-pool-page.module.css";
 import { DeleteDialog } from "./delete-dialog";
@@ -20,19 +22,16 @@ export function PoolPageView({ page }: { page: PoolPage }) {
     <div className={styles.page}>
       {pool.items.length > 0 && <div className={styles.toolbar}>{importButton}</div>}
       <NoticeList notices={page.notices} onDismiss={page.dismissNotice} />
-      {pool.loading && <Skeleton label="正在读取代理池" lines={5} />}
+      {pool.loading && <Skeleton label="正在读取代理池" lines={SKELETON_LINES.list} />}
       {pool.failed && (
-        <div className={styles.page}>
-          <Alert tone="danger" title="读取代理池失败，请确认本地服务已启动后重试" />
-          <div>
-            <Button variant="secondary" onClick={pool.retry}>
-              重新读取
-            </Button>
-          </div>
-        </div>
+        <LoadError title="读取代理池失败，请确认本地服务已启动后重试" onRetry={pool.retry} />
       )}
       {!pool.loading && !pool.failed && pool.items.length === 0 && (
-        <EmptyState title="代理池是空的" action={importButton} />
+        <EmptyState
+          icon={<Network size={24} strokeWidth={1.75} aria-hidden="true" />}
+          title="代理池是空的"
+          action={importButton}
+        />
       )}
       {pool.items.length > 0 && (
         <PoolTable
