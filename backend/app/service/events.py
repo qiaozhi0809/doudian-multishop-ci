@@ -3,6 +3,10 @@
 import asyncio
 from typing import Any, Literal
 
+import structlog
+
+log = structlog.get_logger()
+
 SHOP_STATUS_CHANGED = "shop_status_changed"
 SHOP_LOGIN_FAILED = "shop_login_failed"
 SYNC_PROGRESS = "sync_progress"
@@ -74,7 +78,8 @@ class EventBus:
     @staticmethod
     def _put(queue: asyncio.Queue[Event], item: Event) -> None:
         if queue.full():
-            queue.get_nowait()
+            dropped, _ = queue.get_nowait()
+            log.warning("events.dropped", dropped_event=dropped)  # 只记事件名，不记内容
         queue.put_nowait(item)
 
     def publish(self, event: str, data: dict[str, Any]) -> None:

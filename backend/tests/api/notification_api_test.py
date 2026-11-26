@@ -87,3 +87,16 @@ def test_daily_backup_purges_old_read_notifications(api):
     items = notifications.list(unread_only=False, page=1)["items"]
     assert [i["id"] for i in items] == [keep]
     assert api.app.state.backup.snapshots()[0]["trigger"] == "daily"
+
+
+def test_purge_failure_does_not_fail_daily_backup(api, monkeypatch):
+    import asyncio
+
+    from app.main import _daily_backup
+
+    def boom(_now):
+        raise RuntimeError("purge failed")
+
+    monkeypatch.setattr(api.app.state.notifications, "purge", boom)
+    result = asyncio.run(_daily_backup(api.app)())
+    assert result["trigger"] == "daily"

@@ -158,9 +158,13 @@ def _daily_backup(app: FastAPI) -> Callable[[], Awaitable[object]]:
     async def backup() -> object:
         # 备份在专用线程执行：sqlite 在线备份可能持续数秒，不能卡住事件循环
         result = await asyncio.to_thread(app.state.backup.create, None, "daily")
-        # 备份之后清理已读超过 30 天的通知（先备份，清掉的仍可从快照找回）
-        purged = await asyncio.to_thread(app.state.notifications.purge, app.state.clock())
-        log.info("notifications.purged", count=purged)
+        # 备份之后清理已读超过 30 天的通知（先备份，清掉的仍可从快照找回）；
+        # 清理失败只记日志，不算备份失败
+        try:
+            purged = await asyncio.to_thread(app.state.notifications.purge, app.state.clock())
+            log.info("notifications.purged", count=purged)
+        except Exception:
+            log.exception("notifications.purge_failed")
         return result
 
     return backup

@@ -209,6 +209,23 @@ def ship_deadline_due(
     return [dict(r) for r in rows]
 
 
+def ship_deadline_counts(
+    conn: sa.Connection, statuses: Sequence[str], warn_until: str,
+) -> dict[int, int]:
+    """同 ship_deadline_due 的条件，按店计数（不设上限）。"""
+    if len(statuses) == 0:
+        return {}
+    rows = conn.execute(
+        sa.select(orders.c.shop_id, sa.func.count()).where(
+            orders.c.status.in_(list(statuses)),
+            orders.c.exp_ship_time.is_not(None),
+            orders.c.exp_ship_time != "",
+            orders.c.exp_ship_time <= warn_until,
+        ).group_by(orders.c.shop_id)
+    )
+    return {int(shop_id): int(n) for shop_id, n in rows}
+
+
 def pool_orders(
     conn: sa.Connection, shop_ids: Sequence[int] | None, statuses: Sequence[str],
     page: int, page_size: int, sort: str | None = None, order: SortOrder = "asc",

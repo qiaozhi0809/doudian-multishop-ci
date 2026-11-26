@@ -53,7 +53,7 @@ class NotificationFeed:
             LABEL_DONE: self._on_label_done,
             SHIP_DONE: lambda d: self._batch("ship", d),
             PRINT_DONE: lambda d: self._batch("print", d),
-            RECONCILE_DONE: lambda _d: self._n.emit("reconcile_done", shop_id=None),
+            RECONCILE_DONE: self._on_reconcile_done,
             ORDERS_NEW: lambda d: self._n.emit(
                 "new_order", shop_id=d["shop_id"], count=d["count"]),
             AFTERSALES_NEW: lambda d: self._n.emit(
@@ -107,7 +107,8 @@ class NotificationFeed:
             self._n.resolve_state("login", shop_id=shop_id)
         egress_kind = _EGRESS_KINDS.get(shop["egress_status"] or "")
         if egress_kind is not None:
-            self._n.raise_state("egress", egress_kind, shop_id=shop_id)
+            self._n.raise_state(
+                "egress", egress_kind, shop_id=shop_id, detail=self._egress_body(shop))
         else:
             self._n.resolve_state("egress", shop_id=shop_id)
         reason = shop["paused_reason"] or ""
@@ -118,10 +119,29 @@ class NotificationFeed:
         else:
             self._n.resolve_state("risk", shop_id=shop_id)
 
+    def _egress_body(self, shop: Any) -> str | None:
+        """出口问题的具体事实；不写 IP、代理账号等。"""
+        status = shop["egress_status"]
+        if status == "unreachable":
+            return "直连不通" if shop["egress_mode"] == "direct" else "代理不通"
+        if status == "duplicate" and shop["egress_ip_pending"]:
+            with self._engine.connect() as conn:
+                clash = [
+                    o["name"] for o in shop_store.list(conn)
+                    if o["id"] != shop["id"] and o["status"] != DISABLED
+                    and o["egress_ip"] == shop["egress_ip_pending"]
+                ]
+            return f"与 {'、'.join(clash)} 相同" if clash else None
+        return None
+
     # ---- 临近发货超时 ----
 
     def _on_deadline(self, data: dict[str, Any]) -> None:
-        per_shop = Counter(int(i["shop_id"]) for i in data.get("items") or [])
+        raw = data.get("shop_counts")
+        if raw is not None:  # 真实分店计数（items 被截到上限，不能用来判断恢复）
+            per_shop = {int(k): int(v) for k, v in raw.items() if int(v) > 0}
+        else:
+            per_shop = Counter(int(i["shop_id"]) for i in data.get("items") or [])
         for shop_id, n in per_shop.items():
             self._n.raise_state("deadline", "ship_deadline", shop_id=shop_id, count=n)
         with self._engine.connect() as conn:
@@ -133,6 +153,11 @@ class NotificationFeed:
             self._n.resolve_state("deadline", shop_id=shop_id)
 
     # ---- 批量结果 / 同步结果 ----
+
+    def _on_reconcile_done(self, data: dict[str, Any]) -> None:
+        # 全部店失败的对账不报「完成」；失败原因在对账页的运行记录里
+        if data.get("status") != "failed":
+            self._n.emit("reconcile_done", shop_id=None)
 
     def _on_label_done(self, data: dict[str, Any]) -> None:
         self._batch(str(data.get("mode") or "obtain"), data)
@@ -152,4 +177,5 @@ class NotificationFeed:
     def _on_sync_result(self, data: dict[str, Any]) -> None:
         self._n.emit(
             "sync_done" if data.get("ok") else "sync_failed",
-            shop_id=int(data["shop_id"]), detail=str(data["kind"]))
+            shop_id=int(data["shop_id"]), detail=str(data["kind"]),
+            body=None if data.get("ok") else (data.get("error") or None))

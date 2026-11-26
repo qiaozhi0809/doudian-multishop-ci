@@ -49,6 +49,8 @@ class ShipDeadlineWatcher:
         warn_until = (now + timedelta(hours=self._warn_hours)).strftime(ISO_FMT)
         with self._engine.connect() as conn:
             rows = order_store.ship_deadline_due(conn, PENDING_STATUSES, warn_until, self._limit)
+            # items 截到上限；分店真实数量另算，供通知按店对账
+            shop_counts = order_store.ship_deadline_counts(conn, PENDING_STATUSES, warn_until)
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}
         items = [
             {
@@ -65,6 +67,7 @@ class ShipDeadlineWatcher:
             "warn_hours": self._warn_hours,
             "checked_at": now.strftime(ISO_FMT),
             "items": items,
+            "shop_counts": shop_counts,
         })
         if items:
             log.info("ship_deadline.warning", count=len(items), warn_hours=self._warn_hours)

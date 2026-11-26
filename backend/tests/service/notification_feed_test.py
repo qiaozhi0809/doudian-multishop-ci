@@ -128,7 +128,22 @@ def test_disabled_shop_resolves_all_states(feed, svc, engine, shop_a):
 
 def deadline_event(*shop_ids):
     items = [{"shop_id": s, "order_no": f"no-{i}"} for i, s in enumerate(shop_ids)]
-    return {"count": len(items), "items": items}
+    counts: dict[int, int] = {}
+    for s in shop_ids:
+        counts[s] = counts.get(s, 0) + 1
+    return {"count": len(items), "items": items, "shop_counts": counts}
+
+
+def test_deadline_uses_shop_counts_not_capped_items(feed, svc, shop_a, shop_b):
+    """items 被截到上限，只含店A；shop_counts 是真实分店计数，店B 不能被误判恢复。"""
+    feed.handle(SHIP_DEADLINE_WARNING, deadline_event(shop_a, shop_b))
+    capped = {"count": 2, "items": [{"shop_id": shop_a, "order_no": "x"}] * 2,
+              "shop_counts": {str(shop_a): 150, str(shop_b): 120}}  # 经 JSON 时键为字符串
+    feed.handle(SHIP_DEADLINE_WARNING, capped)
+    by_shop = {r["shop_id"]: r for r in rows(svc, "ship_deadline")}
+    assert by_shop[shop_a]["count"] == 150 and by_shop[shop_b]["count"] == 120
+    assert by_shop[shop_b]["resolved_at"] is None
+    assert rows(svc, "recovered") == []
 
 
 def test_deadline_groups_by_shop_and_resolves_missing(feed, svc, shop_a, shop_b):
@@ -185,6 +200,32 @@ def test_simulated_batch_not_notified(feed, svc):
 def test_reconcile_done(feed, svc):
     feed.handle(RECONCILE_DONE, {"run_id": "r1", "status": "success", "findings": 0})
     assert [r["kind"] for r in rows(svc)] == ["reconcile_done"]
+
+
+def test_failed_reconcile_not_announced(feed, svc):
+    feed.handle(RECONCILE_DONE, {"run_id": "r2", "status": "failed", "errors": 2})
+    assert rows(svc) == []
+
+
+def test_sync_failed_carries_reason_in_body(feed, svc, shop_a):
+    feed.handle(SYNC_RESULT, {"kind": "orders", "shop_id": shop_a, "ok": False,
+                              "error": "该店铺需要重新扫码登录"})
+    feed.handle(SYNC_RESULT, {"kind": "orders", "shop_id": shop_a, "ok": False,
+                              "error": "内部错误"})
+    (row,) = rows(svc, "sync_failed")
+    assert row["count"] == 2 and row["body"] == "内部错误"  # 合并后正文为最近一次原因
+
+
+def test_egress_body_names_concrete_problem(feed, svc, engine, shop_a, shop_b):
+    set_shop(engine, shop_a, egress_status="unreachable", egress_mode="direct")
+    set_shop(engine, shop_b, egress_ip="203.0.113.9")
+    feed.handle(SHOP_STATUS_CHANGED, {"shop_id": shop_a})
+    assert rows(svc, "egress_unreachable")[0]["body"] == "直连不通"
+    set_shop(engine, shop_a, egress_status="duplicate", egress_ip_pending="203.0.113.9")
+    feed.handle(SHOP_STATUS_CHANGED, {"shop_id": shop_a})
+    (row,) = [r for r in rows(svc) if r["state_key"] == f"egress:{shop_a}"]
+    assert row["kind"] == "egress_duplicate" and row["body"] == "与 店B 相同"
+    assert "203.0.113" not in (row["body"] or "")
 
 
 # ---- 新单 / 同步结果 ----

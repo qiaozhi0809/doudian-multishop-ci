@@ -49,8 +49,7 @@ async def _one(
 
     try:
         return ShopResult(shop_id, True, await runner.run(shop_id, wrapped, actor=actor))
-    except _USER_FACING as e:
-        return ShopResult(shop_id, False, error=str(e) or type(e).__name__)
     except Exception as e:
-        log.error(event, shop_id=shop_id, error=type(e).__name__)
-        return ShopResult(shop_id, False, error="内部错误")
+        if not isinstance(e, _USER_FACING):
+            log.error(event, shop_id=shop_id, error=type(e).__name__)
+        return ShopResult(shop_id, False, error=user_error(e))

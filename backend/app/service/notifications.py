@@ -75,22 +75,25 @@ class NotificationService:
 
     def emit(
         self, kind: Kind, *, shop_id: int | None, count: int = 1, detail: str | None = None,
+        body: str | None = None,
     ) -> int:
-        return self._emit(kind, shop_id=shop_id, count=count, detail=detail)
+        """detail 参与标题 / 链接；body 是正文（如失败原因），合并时取最近一次。"""
+        return self._emit(kind, shop_id=shop_id, count=count, detail=detail, body=body)
 
     def _emit(
         self, kind: Kind, *, shop_id: int | None, count: int, detail: str | None,
+        body: str | None,
     ) -> int:
         with self._engine.begin() as conn:
             nid, action, alert = self._write_event(
-                conn, kind, shop_id=shop_id, count=count, detail=detail)
+                conn, kind, shop_id=shop_id, count=count, detail=detail, body=body)
             item = notification_store.get(conn, nid)
         self._publish(action, item, alert=alert)
         return nid
 
     def _write_event(
         self, conn: sa.Connection, kind: Kind, *, shop_id: int | None, count: int,
-        detail: str | None, link: str | None = None,
+        detail: str | None, link: str | None = None, body: str | None = None,
     ) -> tuple[int, str, bool]:
         now = self._now()
         name = _shop_name(conn, shop_id)
@@ -101,14 +104,15 @@ class NotificationService:
                 conn, shop_id, kind, link=link if kind in _MERGE_BY_LINK else None)
         if prev is not None:
             total = prev["count"] + count
+            fields: dict[str, Any] = {} if body is None else {"body": body}
             notification_store.update(
                 conn, prev["id"], now, count=total,
-                title=title_for(kind, shop_name=name, count=total, detail=detail),
+                title=title_for(kind, shop_name=name, count=total, detail=detail), **fields,
             )
             return prev["id"], "updated", False
         nid = notification_store.insert(
             conn, kind=kind, level=LEVEL_BY_KIND[kind], shop_id=shop_id,
-            title=title_for(kind, shop_name=name, count=count, detail=detail),
+            title=title_for(kind, shop_name=name, count=count, detail=detail), body=body,
             link=link, count=count, created_at=now, updated_at=now,
         )
         return nid, "created", True
