@@ -46,6 +46,7 @@ export function useShopPage() {
     resumeShop: byId(dialogs.resumeShopId),
     editShop: byId(dialogs.editShopId),
     disableShop: byId(dialogs.disableShopId),
+    imShop: byId(dialogs.imShopId),
   };
 }
 

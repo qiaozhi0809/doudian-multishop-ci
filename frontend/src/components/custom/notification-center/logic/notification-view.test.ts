@@ -72,6 +72,12 @@ describe("bannerView", () => {
     expect(view.kind === "rows" && view.rows.map((r) => r.problems[0].link)).toEqual(["/shops?shop=3", "/orders?shops=4"]);
   });
 
+  it("飞鸽等待超时显示「超 3 分钟未回复」，跳后端给的链接", () => {
+    const view = bannerView([shop(1, [{ kind: "im_waiting", link: "/messages?shops=1&quick=overdue" }])]);
+    expect(view.kind === "rows" && view.rows[0].text).toBe("店1：超 3 分钟未回复");
+    expect(view.kind === "rows" && view.rows[0].problems[0].link).toBe("/messages?shops=1&quick=overdue");
+  });
+
   it("超过 3 家合并为一行", () => {
     expect(bannerView([1, 2, 3, 4].map((id) => shop(id, [{ kind: "login_expired", link: null }])))).toEqual({ kind: "merged", text: "4 家店需要处理" });
   });

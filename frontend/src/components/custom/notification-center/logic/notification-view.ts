@@ -43,6 +43,7 @@ const PROBLEM_LABELS: Partial<Record<NotificationItem["kind"], string>> = {
   egress_duplicate: "出口 IP 与其他店重复",
   risk_paused: "风控暂停",
   ship_deadline: "临近发货超时",
+  im_waiting: "超 3 分钟未回复",
 };
 
 /** 横条最多逐店列出几家，超过合并为一行。 */

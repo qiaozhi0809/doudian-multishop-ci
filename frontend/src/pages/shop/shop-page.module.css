@@ -109,6 +109,11 @@
   gap: var(--space-4);
 }
 
+/* 表单里的开关只占自身宽度，点旁边空白不会误触 */
+.formSwitch {
+  align-self: flex-start;
+}
+
 .formRow {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);

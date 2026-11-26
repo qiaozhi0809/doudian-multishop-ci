@@ -8,8 +8,11 @@ export function useShopDialogs() {
   const [resumeShopId, setResumeShopId] = useState<number | null>(null);
   const [editShopId, setEditShopId] = useState<number | null>(null);
   const [disableShopId, setDisableShopId] = useState<number | null>(null);
+  /** 正在确认「接收飞鸽消息」的店（叠在编辑弹窗之上）。 */
+  const [imShopId, setImShopId] = useState<number | null>(null);
   return {
     addOpen, setAddOpen, egressShopId, setEgressShopId, baseShopId, setBaseShopId,
     resumeShopId, setResumeShopId, editShopId, setEditShopId, disableShopId, setDisableShopId,
+    imShopId, setImShopId,
   };
 }
