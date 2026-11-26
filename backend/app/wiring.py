@@ -23,6 +23,8 @@ from app.service.fund import FundService
 from app.service.label_pool import LabelPoolService
 from app.service.label_preview import LabelPreviewService
 from app.service.labeling import LabelingService
+from app.service.notification_feed import NotificationFeed
+from app.service.notifications import NotificationService
 from app.service.order_query import OrderQueryService
 from app.service.order_sync import OrderSyncService
 from app.service.printing import PrintingService
@@ -73,6 +75,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
     tasks = TaskRegistry()
     label_preview = LabelPreviewService(
         engine, dry_run=settings.dry_run, **clock_kw)
+    notifications = NotificationService(engine, events, **clock_kw)
     return {
         "engine": engine, "events": events, "sessions": sessions, "egress": egress,
         "proxy_pool": ProxyPoolService(
@@ -83,8 +86,8 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         "order_query": order_query,
         # M5 只读聚合：售后 / 商品与库存 / 资金
         "aftersale": AftersaleService(engine, runner, events=events, **clock_kw),
-        "catalog": CatalogService(engine, runner, **clock_kw),
-        "fund": FundService(engine, runner, **clock_kw),
+        "catalog": CatalogService(engine, runner, events=events, **clock_kw),
+        "fund": FundService(engine, runner, events=events, **clock_kw),
         "label_preview": label_preview,
         "labeling": LabelingService(
             engine, runner, label_preview, events,
@@ -111,6 +114,9 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
             engine, settings.backups_dir, keep=settings.backup_keep, **clock_kw),
         "ship_deadline": ShipDeadlineWatcher(
             engine, events, warn_hours=settings.ship_deadline_warn_hours, **clock_kw),
+        # 通知中心：统一写入口 + 事件翻译（lifespan 里启动订阅循环）
+        "notifications": notifications,
+        "notification_feed": NotificationFeed(engine, notifications),
         "shop_admin": ShopAdminService(engine, events, egress, **clock_kw),
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,

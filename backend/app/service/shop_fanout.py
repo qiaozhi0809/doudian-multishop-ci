@@ -19,6 +19,13 @@ Job = Callable[[int, FxgClient], Awaitable[object]]
 _USER_FACING = (DoudianError, EgressNotReady, EgressConflict, ShopPaused, NotFound)
 
 
+def user_error(e: Exception) -> str:
+    """给用户看的失败原因：业务异常用原文，其他一律「内部错误」（不外泄程序细节）。"""
+    if isinstance(e, _USER_FACING):
+        return str(e) or type(e).__name__
+    return "内部错误"
+
+
 @dataclass(frozen=True)
 class ShopResult[T]:
     shop_id: int

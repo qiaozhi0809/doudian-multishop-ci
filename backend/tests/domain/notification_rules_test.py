@@ -88,3 +88,11 @@ def test_state_key与静默窗口():
     assert state_key("egress", 3) == "egress:3"
     assert state_key("login", 1) == "login:1"
     assert REOPEN_SILENT_WITHIN == timedelta(minutes=30)
+
+
+def test_batch_title_names_operation():
+    from app.domain.notification_rules import batch_detail
+    assert title_for("batch_failed", shop_name=None, count=3,
+                     detail=batch_detail("ship", 1)) == "发货完成：成功 3，失败 1"
+    assert title_for("batch_done", shop_name=None, count=2,
+                     detail=batch_detail("print", 0)) == "打印完成：成功 2，失败 0"

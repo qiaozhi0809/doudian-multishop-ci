@@ -49,6 +49,19 @@ _SHOP_STATE_TITLES = {
     "risk_paused": "风控暂停",
 }
 
+# 批量操作 → 标题前缀；detail 写成 batch_detail(op, 失败数)，旧格式「失败数」按打单
+_BATCH_LABELS = {"obtain": "打单", "fetch_and_ship": "打单发货", "void": "作废面单",
+                 "ship": "发货", "print": "打印"}
+
+
+def batch_detail(op: str, failed: int) -> str:
+    return f"{op}:{failed}"
+
+
+def _batch_title(count: int, detail: str | None) -> str:
+    op, _, failed = (detail or "").rpartition(":")
+    return f"{_BATCH_LABELS.get(op, '打单')}完成：成功 {count}，失败 {failed or 0}"
+
 
 def state_key(kind_family: KindFamily, shop_id: int) -> str:
     return f"{kind_family}:{shop_id}"
@@ -92,7 +105,7 @@ def title_for(kind: Kind, *, shop_name: str | None, count: int, detail: str | No
     if kind == "recovered":
         return f"{prefix}已恢复：{detail}" if detail else f"{prefix}已恢复"
     if kind in ("batch_done", "batch_failed"):
-        return f"打单完成：成功 {count}，失败 {detail or 0}"
+        return _batch_title(count, detail)
     if kind in ("sync_done", "sync_failed"):
         label = _SYNC_LABELS.get(detail or "", detail or "")
         return f"{prefix}{label}同步{'完成' if kind == 'sync_done' else '失败'}"

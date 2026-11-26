@@ -1453,6 +1453,194 @@
         "title": "MarginRow",
         "type": "object"
       },
+      "NotificationItem": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "new_order",
+              "new_aftersale",
+              "login_expired",
+              "egress_unreachable",
+              "egress_changed",
+              "egress_duplicate",
+              "risk_paused",
+              "ship_deadline",
+              "batch_done",
+              "batch_failed",
+              "sync_failed",
+              "sync_done",
+              "reconcile_done",
+              "recovered"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "strong",
+              "medium",
+              "weak"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "shop_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop Id"
+          },
+          "state_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Key"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "level",
+          "shop_id",
+          "title",
+          "body",
+          "link",
+          "count",
+          "state_key",
+          "resolved_at",
+          "read_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "NotificationItem",
+        "type": "object"
+      },
+      "NotificationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "NotificationPage",
+        "type": "object"
+      },
+      "NotificationSummary": {
+        "properties": {
+          "strong_open": {
+            "items": {
+              "$ref": "#/components/schemas/StrongOpenShop"
+            },
+            "title": "Strong Open",
+            "type": "array"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread",
+          "strong_open"
+        ],
+        "title": "NotificationSummary",
+        "type": "object"
+      },
       "OrderCounts": {
         "properties": {
           "exp_ship": {
@@ -4655,6 +4843,61 @@
         "title": "StockSyncResponse",
         "type": "object"
       },
+      "StrongOpenShop": {
+        "description": "一店一行：该店所有未解决的强状态。",
+        "properties": {
+          "kinds": {
+            "items": {
+              "enum": [
+                "new_order",
+                "new_aftersale",
+                "login_expired",
+                "egress_unreachable",
+                "egress_changed",
+                "egress_duplicate",
+                "risk_paused",
+                "ship_deadline",
+                "batch_done",
+                "batch_failed",
+                "sync_failed",
+                "sync_done",
+                "reconcile_done",
+                "recovered"
+              ],
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "kinds",
+          "link"
+        ],
+        "title": "StrongOpenShop",
+        "type": "object"
+      },
       "SyncStarted": {
         "properties": {
           "already_running": {
@@ -7407,6 +7650,150 @@
         "summary": "Preview Void",
         "tags": [
           "labels"
+        ]
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "operationId": "list_notifications_api_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unread",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unread",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Notifications",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/read-all": {
+      "post": {
+        "operationId": "read_all_api_notifications_read_all_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Read All",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/summary": {
+      "get": {
+        "operationId": "summary_api_notifications_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Summary",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/{notification_id}/read": {
+      "post": {
+        "operationId": "read_one_api_notifications__notification_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Read One",
+        "tags": [
+          "notifications"
         ]
       }
     },

@@ -11,8 +11,9 @@ from app.adapter.doudian import endpoints as ep
 from app.adapter.doudian.client import FxgClient
 from app.adapter.doudian.parsers import parse_orders
 from app.domain.order_status import LocalOrderStatus, PlatformOrderStatus
-from app.service.events import ORDERS_NEW, SYNC_PROGRESS, EventBus
+from app.service.events import ORDERS_NEW, SYNC_PROGRESS, EventBus, publish_sync_result
 from app.service.session_manager import SessionManager
+from app.service.shop_fanout import user_error
 from app.service.shop_runner import ShopRunner
 from app.store import order_store, sync_baseline_store
 
@@ -60,6 +61,16 @@ class OrderSyncService:
             if self._on_synced:  # 订单已变：该店的 tab 计数缓存作废
                 self._on_synced(shop_id)
 
+    async def sync_manual(self, shop_id: int, actor: str) -> SyncResult:
+        """手动同步：结束时发 SYNC_RESULT（定时同步走 sync_pending，不发「完成」）。"""
+        try:
+            result = await self.sync_pending(shop_id, actor)
+        except Exception as e:
+            publish_sync_result(self._events, "orders", shop_id, user_error(e))
+            raise
+        publish_sync_result(self._events, "orders", shop_id, None)
+        return result
+
     async def _sync(self, client: FxgClient, shop_id: int) -> SyncResult:
         fetched, seen, complete, new = 0, set[str](), False, 0
         try:
@@ -80,8 +91,13 @@ class OrderSyncService:
                 if len(orders) < ep.SEARCHLIST_MAX_PAGE_SIZE:
                     complete = True
                     break
-        finally:  # 中途失败也报已入库的新单（否则下一轮它们已在库里，提醒就丢了）
-            self._report_new(shop_id, new, complete)
+        except BaseException:  # 中途失败也报已入库的新单（否则下一轮它们已在库里，提醒就丢了）
+            try:
+                self._report_new(shop_id, new, complete=False)
+            except Exception:  # 报告出错不能盖住原异常
+                log.exception("order_sync.report_new_failed", shop_id=shop_id)
+            raise
+        self._report_new(shop_id, new, complete)
         rechecked, cancelled = 0, 0
         if complete:  # 分页没拉全时，「没出现」不代表离开了待发货
             rechecked, cancelled = await self._recheck_vanished(client, shop_id, seen)

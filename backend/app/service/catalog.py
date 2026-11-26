@@ -18,6 +18,7 @@ from app.adapter.doudian.catalog_parsers import (
     product_display,
 )
 from app.adapter.doudian.client import FxgClient
+from app.service.events import EventBus, publish_sync_result
 from app.service.shop_cache import ShopTtlCache
 from app.service.shop_fanout import ShopResult, fan_out
 from app.service.shop_runner import ShopRunner
@@ -73,11 +74,12 @@ class ShopItems:
 class CatalogService:
     def __init__(
         self, engine: Engine, runner: ShopRunner,
-        clock: Callable[[], datetime] = _utc_now,
+        clock: Callable[[], datetime] = _utc_now, events: EventBus | None = None,
     ) -> None:
         self._engine = engine
         self._runner = runner
         self._clock = clock
+        self._events = events  # 手动同步结束发 SYNC_RESULT
         self._counts_cache: ShopTtlCache[dict[str, int]] = ShopTtlCache(clock)
 
     # ---- 商品同步 ----
@@ -89,6 +91,7 @@ class CatalogService:
         )
         for r in results:  # 同步过的店，下次取商品计数重新请求平台
             self._counts_cache.invalidate(r.shop_id)
+            publish_sync_result(self._events, "products", r.shop_id, r.error)
         now = self._stamp()
         return [
             ShopProductSync(
@@ -174,6 +177,8 @@ class CatalogService:
             shop_ids, self._runner, actor, self._sync_stock_shop,
             event="catalog.stock.sync.unexpected",
         )
+        for r in results:
+            publish_sync_result(self._events, "stock", r.shop_id, r.error)
         now = self._stamp()
         return [
             ShopStockSync(

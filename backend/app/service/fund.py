@@ -20,6 +20,7 @@ from app.adapter.doudian.fund_parsers import (
     parse_unsettled,
     unsettled_display,
 )
+from app.service.events import EventBus, publish_sync_result
 from app.service.shop_fanout import fan_out
 from app.service.shop_runner import ShopRunner
 from app.shared.time_bj import BEIJING
@@ -67,11 +68,13 @@ class FundService:
     def __init__(
         self, engine: Engine, runner: ShopRunner,
         clock: Callable[[], datetime] = _utc_now, max_pages: int = MAX_PAGES,
+        events: EventBus | None = None,
     ) -> None:
         self._engine = engine
         self._runner = runner
         self._clock = clock
         self._max_pages = max_pages
+        self._events = events  # 手动同步结束发 SYNC_RESULT
 
     # ---- 同步（待结算 + 保证金）----
 
@@ -79,6 +82,8 @@ class FundService:
         results = await fan_out(
             shop_ids, self._runner, actor, self._sync_shop, event="fund.sync.unexpected"
         )
+        for r in results:
+            publish_sync_result(self._events, "fund", r.shop_id, r.error)
         now = self._stamp()
         return [
             ShopFundSync(

@@ -108,3 +108,25 @@ async def test_product_counts_cached_and_invalidated_by_sync(env):
     await svc.sync_products([env.shop_id], "admin")
     await svc.product_counts([env.shop_id], "admin")
     assert count_calls() == 2  # 同步后马上重新取
+
+
+def _results(sub) -> list[dict]:
+    out = []
+    while not sub._queue.empty():
+        event, data = sub._queue.get_nowait()
+        if event == "sync_result":
+            out.append(data)
+    return out
+
+
+async def test_manual_syncs_publish_result(env):
+    svc = CatalogService(env.engine, env.runner, events=env.events)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [BizRejected("100021", "商品数据不可用"),
+                                  BizRejected("100021", "库存数据不可用")]
+    await svc.sync_products([env.shop_id], "admin")
+    await svc.sync_stock([env.shop_id], "admin")
+    results = _results(sub)
+    assert [(r["kind"], r["shop_id"], r["ok"]) for r in results] == [
+        ("products", env.shop_id, False), ("stock", env.shop_id, False)]
+    assert "商品数据不可用" in results[0]["error"]

@@ -304,3 +304,50 @@ async def test_partial_aftersale_sync_with_baseline_notifies_inserted(env):
     (outcome,) = await svc.sync([env.shop_id], "admin")
     assert outcome.error
     assert drain(sub, "aftersales_new") == [{"shop_id": env.shop_id, "count": 49}]
+
+
+async def test_prune_error_does_not_lose_new_aftersale_report(env, monkeypatch):
+    from app.store import aftersale_store
+    svc = checker(env)
+    env.transport.responses[:] = [list_of()]
+    await svc.sync([env.shop_id], "admin")
+    sub = env.events.subscribe()
+
+    def boom(*_a, **_k):
+        raise RuntimeError("prune failed")
+
+    monkeypatch.setattr(aftersale_store, "prune_unseen", boom)
+    env.transport.responses[:] = [list_of(("n1", OPEN))]
+    (outcome,) = await svc.sync([env.shop_id], "admin")
+    assert outcome.error
+    assert drain(sub, "aftersales_new") == [{"shop_id": env.shop_id, "count": 1}]
+
+
+async def test_report_error_on_failed_sync_keeps_original_error(env, monkeypatch):
+    from app.store import sync_baseline_store
+    svc = checker(env)
+    full = [(f"id{i}", OPEN) for i in range(50)]
+    env.transport.responses[:] = [list_of(*full), BizRejected("100021", "售后数据不可用")]
+
+    def boom(*_a, **_k):
+        raise RuntimeError("report failed")
+
+    monkeypatch.setattr(sync_baseline_store, "has", boom)
+    (outcome,) = await svc.sync([env.shop_id], "admin")
+    assert "售后数据不可用" in outcome.error
+
+
+async def test_manual_sync_publishes_result_check_new_does_not(env):
+    svc = checker(env)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [list_of(), BizRejected("100021", "售后数据不可用")]
+    await svc.sync([env.shop_id], "admin")
+    await svc.sync([env.shop_id], "admin")
+    results = drain(sub, "sync_result")
+    assert results[0] == {"kind": "aftersales", "shop_id": env.shop_id, "ok": True,
+                          "error": None}
+    assert results[1]["ok"] is False and "售后数据不可用" in results[1]["error"]
+
+    env.transport.responses[:] = [counts_with(1), list_of(("a1", OPEN))]
+    await svc.check_new(env.shop_id)
+    assert drain(sub, "sync_result") == []

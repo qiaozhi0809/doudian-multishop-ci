@@ -23,6 +23,7 @@ from app.api import catalog as catalog_api
 from app.api import event as event_api
 from app.api import fund as fund_api
 from app.api import label as label_api
+from app.api import notification as notification_api
 from app.api import order as order_api
 from app.api import print as print_api
 from app.api import proxy_pool as proxy_pool_api
@@ -87,6 +88,7 @@ def create_app(
             task_store.recover_after_restart(conn, now_iso)
         for name, service in build_services(settings, engine, overrides).items():
             setattr(app.state, name, service)
+        app.state.clock = overrides.clock or _utc_now
         app.state.proxy_pool.rehash_legacy()  # 补算迁移留下的 legacy: identity
 
         stop = asyncio.Event()
@@ -100,6 +102,7 @@ def create_app(
             for_each_active_shop, engine, lambda sid: aftersale.check_new(sid, SYSTEM_ACTOR)
         )
         tasks = [
+            asyncio.create_task(app.state.notification_feed.run(app.state.events, stop)),
             asyncio.create_task(run_every(PROBE_INTERVAL_S, probe_all, stop)),
             asyncio.create_task(run_every(ORDER_SYNC_INTERVAL_S, sync_all, stop)),
             asyncio.create_task(run_every(ORDER_SYNC_INTERVAL_S, aftersale_all, stop)),
@@ -137,7 +140,7 @@ def create_app(
     for module in (
         auth_api, shop_api, proxy_pool_api, order_api, label_api, print_api, event_api,
         aftersale_api, catalog_api, fund_api, shipping_api, reconcile_api,
-        backup_api, system_api,
+        backup_api, system_api, notification_api,
     ):
         app.include_router(module.router)
     _mount_frontend(app, settings)
@@ -154,7 +157,11 @@ def _deadline_scan(app: FastAPI) -> Callable[[], Awaitable[object]]:
 def _daily_backup(app: FastAPI) -> Callable[[], Awaitable[object]]:
     async def backup() -> object:
         # 备份在专用线程执行：sqlite 在线备份可能持续数秒，不能卡住事件循环
-        return await asyncio.to_thread(app.state.backup.create, None, "daily")
+        result = await asyncio.to_thread(app.state.backup.create, None, "daily")
+        # 备份之后清理已读超过 30 天的通知（先备份，清掉的仍可从快照找回）
+        purged = await asyncio.to_thread(app.state.notifications.purge, app.state.clock())
+        log.info("notifications.purged", count=purged)
+        return result
 
     return backup
 

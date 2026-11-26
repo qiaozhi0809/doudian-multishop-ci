@@ -630,6 +630,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notifications */
+        get: operations["list_notifications_api_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read All */
+        post: operations["read_all_api_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_notifications_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read One */
+        post: operations["read_one_api_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders": {
         parameters: {
             query?: never;
@@ -1617,6 +1685,59 @@ export interface components {
             /** Withdrawable Cents */
             withdrawable_cents: number | null;
         };
+        /** NotificationItem */
+        NotificationItem: {
+            /** Body */
+            body: string | null;
+            /** Count */
+            count: number;
+            /** Created At */
+            created_at: string;
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered";
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "strong" | "medium" | "weak";
+            /** Link */
+            link: string | null;
+            /** Read At */
+            read_at: string | null;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Shop Id */
+            shop_id: number | null;
+            /** State Key */
+            state_key: string | null;
+            /** Title */
+            title: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /** NotificationPage */
+        NotificationPage: {
+            /** Items */
+            items: components["schemas"]["NotificationItem"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** NotificationSummary */
+        NotificationSummary: {
+            /** Strong Open */
+            strong_open: components["schemas"]["StrongOpenShop"][];
+            /** Unread */
+            unread: number;
+        };
         /** OrderCounts */
         OrderCounts: {
             /** Exp Ship */
@@ -2525,6 +2646,20 @@ export interface components {
         StockSyncResponse: {
             /** Shops */
             shops: components["schemas"]["ShopStockSync"][];
+        };
+        /**
+         * StrongOpenShop
+         * @description 一店一行：该店所有未解决的强状态。
+         */
+        StrongOpenShop: {
+            /** Kinds */
+            kinds: ("new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered")[];
+            /** Link */
+            link: string | null;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
         };
         /** SyncStarted */
         SyncStarted: {
@@ -3839,6 +3974,123 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VoidPreviewResponse"];
                 };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_notifications_api_notifications_get: {
+        parameters: {
+            query?: {
+                unread?: boolean;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    read_all_api_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    summary_api_notifications_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSummary"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    read_one_api_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description 错误信封 */
             default: {

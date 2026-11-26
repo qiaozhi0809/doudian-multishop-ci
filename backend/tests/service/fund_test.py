@@ -122,3 +122,14 @@ async def test_unsettled_paging_incomplete_keeps_old_snapshot(env):
     assert outcome.unsettled_count == 0
     assert outcome.note and "未覆盖旧数据" in outcome.note
     assert svc.list_unsettled([env.shop_id])[1] == 0
+
+
+async def test_manual_sync_publishes_result(env):
+    set_shop_no(env, SHOP_NO)
+    svc = FundService(env.engine, env.runner, events=env.events)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [reply(fx("fund_unsettled")), reply(fx("fund_margin"))]
+    await svc.sync([env.shop_id], "admin")
+    event, data = sub._queue.get_nowait()
+    assert (event, data) == ("sync_result", {
+        "kind": "fund", "shop_id": env.shop_id, "ok": True, "error": None})

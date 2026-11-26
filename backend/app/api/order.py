@@ -76,7 +76,7 @@ async def sync_orders(
     started, running = [], []
     for shop_id in ids:
         try:
-            state.tasks.spawn(f"orders-{shop_id}", state.order_sync.sync_pending(shop_id, admin))
+            state.tasks.spawn(f"orders-{shop_id}", state.order_sync.sync_manual(shop_id, admin))
             started.append(shop_id)
         except TaskAlreadyRunning:
             running.append(shop_id)

@@ -270,3 +270,38 @@ async def test_failed_first_sync_no_baseline_no_event(env):
         await service(env).sync_pending(env.shop_id, "admin")
     assert not has_baseline(env, "orders")
     assert drain(sub, "orders_new") == []
+
+
+async def test_report_error_on_failed_sync_keeps_original_exception(env, monkeypatch):
+    from app.store import sync_baseline_store
+    svc = service(env)
+    env.transport.responses[:] = [page_of(0, 1)]
+    await svc.sync_pending(env.shop_id, "admin")
+
+    def boom(*_a, **_k):
+        raise RuntimeError("report failed")
+
+    monkeypatch.setattr(sync_baseline_store, "has", boom)
+    env.transport.responses[:] = [page_of(100, 200), ok(code=10008)]
+    with pytest.raises(SessionExpired):
+        await svc.sync_pending(env.shop_id, "admin")
+
+
+async def test_sync_manual_publishes_result(env):
+    svc = service(env)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 1)]
+    await svc.sync_manual(env.shop_id, "admin")
+    env.transport.responses[:] = [ok(code=10008)]
+    with pytest.raises(SessionExpired):
+        await svc.sync_manual(env.shop_id, "admin")
+    results = drain(sub, "sync_result")
+    assert results[0] == {"kind": "orders", "shop_id": env.shop_id, "ok": True, "error": None}
+    assert results[1]["ok"] is False and results[1]["error"]
+
+
+async def test_periodic_sync_pending_publishes_no_result(env):
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 1)]
+    await service(env).sync_pending(env.shop_id, "admin")
+    assert drain(sub, "sync_result") == []

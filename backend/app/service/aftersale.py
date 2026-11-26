@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import structlog
 from sqlalchemy import Engine
 
 from app.adapter.doudian import endpoints as ep
@@ -22,13 +23,15 @@ from app.domain.aftersale_status import (
     is_open,
     pending_total,
 )
-from app.service.events import AFTERSALES_NEW, EventBus
+from app.service.events import AFTERSALES_NEW, EventBus, publish_sync_result
 from app.service.periodic import SYSTEM_ACTOR
 from app.service.shop_cache import ShopTtlCache
 from app.service.shop_fanout import fan_out
 from app.service.shop_runner import ShopRunner
 from app.store import aftersale_store, shop_store, sync_baseline_store
 from app.store.sorting import SortOrder
+
+log = structlog.get_logger()
 
 MAX_PAGES = 50
 BASELINE_KIND = "aftersales"
@@ -77,6 +80,13 @@ class AftersaleService:
     # ---- 同步 ----
 
     async def sync(self, shop_ids: Sequence[int], actor: str) -> list[ShopSync]:
+        """手动同步：每店结束发 SYNC_RESULT（定时检查走 _sync_all，不发「完成」）。"""
+        results = await self._sync_all(shop_ids, actor)
+        for r in results:
+            publish_sync_result(self._events, "aftersales", r.shop_id, r.error)
+        return results
+
+    async def _sync_all(self, shop_ids: Sequence[int], actor: str) -> list[ShopSync]:
         results = await fan_out(
             shop_ids, self._runner, actor, self._sync_shop, event="aftersale.sync.unexpected"
         )
@@ -107,7 +117,7 @@ class AftersaleService:
             if unchanged < FORCE_SYNC_EVERY:
                 self._unchanged[shop_id] = unchanged
                 return 0
-        (result,) = await self.sync([shop_id], actor)
+        (result,) = await self._sync_all([shop_id], actor)
         if result.error is None and result.complete:  # 失败的下一轮重试
             self._last_pending[shop_id] = snapshot
             self._unchanged[shop_id] = 0
@@ -132,12 +142,17 @@ class AftersaleService:
                     complete = True
                     break
         except BaseException:  # 中途失败也报已入库的新单（下一轮它们已在库里）
-            self._report_new(shop_id, new, now, complete=False)
+            try:
+                self._report_new(shop_id, new, now, complete=False)
+            except Exception:  # 报告出错不能盖住原异常
+                log.exception("aftersale.report_new_failed", shop_id=shop_id)
             raise
+        # 先报新单再清理：清理出错也不丢提醒
+        reported = self._report_new(shop_id, new, now, complete=complete)
         if complete:  # 只有拉全了才能判断哪些售后单已不在平台列表
             with self._engine.begin() as conn:
                 aftersale_store.prune_unseen(conn, shop_id, now)
-        return fetched, complete, self._report_new(shop_id, new, now, complete=complete)
+        return fetched, complete, reported
 
     def _report_new(self, shop_id: int, new: int, now: str, *, complete: bool) -> int:
         """有基线：报本轮新入库的待办单（部分同步也报）。无基线：不报，返回 0；
