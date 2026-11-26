@@ -44,7 +44,7 @@ class FakePage:
         self.goto_error = goto_error
         self.load_args = None
 
-    async def goto(self, url: str) -> None:
+    async def goto(self, url: str, **_kw) -> None:
         self.ctx.calls.append("goto")
         if self.on_goto:
             self.on_goto(self.ctx)

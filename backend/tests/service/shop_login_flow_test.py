@@ -28,7 +28,7 @@ def test_scan_job_passes_use_cloak_and_proxy_to_scanner(tmp_path):
 
     calls: list[dict] = []
 
-    async def fake_scan(profile, channel, proxy, timeout_s, use_cloak=False):
+    async def fake_scan(profile, channel, proxy, timeout_s, use_cloak=False, registry=None):
         calls.append({"proxy": proxy, "use_cloak": use_cloak})
         return LoginResult(
             cookies=[], token="tok", expires_at="2030-01-01T00:00:00Z", device_headers={},

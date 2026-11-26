@@ -15,16 +15,23 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from playwright.async_api import async_playwright
 
+from app.adapter.browser import browser_registry
+from app.adapter.browser.browser_registry import BrowserRegistry, CloseReason, Purpose
+from app.adapter.browser.browser_timing import (
+    LOGIN_LOAD_WAIT_S,
+    LOGIN_NAV_TIMEOUT_S,
+    SCAN_WAIT_S,
+    login_max_age,
+)
 from app.adapter.browser.cloak_launch import (  # noqa: F401 - build_cloak_kwargs 供测试与调用方复用
     CloakUnavailable,
     build_cloak_kwargs,
-    launch_cloak,
 )
 from app.adapter.doudian.endpoints import BASE_URL
 
 ORDER_PAGE_URL = BASE_URL + "/ffa/morder/order/list"
 SESSION_LIFETIME = timedelta(days=60)
-LOAD_WAIT_MS = 10_000
+LOAD_WAIT_MS = LOGIN_LOAD_WAIT_S * 1000
 _HOST = urlparse(BASE_URL).hostname
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 # 协议通道要复用的设备请求头（规范名）
@@ -110,7 +117,7 @@ async def await_login(
     ctx.on("request", on_request)
     ctx.on("close", on_close)
     try:
-        await page.goto(ORDER_PAGE_URL)
+        await page.goto(ORDER_PAGE_URL, timeout=LOGIN_NAV_TIMEOUT_S * 1000)
     except Exception:
         if found.done() and found.exception() is not None:
             raise found.exception() from None
@@ -124,40 +131,54 @@ async def await_login(
 
 
 async def scan_login(
-    profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = 300,
-    use_cloak: bool = False,
+    profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = SCAN_WAIT_S,
+    use_cloak: bool = False, *, registry: BrowserRegistry | None = None,
 ) -> LoginResult:
     """打开订单页等待人工扫码。超时抛 TimeoutError，关窗抛 LoginCancelled。
 
     use_cloak 为真时走 CloakBrowser 定制 Chromium（每店固定指纹）；
-    否则用系统浏览器（channel 指定）。
+    否则用系统浏览器（channel 指定）。两种都在浏览器登记表里登记（用途 login），
+    关闭超时会强杀进程树。
     """
+    reg = registry or browser_registry.REGISTRY
     playwright_proxy_value = playwright_proxy(proxy)
-    if use_cloak:
-        ctx = await launch_cloak(profile_dir, playwright_proxy_value)
-        try:
-            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
-            token, headers, cookies = await await_login(ctx, page, timeout_s)
-        finally:
-            try:
-                await ctx.close()
-            except Exception:  # noqa: BLE001 - 用户已关窗时 close 会报错
-                pass
-        return LoginResult(cookies, token, session_expiry(cookies, datetime.now(UTC)), headers)
+    closed: list[str] = []
+    opts = {"max_age_s": login_max_age(timeout_s), "on_close": closed.append}
+    try:
+        if use_cloak:
+            async with reg.open_cloak(
+                profile_dir, Purpose.LOGIN, playwright_proxy_value, **opts
+            ) as ctx:
+                token, headers, cookies = await _login_in(ctx, timeout_s)
+        else:
+            async with async_playwright() as p:
+                def launch() -> Any:
+                    return p.chromium.launch_persistent_context(
+                        str(profile_dir), channel=channel, headless=False,
+                        proxy=playwright_proxy_value,
+                    )
 
-    async with async_playwright() as p:
-        ctx = await p.chromium.launch_persistent_context(
-            str(profile_dir), channel=channel, headless=False, proxy=playwright_proxy_value,
-        )
-        try:
-            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
-            token, headers, cookies = await await_login(ctx, page, timeout_s)
-        finally:
-            try:
-                await ctx.close()
-            except Exception:  # noqa: BLE001 - 用户已关窗时 close 会报错
-                pass
+                async with reg.open(profile_dir, Purpose.LOGIN, launch, **opts) as ctx:
+                    token, headers, cookies = await _login_in(ctx, timeout_s)
+    except LoginCancelled:
+        message = _CLOSED_BY_SYSTEM.get(closed[0]) if closed else None
+        if message:
+            raise LoginCancelled(message) from None
+        raise
     return LoginResult(cookies, token, session_expiry(cookies, datetime.now(UTC)), headers)
+
+
+# 浏览器不是用户关的：按登记表给出的关闭原因提示，而不是「浏览器已关闭」
+_CLOSED_BY_SYSTEM = {
+    CloseReason.EXPIRED: "扫码窗口打开太久，已被自动关闭，请重新发起登录",
+    CloseReason.PREEMPTED: "该店浏览器被其他操作关闭，扫码登录取消",
+    CloseReason.SHUTDOWN: "后台正在退出，扫码登录取消",
+}
+
+
+async def _login_in(ctx: Any, timeout_s: float) -> tuple[str, dict[str, str], list[dict]]:
+    page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+    return await await_login(ctx, page, timeout_s)
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:

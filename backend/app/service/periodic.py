@@ -20,9 +20,16 @@ SYSTEM_ACTOR = "system"
 
 
 async def run_every(
-    interval_s: float, fn: Callable[[], Awaitable[Any]], stop: asyncio.Event
+    interval_s: float, fn: Callable[[], Awaitable[Any]], stop: asyncio.Event,
+    *, delay_first: bool = False,
 ) -> None:
-    """立即执行一次，之后每隔 interval_s 执行；fn 抛异常只记日志，stop 置位后尽快退出。"""
+    """立即执行一次（delay_first 时先等一个间隔），之后每隔 interval_s 执行；
+    fn 抛异常只记日志，stop 置位后尽快退出。"""
+    if delay_first:
+        try:
+            await asyncio.wait_for(stop.wait(), interval_s)
+        except TimeoutError:
+            pass
     while not stop.is_set():
         try:
             await fn()

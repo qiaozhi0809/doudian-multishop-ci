@@ -18,7 +18,7 @@
 |---|---|
 | `adapter/doudian` | 抖店 HTTP 协议（含签名、错误码、分页基准） |
 | `adapter/print` | 官方打印组件 WebSocket |
-| `adapter/browser` | Playwright 扫码登录与兜底 fetch |
+| `adapter/browser` | Playwright 扫码登录与兜底 fetch；浏览器进程的登记与回收 |
 | `store/*` | SQLite 表结构与 CRUD |
 | `domain/order` | 订单状态机与状态枚举 |
 | `domain/aftersale` | 售后状态与待办判定 |
@@ -68,7 +68,7 @@ backend/app/
   adapter/      ← 外部世界的薄封装，无业务逻辑
     doudian/    ← 抖店 HTTP 客户端（FxgClient）、签名、接口常量、错误码
     print/      ← 打印组件 WebSocket
-    browser/    ← Playwright 登录与兜底渠道
+    browser/    ← Playwright 登录与兜底渠道、浏览器进程登记与回收
   store/        ← SQLite 数据访问，表/键 CRUD
   domain/       ← 纯业务模型 + 纯函数，不依赖框架、无 IO
   shared/       ← 跨模块工具，必须配单测 <name>_test.py

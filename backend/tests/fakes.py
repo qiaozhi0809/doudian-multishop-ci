@@ -31,3 +31,16 @@ class FakeTransport:
         if isinstance(item, Exception):
             raise item
         return item
+
+
+class NullProcesses:
+    """空进程表：测试里的应用不去枚举、更不去结束本机真实进程。"""
+
+    def list_browsers(self) -> list:
+        return []
+
+    def alive(self, proc) -> bool:
+        return False
+
+    def kill_tree(self, proc) -> bool:
+        return False
