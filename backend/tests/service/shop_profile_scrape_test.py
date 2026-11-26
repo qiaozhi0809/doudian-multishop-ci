@@ -153,3 +153,29 @@ async def test_scrape_unsupported_proxy_message_is_shown(engine, tmp_path, monke
     sid = _shop(engine)
     with pytest.raises(InvalidRequest, match="socks5 代理不支持账号密码"):
         await _svc(engine, FakeRunner(), tmp_path).scrape_card(sid, actor="admin")
+
+
+async def test_scrape_yields_im_profile_before_browser(engine, tmp_path, monkeypatch):
+    """让出必须发生在已进入该店队列之后、打开抓取浏览器之前。"""
+    calls: list = []
+
+    class QueueRunner(FakeRunner):
+        async def run(self, shop_id, job, *, actor, **_kw):
+            calls.append("queued")
+            return await super().run(shop_id, job, actor=actor)
+
+    async def fake_yield(shop_id):
+        calls.append(("yield", shop_id))
+        return True
+
+    async def fake_scrape(profile_dir, proxy, registry=None):
+        calls.append("scrape")
+        return dict(SCRAPED)
+
+    monkeypatch.setattr(shop_profile_mod, "scrape_platform_info", fake_scrape)
+    sid = _shop(engine)
+    svc = ShopProfileService(
+        engine, QueueRunner(), profiles_dir=tmp_path, yield_profile=fake_yield)
+    await svc.scrape_card(sid, actor="admin")
+
+    assert calls == ["queued", ("yield", sid), "scrape"]
