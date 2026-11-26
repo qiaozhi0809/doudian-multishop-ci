@@ -84,7 +84,7 @@ def test_im_waiting_recovered_title_drops_count(svc, shop_a):
     svc.resolve_state("im_wait", shop_id=shop_a)
     (recovered,) = _rows(svc, "recovered")
     assert recovered["title"] == "店A 已恢复：超 3 分钟未回复"
-    assert recovered["link"] == f"/messages?shops={shop_a}&quick=overdue"
+    assert recovered["link"] == f"/shops?shop={shop_a}"
 
 
 def test_emit_after_read_creates_new(svc, shop_a):

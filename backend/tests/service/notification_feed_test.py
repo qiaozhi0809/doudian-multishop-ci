@@ -286,7 +286,7 @@ def test_im_unread_changed_writes_new_message(feed, svc, shop_a):
     (row,) = rows(svc)
     assert row["kind"] == "new_message" and row["level"] == "medium"
     assert row["count"] == 2 and row["title"] == "店A 新增 2 条未读消息"  # 用 new，不用 unread
-    assert row["body"] is None and row["link"] == f"/messages?shops={shop_a}"
+    assert row["body"] is None and row["link"] == f"/shops?shop={shop_a}"
 
 
 def test_im_stopped_writes_medium_event(feed, svc, shop_a):

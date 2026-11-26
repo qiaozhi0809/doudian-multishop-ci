@@ -146,6 +146,7 @@
 - Modify: `frontend/src/components/custom/app-shell/components/side-nav.tsx`（`lucide-react` 导入加 `MessageSquare`；`ICONS` 加 `messages: MessageSquare`）
 - Modify: `frontend/src/components/custom/app-shell/logic/nav-items.test.ts`
 - Modify: `frontend/src/app.tsx`（`<Route path="/messages" element={<MessagePage />} />`）
+- Modify: `backend/app/domain/notification_rules.py`（`link_for` 里 `new_message`、`im_stopped`、`im_waiting` 现暂指 `/shops?shop=<id>`，本阶段改回 `/messages?shops=<id>`，`im_waiting` 加 `quick=overdue`；同步改三处测试）
 - Modify: `frontend/src/lib/query-keys.ts`（`imRoot()`、`imStatus()`、`imConversations(shopIds, filters)`、`imCounts(shopIds)`、`imThread(shopId, conversationId)`）
 - Create: `frontend/src/pages/message/index.tsx`（≤ 80 行，只装配）
 - Create: `frontend/src/pages/message/components/message-page-view.tsx`、`im-metrics.tsx`、`im-status-strip.tsx`、`conversation-list.tsx`、`conversation-row.tsx`、`thread-pane.tsx`、`message-line.tsx`
