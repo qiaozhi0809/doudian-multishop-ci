@@ -43,6 +43,10 @@ def test_launch_args_contains_fixed_fingerprint():
     assert cloak_launch_args(12345) == [
         "--fingerprint=12345",
         "--fingerprint-platform=windows",
+        # 抑制 Chromium 的「不受支持的命令行标记」横幅（cloak 自带 --no-sandbox）。
+        # 与 js-reverse-mcp 的做法一致；纯 UI 提示，不是指纹配置。
+        "--test-type",
+        "--hide-crash-restore-bubble",
     ]
 
 

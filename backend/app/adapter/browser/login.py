@@ -126,13 +126,16 @@ async def await_login(
 def build_cloak_kwargs(profile_dir: Path, proxy: dict | None) -> dict:
     """CloakBrowser 启动参数。proxy 已由 playwright_proxy() 转成 dict。
 
-    有头模式下不叠加 viewport：CloakBrowser 的屏幕/窗口尺寸由种子派生，
-    额外指定 viewport 会破坏 outerWidth >= innerWidth 的自洽性。
+    有头模式下**必须**显式传 ``viewport=None``：cloakbrowser 在拿不到 viewport
+    时会套用写死的 ``DEFAULT_VIEWPORT``（1920x947），与真实窗口尺寸不一致，
+    页面会被渲染成错误的缩放比例。传 None 让它设置 ``no_viewport``，
+    直接用真实窗口尺寸，屏幕/窗口比例由种子派生的指纹保持一致。
     """
     return {
         "user_data_dir": str(profile_dir),
         "headless": False,
         "proxy": proxy,
+        "viewport": None,
         "args": cloak_launch_args(get_or_create_seed(profile_dir)),
     }
 

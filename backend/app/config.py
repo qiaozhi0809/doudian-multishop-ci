@@ -57,7 +57,9 @@ class Settings(BaseSettings):
         if not _is_absolute(self.data_dir, platform):
             self.data_dir = self.data_dir.resolve()
         if "cloak_cache_dir" not in self.model_fields_set:
-            self.cloak_cache_dir = self.data_dir / "browser"
+            # 二进制随程序目录，不跟 data_dir 走：Windows 对 %LOCALAPPDATA% 下的
+            # exe 有限制，Chromium 的 SxS 激活上下文创建失败（spawn UNKNOWN）。
+            self.cloak_cache_dir = REPO_ROOT / "backend" / "browser"
 
 
 def _default_data_dir(platform: str) -> Path:

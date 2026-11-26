@@ -84,8 +84,21 @@ def get_or_create_seed(profile_dir: Path) -> int:
 
 
 def cloak_launch_args(seed: int) -> list[str]:
-    """CloakBrowser 启动参数：固定指纹 + 声称 Windows 平台。"""
-    return [f"--fingerprint={seed}", "--fingerprint-platform=windows"]
+    """CloakBrowser 启动参数：固定指纹 + 声称 Windows 平台 + 静音提示条。
+
+    后两项是**纯 UI 参数**，不是指纹配置：
+    - ``--test-type`` 让 Chromium 认为处在自动化环境，抑制
+      「您使用的是不受支持的命令行标记：--no-sandbox」横幅。cloakbrowser 自己
+      会加 ``--no-sandbox``，不加这个每个窗口顶部都会挂一条黄条。
+      js-reverse-mcp 的 cloak 模式同样传它（见其 browser.js 注释）。
+    - ``--hide-crash-restore-bubble`` 隐藏「Chrome 未正常关闭」气泡。
+    """
+    return [
+        f"--fingerprint={seed}",
+        "--fingerprint-platform=windows",
+        "--test-type",
+        "--hide-crash-restore-bubble",
+    ]
 
 
 def apply_env(cache_dir: Path) -> None:

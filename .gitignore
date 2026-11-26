@@ -37,6 +37,9 @@ frontend/dist/
 .pytest_cache/
 .ruff_cache/
 
+# CloakBrowser 二进制（约 537MB，首次运行下载到程序目录，绝不入库）
+backend/browser/
+
 # 其他会话的 worktree
 .claude/worktrees/
 

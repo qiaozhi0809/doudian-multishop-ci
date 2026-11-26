@@ -1,6 +1,6 @@
 from pathlib import Path, PureWindowsPath
 
-from app.config import Settings
+from app.config import REPO_ROOT, Settings
 
 
 def test_browser_channel_default():
@@ -40,7 +40,7 @@ def test_cloak_defaults(tmp_path):
     s = Settings(_platform="win32", data_dir=tmp_path)
 
     assert s.use_cloak is True
-    assert s.cloak_cache_dir == tmp_path / "browser"
+    assert s.cloak_cache_dir == REPO_ROOT / "backend" / "browser"
 
 
 def test_explicit_cloak_cache_dir_not_overridden(tmp_path):
@@ -51,13 +51,18 @@ def test_explicit_cloak_cache_dir_not_overridden(tmp_path):
     assert s.cloak_cache_dir == custom
 
 
-def test_cloak_cache_dir_derived_after_data_dir_resolved(tmp_path, monkeypatch):
+def test_cloak_cache_dir_independent_of_data_dir(tmp_path, monkeypatch):
+    """二进制缓存固定随程序目录，不跟 data_dir 走。
+
+    放在 %LOCALAPPDATA%（Windows 默认 data_dir）下时，
+    Chromium 的 SxS 激活上下文创建失败，exe 无法启动。
+    """
     monkeypatch.chdir(tmp_path)
 
     s = Settings(_platform="linux", data_dir="relative/data")
 
     assert s.data_dir.is_absolute()
-    assert s.cloak_cache_dir == s.data_dir / "browser"
+    assert s.cloak_cache_dir == REPO_ROOT / "backend" / "browser"
 
 
 def test_use_cloak_can_be_disabled_by_env(monkeypatch):

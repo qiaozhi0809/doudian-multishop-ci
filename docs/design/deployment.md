@@ -52,7 +52,7 @@ D:\doudian-multishop\            ← 安装目录（可任意）
    .\.venv\Scripts\python.exe -m pip install --upgrade pip
    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
    # 预下载 CloakBrowser 定制浏览器（约 200MB，直连下载，不走店铺代理）
-   $env:CLOAKBROWSER_CACHE_DIR = "$env:LOCALAPPDATA\doudian-multishop\browser"
+   $env:CLOAKBROWSER_CACHE_DIR = "$PWD\browser"
    .\.venv\Scripts\python.exe -c "import cloakbrowser; print(cloakbrowser.ensure_binary())"
    ```
 
@@ -87,7 +87,7 @@ D:\doudian-multishop\            ← 安装目录（可任意）
 | `DD_HOST` / `DD_PORT` | `127.0.0.1` / `8787` | 监听地址与端口（不要改成 0.0.0.0） |
 | `DD_DRY_RUN` | `false` | 演练模式，见 §5 |
 | `DD_USE_CLOAK` | `true` | 是否使用 CloakBrowser 定制 Chromium；设为 `false` 时回退系统浏览器 |
-| `DD_CLOAK_CACHE_DIR` | `<data_dir>\browser` | CloakBrowser 二进制缓存目录 |
+| `DD_CLOAK_CACHE_DIR` | `<安装目录>\backend\browser` | CloakBrowser 二进制缓存目录。**不要指到 `%LOCALAPPDATA%`**：Windows 下该目录中的 exe 无法生成 SxS 激活上下文，浏览器起不来（`spawn UNKNOWN`） |
 | `DD_BROWSER_CHANNEL` | `msedge`（Windows） | 仅 `DD_USE_CLOAK=false` 时生效的兜底通道。**应急专用**：此时所有店铺共用本机真实 Edge 指纹，多店同时使用会破坏「每店固定指纹」的隔离目标 |
 | `DD_PRINTER_NAME` | 空 | 取号请求的 printer 字段 / 默认打印机名 |
 | `DD_MAX_CONCURRENT_SHOPS` | `3` | 同时执行的店铺数上限 |

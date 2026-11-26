@@ -92,3 +92,11 @@ def test_scan_login_cloak_branch_passes_proxy_and_seed(monkeypatch, tmp_path):
     assert captured.get("closed") is True
     assert result.token == "tok"
     assert result.expires_at == "2030-01-01T00:00:00Z"
+
+
+def test_build_cloak_kwargs_disables_default_viewport(tmp_path):
+    """有头模式必须显式关掉视口：cloakbrowser 默认塞 1920x947 的写死视口，
+    与真实窗口尺寸不一致时页面会被渲染成错误的缩放比例。"""
+    kwargs = build_cloak_kwargs(tmp_path, None)
+
+    assert kwargs["viewport"] is None
