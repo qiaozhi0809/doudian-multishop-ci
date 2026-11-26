@@ -128,7 +128,7 @@ describe("useNotifications", () => {
 });
 
 describe("useNotificationAlerts", () => {
-  it("同一 alert id 只回调一次，记在 sessionStorage", () => {
+  it("同一 alert（id + 数量）只回调一次，记在 sessionStorage", () => {
     const onAlert = vi.fn();
     renderHook(() => useNotificationAlerts(onAlert));
     const event = { action: "created", item: item({ id: 7 }), alert: true };
@@ -136,11 +136,19 @@ describe("useNotificationAlerts", () => {
     act(() => FakeEventSource.latest().emit("notification", event));
     expect(onAlert).toHaveBeenCalledTimes(1);
     expect(onAlert).toHaveBeenCalledWith(event.item);
-    expect(JSON.parse(sessionStorage.getItem(ALERTED_KEY) ?? "[]")).toEqual([7]);
+    expect(JSON.parse(sessionStorage.getItem(ALERTED_KEY) ?? "[]")).toEqual(["7:1"]);
   });
 
-  it("刷新后（sessionStorage 已有该 id）不再回调", () => {
-    sessionStorage.setItem(ALERTED_KEY, JSON.stringify([7]));
+  it("未读时又来新售后：同一条合并后数量变多，再回调一次", () => {
+    const onAlert = vi.fn();
+    renderHook(() => useNotificationAlerts(onAlert));
+    act(() => FakeEventSource.latest().emit("notification", { action: "created", item: item({ id: 7 }), alert: true }));
+    act(() => FakeEventSource.latest().emit("notification", { action: "updated", item: item({ id: 7, count: 2 }), alert: true }));
+    expect(onAlert).toHaveBeenCalledTimes(2);
+  });
+
+  it("刷新后（sessionStorage 已有该 id + 数量）不再回调", () => {
+    sessionStorage.setItem(ALERTED_KEY, JSON.stringify(["7:1"]));
     const onAlert = vi.fn();
     renderHook(() => useNotificationAlerts(onAlert));
     act(() => FakeEventSource.latest().emit("notification", { action: "created", item: item({ id: 7 }), alert: true }));

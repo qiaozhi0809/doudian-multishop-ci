@@ -4844,7 +4844,7 @@
         "type": "object"
       },
       "StrongOpenShop": {
-        "description": "一店一行：该店所有未解决的强状态。",
+        "description": "一店一行：该店所有未解决的强状态；problems 每个问题带自己的链接。",
         "properties": {
           "kinds": {
             "items": {
@@ -4880,6 +4880,13 @@
             ],
             "title": "Link"
           },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/StrongProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
           "shop_id": {
             "title": "Shop Id",
             "type": "integer"
@@ -4893,9 +4900,51 @@
           "shop_id",
           "shop_name",
           "kinds",
-          "link"
+          "link",
+          "problems"
         ],
         "title": "StrongOpenShop",
+        "type": "object"
+      },
+      "StrongProblem": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "new_order",
+              "new_aftersale",
+              "login_expired",
+              "egress_unreachable",
+              "egress_changed",
+              "egress_duplicate",
+              "risk_paused",
+              "ship_deadline",
+              "batch_done",
+              "batch_failed",
+              "sync_failed",
+              "sync_done",
+              "reconcile_done",
+              "recovered"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          }
+        },
+        "required": [
+          "kind",
+          "link"
+        ],
+        "title": "StrongProblem",
         "type": "object"
       },
       "SyncStarted": {

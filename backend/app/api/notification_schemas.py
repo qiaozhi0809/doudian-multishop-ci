@@ -28,13 +28,19 @@ class NotificationPage(BaseModel):
     page_size: int
 
 
+class StrongProblem(BaseModel):
+    kind: Kind
+    link: str | None
+
+
 class StrongOpenShop(BaseModel):
-    """一店一行：该店所有未解决的强状态。"""
+    """一店一行：该店所有未解决的强状态；problems 每个问题带自己的链接。"""
 
     shop_id: int
     shop_name: str
     kinds: list[Kind]
-    link: str | None
+    link: str | None  # 第一个问题的链接（兼容旧前端）
+    problems: list[StrongProblem]
 
 
 class NotificationSummary(BaseModel):

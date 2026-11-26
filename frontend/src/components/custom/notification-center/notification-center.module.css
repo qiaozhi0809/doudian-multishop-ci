@@ -115,8 +115,32 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .item:hover {
+  .item:not([data-static]):hover {
     background: var(--surface-muted);
+  }
+}
+
+/* 待处理 / 横条一行里的单个问题：各自可点 */
+.item[data-static],
+.bannerRow[data-static] {
+  cursor: default;
+}
+
+.problemLink {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .problemLink:hover {
+    text-decoration-color: currentColor;
   }
 }
 
@@ -222,7 +246,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .bannerRow:hover {
+  .bannerRow:not([data-static]):hover {
     background: color-mix(in oklab, var(--danger) 8%, transparent);
   }
 }

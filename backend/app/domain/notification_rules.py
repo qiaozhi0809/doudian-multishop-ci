@@ -76,14 +76,18 @@ def _with_query(path: str, params: list[tuple[str, str]]) -> str:
     return path + ("?" + "&".join(f"{k}={v}" for k, v in params) if params else "")
 
 
-def link_for(kind: Kind, shop_id: int | None, *, sync_type: str | None = None) -> str:
+def link_for(
+    kind: Kind, shop_id: int | None, *, sync_type: str | None = None, overdue: bool = False,
+) -> str:
+    """overdue：临近超时的店里已有超时订单 → 跳「已超时」筛选（exp_ship 不含已超时）。"""
     shop = [(_SHOP_PARAM, str(shop_id))] if shop_id is not None else []
     if kind == "new_order":
         return _with_query("/orders", shop)
     if kind == "new_aftersale":
         return _with_query("/aftersale", [("view", "todo"), *shop])
     if kind == "ship_deadline":
-        return _with_query("/orders", [("quick", "exp_ship"), *shop])
+        quick = "ship_delay" if overdue else "exp_ship"
+        return _with_query("/orders", [("quick", quick), *shop])
     if kind in _SHOP_STATE_TITLES:
         # 店铺页高亮参数名为 shop（Task 7 前端实现）
         return _with_query("/shops", [("shop", str(shop_id))] if shop_id is not None else [])

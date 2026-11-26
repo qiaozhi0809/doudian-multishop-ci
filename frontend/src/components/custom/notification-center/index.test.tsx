@@ -15,8 +15,11 @@ const item = (over: Partial<NotificationItem> = {}): NotificationItem => ({
   created_at: "2026-11-25T08:00:00", updated_at: "2026-11-25T08:00:00", ...over,
 });
 
-const shop = (id: number, kinds: StrongOpenShop["kinds"], link: string | null = null): StrongOpenShop => ({
-  shop_id: id, shop_name: `示例店${id}`, kinds, link,
+/** links 给出每个问题各自的链接；不给时都用 link。 */
+const shop = (
+  id: number, kinds: StrongOpenShop["kinds"], link: string | null = null, links: Partial<Record<StrongOpenShop["kinds"][number], string>> = {},
+): StrongOpenShop => ({
+  shop_id: id, shop_name: `示例店${id}`, kinds, link, problems: kinds.map((kind) => ({ kind, link: links[kind] ?? link })),
 });
 
 function Where() {
@@ -76,15 +79,19 @@ describe("顶部强提醒横条", () => {
   it("两店有问题：一店一行，同店问题写在一起", async () => {
     setup({ strongOpen: [shop(1, ["login_expired", "egress_unreachable"], "/shops?shop=1"), shop(2, ["risk_paused"], "/shops?shop=2")] });
     const banner = await screen.findByRole("region", { name: "需要处理的店铺" });
-    const rows = within(banner).getAllByRole("button");
+    const rows = within(banner).getAllByRole("group");
     expect(rows.map((r) => r.textContent)).toEqual(["示例店1：登录失效、出口不通", "示例店2：风控暂停"]);
+    expect(within(rows[0]).getAllByRole("button").map((b) => b.textContent)).toEqual(["登录失效", "出口不通"]);
     expect(within(banner).queryByRole("button", { name: /关闭/ })).not.toBeInTheDocument();
   });
 
-  it("点击一行按该店第一项问题的链接跳转", async () => {
-    setup({ strongOpen: [shop(2, ["ship_deadline"], "/orders?quick=exp_ship&shops=2")] });
-    await userEvent.setup().click(await screen.findByRole("button", { name: "示例店2：临近发货超时" }));
-    expect(screen.getByTestId("where")).toHaveTextContent("/orders?quick=exp_ship&shops=2");
+  it("每个问题跳各自的链接", async () => {
+    setup({
+      strongOpen: [shop(2, ["login_expired", "ship_deadline"], "/shops?shop=2", { ship_deadline: "/orders?quick=ship_delay&shops=2" })],
+    });
+    const row = await screen.findByRole("group", { name: "示例店2" });
+    await userEvent.setup().click(within(row).getByRole("button", { name: "临近发货超时" }));
+    expect(screen.getByTestId("where")).toHaveTextContent("/orders?quick=ship_delay&shops=2");
   });
 
   it("四店有问题：合并为一行，点击打开通知面板", async () => {
@@ -156,7 +163,7 @@ describe("通知面板", () => {
     const ongoing = within(panel).getByRole("region", { name: "进行中" });
     expect(ongoing).toHaveTextContent("发货");
     expect(ongoing).toHaveTextContent("成功 1");
-    expect(within(within(panel).getByRole("region", { name: "待处理" })).getByText("示例店1：登录失效")).toBeInTheDocument();
+    expect(within(within(panel).getByRole("region", { name: "待处理" })).getByRole("group", { name: "示例店1" })).toHaveTextContent("示例店1：登录失效");
     const recent = within(panel).getByRole("region", { name: "最近" });
     expect(within(recent).queryByText("示例店1 登录失效")).not.toBeInTheDocument();
     expect(within(recent).getByText("示例店 新增 2 单待发货").closest("button")).toHaveAttribute("data-unread", "true");
@@ -168,7 +175,7 @@ describe("通知面板", () => {
     const { user, panel } = await openPanel();
     const open = within(panel).getByRole("region", { name: "待处理" });
     expect(within(open).getAllByRole("button")).toHaveLength(4);
-    await user.click(within(open).getByRole("button", { name: "示例店3：风控暂停" }));
+    await user.click(within(within(open).getByRole("group", { name: "示例店3" })).getByRole("button", { name: "风控暂停" }));
     expect(screen.getByTestId("where")).toHaveTextContent("/shops?shop=3");
     expect(screen.queryByRole("dialog", { name: "通知" })).not.toBeInTheDocument();
   });
@@ -237,6 +244,26 @@ describe("右下角弹窗", () => {
     live.strongOpen = [];
     act(() => FakeEventSource.latest().emit("open"));
     await waitFor(() => expect(within(toasts).queryByText("示例店 登录失效")).not.toBeInTheDocument());
+  });
+
+  it("未读时又来新售后（合并后数量变多）：再弹一次并响提示音", async () => {
+    const play = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("Audio", vi.fn(() => ({ play })));
+    try {
+      setup();
+      await screen.findByRole("button", { name: "通知" });
+      const first = item({ id: 20, kind: "new_aftersale", level: "strong", title: "示例店 新增 1 个售后", count: 1 });
+      act(() => FakeEventSource.latest().emit("notification", { action: "created", item: first, alert: true }));
+      const toasts = screen.getByLabelText("操作提示");
+      expect(within(toasts).getByText("示例店 新增 1 个售后")).toBeInTheDocument();
+      const merged = { ...first, title: "示例店 新增 2 个售后", count: 2 };
+      act(() => FakeEventSource.latest().emit("notification", { action: "updated", item: merged, alert: true }));
+      expect(within(toasts).getByText("示例店 新增 2 个售后")).toBeInTheDocument();
+      expect(within(toasts).queryByText("示例店 新增 1 个售后")).not.toBeInTheDocument();
+      await waitFor(() => expect(play).toHaveBeenCalledTimes(2));
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("中档 5 秒后消失，强档不消失，弱档不弹", async () => {

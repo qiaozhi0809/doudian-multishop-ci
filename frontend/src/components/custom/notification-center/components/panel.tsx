@@ -7,6 +7,7 @@ import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import { countsText, type ProgressItem } from "../logic/progress";
 import { groupForPanel, lastPage, levelTone, openRows, type NotificationItem, type StrongOpenShop } from "../logic/notification-view";
 import styles from "../notification-center.module.css";
+import { ProblemLinks } from "./problem-links";
 
 export interface PanelProps {
   progress: ProgressItem[];
@@ -87,10 +88,10 @@ export function Panel(props: PanelProps) {
           <ul className={styles.list}>
             {open.map((row) => (
               <li key={row.shopId}>
-                <button type="button" className={styles.item} data-unread onClick={() => props.onNavigate(row.link)}>
+                <div role="group" aria-label={row.shopName} className={styles.item} data-unread data-static>
                   <span className={styles.dot} data-tone="danger" aria-hidden="true" />
-                  <span className={styles.itemTitle}>{row.text}</span>
-                </button>
+                  <ProblemLinks row={row} onNavigate={props.onNavigate} />
+                </div>
               </li>
             ))}
           </ul>

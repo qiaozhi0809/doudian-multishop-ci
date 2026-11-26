@@ -51,6 +51,9 @@ class ShipDeadlineWatcher:
             rows = order_store.ship_deadline_due(conn, PENDING_STATUSES, warn_until, self._limit)
             # items 截到上限；分店真实数量另算，供通知按店对账
             shop_counts = order_store.ship_deadline_counts(conn, PENDING_STATUSES, warn_until)
+            # 已超时的分店数量：通知据此跳「已超时」筛选
+            shop_overdue = order_store.ship_deadline_counts(
+                conn, PENDING_STATUSES, now.strftime(ISO_FMT), before=True)
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}
         items = [
             {
@@ -68,6 +71,7 @@ class ShipDeadlineWatcher:
             "checked_at": now.strftime(ISO_FMT),
             "items": items,
             "shop_counts": shop_counts,
+            "shop_overdue": shop_overdue,
         })
         if items:
             log.info("ship_deadline.warning", count=len(items), warn_hours=self._warn_hours)

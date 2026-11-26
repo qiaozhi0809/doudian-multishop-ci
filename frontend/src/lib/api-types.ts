@@ -2649,17 +2649,29 @@ export interface components {
         };
         /**
          * StrongOpenShop
-         * @description 一店一行：该店所有未解决的强状态。
+         * @description 一店一行：该店所有未解决的强状态；problems 每个问题带自己的链接。
          */
         StrongOpenShop: {
             /** Kinds */
             kinds: ("new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered")[];
             /** Link */
             link: string | null;
+            /** Problems */
+            problems: components["schemas"]["StrongProblem"][];
             /** Shop Id */
             shop_id: number;
             /** Shop Name */
             shop_name: string;
+        };
+        /** StrongProblem */
+        StrongProblem: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered";
+            /** Link */
+            link: string | null;
         };
         /** SyncStarted */
         SyncStarted: {

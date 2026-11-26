@@ -11,7 +11,7 @@ from typing import Any
 import structlog
 from sqlalchemy import Engine
 
-from app.domain.notification_rules import Kind, batch_detail
+from app.domain.notification_rules import Kind, batch_detail, link_for
 from app.service.events import (
     AFTERSALES_NEW,
     LABEL_DONE,
@@ -93,12 +93,22 @@ class NotificationFeed:
     def _on_shop(self, data: dict[str, Any]) -> None:
         self.reconcile_shop(int(data["shop_id"]))
 
+    def reconcile_all(self) -> None:
+        """启动时对账一次：升级前已有的问题、停机期间丢失的事件都补上 / 收起。"""
+        with self._engine.connect() as conn:
+            shop_ids = [int(s["id"]) for s in shop_store.list(conn)]
+        for shop_id in shop_ids:
+            try:
+                self.reconcile_shop(shop_id)
+            except Exception:  # 单店出错不影响其他店
+                log.exception("notification_feed.reconcile_failed", shop_id=shop_id)
+
     def reconcile_shop(self, shop_id: int) -> None:
         with self._engine.connect() as conn:
             shop = shop_store.get(conn, shop_id)
             had_session = session_store.load(conn, shop_id) is not None
         if shop is None or shop["status"] == DISABLED:  # 已删除 / 停用：不再报该店问题
-            for family in ("login", "egress", "risk"):
+            for family in ("login", "egress", "risk", "deadline"):
                 self._n.resolve_state(family, shop_id=shop_id)
             return
         if shop["status"] == NEEDS_LOGIN and had_session:  # 从未登录过的新店不算失效
@@ -142,8 +152,11 @@ class NotificationFeed:
             per_shop = {int(k): int(v) for k, v in raw.items() if int(v) > 0}
         else:
             per_shop = Counter(int(i["shop_id"]) for i in data.get("items") or [])
+        overdue = {int(k) for k, v in (data.get("shop_overdue") or {}).items() if int(v) > 0}
         for shop_id, n in per_shop.items():
-            self._n.raise_state("deadline", "ship_deadline", shop_id=shop_id, count=n)
+            self._n.raise_state(
+                "deadline", "ship_deadline", shop_id=shop_id, count=n,
+                link=link_for("ship_deadline", shop_id, overdue=shop_id in overdue))
         with self._engine.connect() as conn:
             open_ids = {
                 int(r["shop_id"]) for r in notification_store.open_strong_states(conn)

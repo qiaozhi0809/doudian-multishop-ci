@@ -110,12 +110,15 @@ describe("App Shell", () => {
     renderShell("/orders", {
       "GET /api/notifications/summary": jsonResponse({
         unread: 1,
-        strong_open: [{ shop_id: 1, shop_name: "示例店", kinds: ["login_expired"], link: "/shops?shop=1" }],
+        strong_open: [{
+          shop_id: 1, shop_name: "示例店", kinds: ["login_expired"], link: "/shops?shop=1",
+          problems: [{ kind: "login_expired", link: "/shops?shop=1" }],
+        }],
       }),
     });
     const banner = await screen.findByRole("region", { name: "需要处理的店铺" });
     expect(banner).toHaveTextContent("示例店：登录失效");
-    await userEvent.setup().click(within(banner).getByRole("button", { name: "示例店：登录失效" }));
+    await userEvent.setup().click(within(banner).getByRole("button", { name: "登录失效" }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/shops?shop=1"));
   });
 

@@ -30,10 +30,11 @@ def test_list_summary_and_read(api):
     assert "recovered_notified_at" not in item
 
     summary = api.client.get("/api/notifications/summary").json()
-    assert summary["unread"] == 2
+    assert summary["unread"] == 1  # 未解决的强状态不计未读
     assert summary["strong_open"] == [{
         "shop_id": sid, "shop_name": "店A", "kinds": ["egress_unreachable"],
         "link": f"/shops?shop={sid}",
+        "problems": [{"kind": "egress_unreachable", "link": f"/shops?shop={sid}"}],
     }]
 
     assert api.client.post(f"/api/notifications/{first}/read").status_code == 204
@@ -100,3 +101,35 @@ def test_purge_failure_does_not_fail_daily_backup(api, monkeypatch):
     monkeypatch.setattr(api.app.state.notifications, "purge", boom)
     result = asyncio.run(_daily_backup(api.app)())
     assert result["trigger"] == "daily"
+
+
+def test_startup_reconciles_existing_shop_states(app, tmp_path):
+    """升级前就登录失效的店：启动后对账一次，补出未解决的登录失效。"""
+    import time
+
+    from fastapi.testclient import TestClient
+
+    from app.store import session_store
+    from app.store.db import DB_FILE_NAME, make_engine
+    from app.store.migrate import upgrade_to_head
+    from app.store.session_store import SessionRow
+
+    db = tmp_path / "data" / DB_FILE_NAME
+    db.parent.mkdir(parents=True)
+    upgrade_to_head(db)
+    engine = make_engine(db)
+    with engine.begin() as conn:
+        sid = int(conn.execute(sa.insert(shop).values(
+            name="店A", status="needs_login", created_at=NOW, updated_at=NOW,
+        )).inserted_primary_key[0])
+        session_store.save(conn, SessionRow(sid, b"c", b"t", "{}", None), NOW)
+    engine.dispose()
+
+    with TestClient(app, base_url="http://127.0.0.1:8787"):
+        notifications = app.state.notifications
+        for _ in range(100):
+            if notifications.summary()["strong_open"]:
+                break
+            time.sleep(0.02)
+        (group,) = notifications.summary()["strong_open"]
+    assert group["shop_id"] == sid and group["kinds"] == ["login_expired"]

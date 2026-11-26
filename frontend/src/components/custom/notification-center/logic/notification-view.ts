@@ -6,6 +6,7 @@ export type NotificationItem = Schemas["NotificationItem"];
 export type NotificationPage = Schemas["NotificationPage"];
 export type NotificationSummary = Schemas["NotificationSummary"];
 export type StrongOpenShop = Schemas["StrongOpenShop"];
+export type StrongProblem = Schemas["StrongProblem"];
 export type NotificationLevel = NotificationItem["level"];
 export type Tone = "danger" | "warning" | "info";
 
@@ -27,9 +28,12 @@ export function groupForPanel(items: NotificationItem[]): { open: NotificationIt
   return { open: items.filter(isOpenState), recent: items.filter((item) => !isOpenState(item)) };
 }
 
-/** 只对 alert=true 且本会话还没提醒过的通知弹提醒。 */
-export const shouldAlert = (event: NotificationEvent, alerted: number[]): boolean =>
-  event.alert && event.item !== null && !alerted.includes(event.item.id);
+/** 提醒去重键：同一条通知合并后数量变多（又来了新单）算新的提醒。 */
+export const alertKey = (item: NotificationItem): string => `${item.id}:${item.count}`;
+
+/** 只对 alert=true 且本会话还没提醒过（按 id + 数量）的通知弹提醒。 */
+export const shouldAlert = (event: NotificationEvent, alerted: string[]): boolean =>
+  event.alert && event.item !== null && !alerted.includes(alertKey(event.item));
 
 /** 横条里的问题名（与后端通知标题一致）。 */
 const PROBLEM_LABELS: Partial<Record<NotificationItem["kind"], string>> = {
@@ -44,26 +48,46 @@ const PROBLEM_LABELS: Partial<Record<NotificationItem["kind"], string>> = {
 /** 横条最多逐店列出几家，超过合并为一行。 */
 export const BANNER_MAX_ROWS = 3;
 
+export interface BannerProblem {
+  kind: NotificationItem["kind"];
+  label: string;
+  link: string;
+}
+
 export interface BannerRow {
   shopId: number;
+  shopName: string;
+  /** 「店A：登录失效、出口不通」 */
   text: string;
-  link: string;
+  /** 每个问题各自跳转 */
+  problems: BannerProblem[];
 }
 
 export type BannerView = { kind: "none" } | { kind: "rows"; rows: BannerRow[] } | { kind: "merged"; text: string };
 
-/** 后端没给链接时按第一项问题兜底：临近超时 → 超时未发筛选，其余 → 店铺页高亮该店。 */
-function fallbackLink(shop: StrongOpenShop): string {
-  return shop.kinds[0] === "ship_deadline" ? `/orders?quick=exp_ship&shops=${shop.shop_id}` : `/shops?shop=${shop.shop_id}`;
+/**
+ * 后端没给链接时兜底：临近超时 → 该店订单（不加快捷筛选，已超时与临近的都在；
+ * 后端按是否有超时单给 ship_delay / exp_ship），其余 → 店铺页高亮该店。
+ */
+function fallbackLink(kind: NotificationItem["kind"], shopId: number): string {
+  return kind === "ship_deadline" ? `/orders?shops=${shopId}` : `/shops?shop=${shopId}`;
 }
 
-/** 未解决的强提醒，一店一行「店A：登录失效、出口不通」（面板「待处理」全部列出）。 */
+/** 未解决的强提醒，一店一行「店A：登录失效、出口不通」，每个问题跳各自的链接（面板「待处理」全部列出）。 */
 export function openRows(shops: StrongOpenShop[]): BannerRow[] {
-  return shops.map((shop) => ({
-    shopId: shop.shop_id,
-    text: `${shop.shop_name}：${shop.kinds.map((k) => PROBLEM_LABELS[k] ?? "需要处理").join("、")}`,
-    link: shop.link ?? fallbackLink(shop),
-  }));
+  return shops.map((shop) => {
+    const problems = shop.problems.map((p) => ({
+      kind: p.kind,
+      label: PROBLEM_LABELS[p.kind] ?? "需要处理",
+      link: p.link ?? fallbackLink(p.kind, shop.shop_id),
+    }));
+    return {
+      shopId: shop.shop_id,
+      shopName: shop.shop_name,
+      text: `${shop.shop_name}：${problems.map((p) => p.label).join("、")}`,
+      problems,
+    };
+  });
 }
 
 /** 顶部横条：同 openRows；超过 3 家合并为「N 家店需要处理」。 */

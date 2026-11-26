@@ -50,8 +50,19 @@ def test_emit_merges_unread_same_shop_kind(svc, shop_a, clock, published):
     assert rows[0]["updated_at"] == "2026-12-01T00:01:00Z"
     assert rows[0]["link"] == f"/orders?shops={shop_a}" and rows[0]["level"] == "medium"
     assert [p["action"] for p in published] == ["created", "updated"]
-    assert published[0]["alert"] is True and published[1]["alert"] is False
+    # 未读时又来新单：合并后数量变多也要再提醒（前端按 id + 数量去重）
+    assert published[0]["alert"] is True and published[1]["alert"] is True
     assert published[1]["item"]["count"] == 7
+
+
+def test_merge_alerts_again_only_for_new_items(svc, shop_a, published):
+    svc.emit("new_aftersale", shop_id=shop_a, count=1)
+    svc.emit("new_aftersale", shop_id=shop_a, count=1)
+    svc.emit("sync_failed", shop_id=shop_a, detail="orders")
+    svc.emit("sync_failed", shop_id=shop_a, detail="orders")
+    assert [(p["item"]["kind"], p["action"], p["alert"]) for p in published] == [
+        ("new_aftersale", "created", True), ("new_aftersale", "updated", True),
+        ("sync_failed", "created", True), ("sync_failed", "updated", False)]
 
 
 def test_emit_after_read_creates_new(svc, shop_a):
@@ -176,8 +187,47 @@ def test_summary_groups_strong_open_by_shop(svc, engine, shop_a):
     assert s["strong_open"] == [{
         "shop_id": shop_a, "shop_name": "店A",
         "kinds": ["login_expired", "egress_unreachable"], "link": f"/shops?shop={shop_a}",
+        "problems": [
+            {"kind": "login_expired", "link": f"/shops?shop={shop_a}"},
+            {"kind": "egress_unreachable", "link": f"/shops?shop={shop_a}"},
+        ],
     }]
-    assert s["unread"] == 5  # 两条强状态 + 已解决的风控 + 已恢复 + 新订单
+    # 未解决的强状态由横条 / 待处理代表，不计未读：已解决的风控 + 已恢复 + 新订单
+    assert s["unread"] == 3
+
+
+def test_summary_problem_links_per_kind(svc, shop_a):
+    svc.raise_state("login", "login_expired", shop_id=shop_a)
+    svc.raise_state("deadline", "ship_deadline", shop_id=shop_a, count=2)
+    (group,) = svc.summary()["strong_open"]
+    assert group["problems"] == [
+        {"kind": "login_expired", "link": f"/shops?shop={shop_a}"},
+        {"kind": "ship_deadline", "link": f"/orders?quick=exp_ship&shops={shop_a}"},
+    ]
+
+
+def test_unread_excludes_open_states_until_resolved(svc, shop_a):
+    svc.raise_state("login", "login_expired", shop_id=shop_a)
+    assert svc.summary()["unread"] == 0
+    svc.resolve_state("login", shop_id=shop_a)
+    assert svc.summary()["unread"] == 2  # 已解决的登录失效 + 已恢复
+
+
+def test_raise_state_unchanged_is_noop(svc, shop_a, clock, published):
+    svc.raise_state("egress", "egress_unreachable", shop_id=shop_a, detail="直连不通")
+    clock.now += timedelta(minutes=5)
+    svc.raise_state("egress", "egress_unreachable", shop_id=shop_a, detail="直连不通")
+    assert [p["action"] for p in published] == ["created"]
+    assert _rows(svc)[0]["updated_at"] == "2026-12-01T00:00:00Z"
+
+
+def test_raise_state_link_override_updates_row(svc, shop_a, published):
+    svc.raise_state("deadline", "ship_deadline", shop_id=shop_a, count=1)
+    svc.raise_state("deadline", "ship_deadline", shop_id=shop_a, count=1,
+                    link=f"/orders?quick=ship_delay&shops={shop_a}")
+    assert _rows(svc)[0]["link"] == f"/orders?quick=ship_delay&shops={shop_a}"
+    assert [(p["action"], p["alert"]) for p in published] == [
+        ("created", True), ("updated", False)]
 
 
 def test_mark_all_read(svc, shop_a, published):

@@ -103,6 +103,8 @@ def create_app(
         )
         tasks = [
             asyncio.create_task(app.state.notification_feed.run(app.state.events, stop)),
+            # 启动对账一次：升级前已有的店铺问题、停机期间丢失的事件
+            asyncio.create_task(_startup_reconcile(app)),
             asyncio.create_task(run_every(PROBE_INTERVAL_S, probe_all, stop)),
             asyncio.create_task(run_every(ORDER_SYNC_INTERVAL_S, sync_all, stop)),
             asyncio.create_task(run_every(ORDER_SYNC_INTERVAL_S, aftersale_all, stop)),
@@ -145,6 +147,13 @@ def create_app(
         app.include_router(module.router)
     _mount_frontend(app, settings)
     return app
+
+
+async def _startup_reconcile(app: FastAPI) -> None:
+    try:
+        await asyncio.to_thread(app.state.notification_feed.reconcile_all)
+    except Exception:
+        log.exception("notification_feed.startup_reconcile_failed")
 
 
 def _deadline_scan(app: FastAPI) -> Callable[[], Awaitable[object]]:

@@ -5,6 +5,7 @@ import { api, errorText } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import { useEventSubscription } from "@/lib/use-events";
 import {
+  alertKey,
   lastPage,
   shouldAlert,
   type NotificationEvent,
@@ -17,22 +18,22 @@ import {
 const NO_ITEMS: NotificationItem[] = [];
 const NO_STRONG: NotificationSummary["strong_open"] = [];
 
-/** 本会话已弹过提醒的通知 id；存 sessionStorage，刷新页面不重复弹。 */
+/** 本会话已弹过的提醒（`id:数量`）；存 sessionStorage，刷新页面不重复弹。 */
 export const ALERTED_KEY = "notify.alerted";
 const ALERTED_LIMIT = 200;
 
-function readAlerted(): number[] {
+function readAlerted(): string[] {
   try {
     const parsed: unknown = JSON.parse(sessionStorage.getItem(ALERTED_KEY) ?? "[]");
-    return Array.isArray(parsed) ? parsed.filter((x): x is number => typeof x === "number") : [];
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
   } catch {
     return [];
   }
 }
 
-function rememberAlerted(id: number): void {
+function rememberAlerted(key: string): void {
   try {
-    sessionStorage.setItem(ALERTED_KEY, JSON.stringify([...readAlerted(), id].slice(-ALERTED_LIMIT)));
+    sessionStorage.setItem(ALERTED_KEY, JSON.stringify([...readAlerted(), key].slice(-ALERTED_LIMIT)));
   } catch {
     // 存储不可用时只是可能重复提醒，不影响功能
   }
@@ -98,11 +99,11 @@ export function useNotifications() {
   };
 }
 
-/** 只对 `alert === true` 且本会话未提醒过的通知回调一次。 */
+/** 只对 `alert === true` 且本会话未提醒过的通知回调一次（合并后数量变多再回调）。 */
 export function useNotificationAlerts(onAlert: (item: NotificationItem) => void): void {
   useEventSubscription<NotificationEvent>("notification", (event) => {
     if (!shouldAlert(event, readAlerted()) || event.item === null) return;
-    rememberAlerted(event.item.id);
+    rememberAlerted(alertKey(event.item));
     onAlert(event.item);
   });
 }

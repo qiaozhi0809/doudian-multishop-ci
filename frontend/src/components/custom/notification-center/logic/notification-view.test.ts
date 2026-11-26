@@ -29,37 +29,51 @@ describe("groupForPanel", () => {
 });
 
 describe("shouldAlert", () => {
-  it("只对 alert=true 且未处理过的 id 返回 true", () => {
+  it("只对 alert=true 且未处理过的 id + 数量返回 true", () => {
     expect(shouldAlert({ action: "created", item: item({ id: 5 }), alert: true }, [])).toBe(true);
-    expect(shouldAlert({ action: "created", item: item({ id: 5 }), alert: true }, [5])).toBe(false);
+    expect(shouldAlert({ action: "created", item: item({ id: 5 }), alert: true }, ["5:1"])).toBe(false);
+    // 未读时又来新单：同一条合并后数量变多，再提醒
+    expect(shouldAlert({ action: "updated", item: item({ id: 5, count: 2 }), alert: true }, ["5:1"])).toBe(true);
     expect(shouldAlert({ action: "updated", item: item({ id: 6 }), alert: false }, [])).toBe(false);
     expect(shouldAlert({ action: "read", item: null, alert: false }, [])).toBe(false);
   });
 });
 
 describe("bannerView", () => {
-  const shop = (id: number, kinds: StrongOpenShop["kinds"], link: string | null = null): StrongOpenShop => ({
-    shop_id: id, shop_name: `店${id}`, kinds, link,
+  const shop = (id: number, problems: StrongOpenShop["problems"]): StrongOpenShop => ({
+    shop_id: id, shop_name: `店${id}`, kinds: problems.map((p) => p.kind), link: problems[0]?.link ?? null, problems,
   });
 
-  it("一店一行，同店问题用顿号连起来，按第一项问题的链接跳转", () => {
-    const view = bannerView([shop(1, ["login_expired", "egress_unreachable"], "/shops?shop=1"), shop(2, ["ship_deadline"], "/orders?quick=exp_ship&shops=2")]);
+  it("一店一行，同店问题用顿号连起来，每个问题跳各自的链接", () => {
+    const view = bannerView([
+      shop(1, [{ kind: "login_expired", link: "/shops?shop=1" }, { kind: "ship_deadline", link: "/orders?quick=ship_delay&shops=1" }]),
+      shop(2, [{ kind: "ship_deadline", link: "/orders?quick=exp_ship&shops=2" }]),
+    ]);
     expect(view).toEqual({
       kind: "rows",
       rows: [
-        { shopId: 1, text: "店1：登录失效、出口不通", link: "/shops?shop=1" },
-        { shopId: 2, text: "店2：临近发货超时", link: "/orders?quick=exp_ship&shops=2" },
+        {
+          shopId: 1, shopName: "店1", text: "店1：登录失效、临近发货超时",
+          problems: [
+            { kind: "login_expired", label: "登录失效", link: "/shops?shop=1" },
+            { kind: "ship_deadline", label: "临近发货超时", link: "/orders?quick=ship_delay&shops=1" },
+          ],
+        },
+        {
+          shopId: 2, shopName: "店2", text: "店2：临近发货超时",
+          problems: [{ kind: "ship_deadline", label: "临近发货超时", link: "/orders?quick=exp_ship&shops=2" }],
+        },
       ],
     });
   });
 
-  it("没有链接时登录 / 出口 / 风控回到店铺页高亮该店，临近超时去超时筛选", () => {
-    const view = bannerView([shop(3, ["risk_paused"]), shop(4, ["ship_deadline"])]);
-    expect(view.kind === "rows" && view.rows.map((r) => r.link)).toEqual(["/shops?shop=3", "/orders?quick=exp_ship&shops=4"]);
+  it("没有链接时登录 / 出口 / 风控回到店铺页高亮该店，临近超时去该店订单（不筛掉已超时）", () => {
+    const view = bannerView([shop(3, [{ kind: "risk_paused", link: null }]), shop(4, [{ kind: "ship_deadline", link: null }])]);
+    expect(view.kind === "rows" && view.rows.map((r) => r.problems[0].link)).toEqual(["/shops?shop=3", "/orders?shops=4"]);
   });
 
   it("超过 3 家合并为一行", () => {
-    expect(bannerView([1, 2, 3, 4].map((id) => shop(id, ["login_expired"])))).toEqual({ kind: "merged", text: "4 家店需要处理" });
+    expect(bannerView([1, 2, 3, 4].map((id) => shop(id, [{ kind: "login_expired", link: null }])))).toEqual({ kind: "merged", text: "4 家店需要处理" });
   });
 
   it("没有问题时为空", () => {
@@ -90,14 +104,16 @@ describe("alertNotice", () => {
 
 describe("openRows", () => {
   it("待处理列出全部未解决的店，不合并", () => {
-    const shops = [1, 2, 3, 4].map((id): StrongOpenShop => ({ shop_id: id, shop_name: `店${id}`, kinds: ["login_expired"], link: null }));
+    const shops = [1, 2, 3, 4].map((id): StrongOpenShop => ({
+      shop_id: id, shop_name: `店${id}`, kinds: ["login_expired"], link: null, problems: [{ kind: "login_expired", link: null }],
+    }));
     expect(openRows(shops).map((r) => r.text)).toEqual(["店1：登录失效", "店2：登录失效", "店3：登录失效", "店4：登录失效"]);
   });
 });
 
 describe("isStillOpen", () => {
   it("摘要里该店仍有该问题才算未解决", () => {
-    const shops: StrongOpenShop[] = [{ shop_id: 2, shop_name: "店2", kinds: ["login_expired", "egress_unreachable"], link: null }];
+    const shops: StrongOpenShop[] = [{ shop_id: 2, shop_name: "店2", kinds: ["login_expired", "egress_unreachable"], link: null, problems: [] }];
     expect(isStillOpen(shops, 2, "egress_unreachable")).toBe(true);
     expect(isStillOpen(shops, 2, "risk_paused")).toBe(false);
     expect(isStillOpen(shops, 3, "login_expired")).toBe(false);

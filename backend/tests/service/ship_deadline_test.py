@@ -63,7 +63,7 @@ def test_zero_count_event_clears_reminder(engine, clock):
 
     assert _watcher(engine, clock, events).scan()["count"] == 0
     assert published == [{"count": 0, "warn_hours": 6, "checked_at": "2026-12-01T00:00:00Z",
-                          "items": [], "shop_counts": {}}]
+                          "items": [], "shop_counts": {}, "shop_overdue": {}}]
 
 
 def test_warn_hours_is_configurable(engine, clock):
@@ -88,3 +88,17 @@ def test_shop_counts_not_capped_by_item_limit(engine, clock):
     _event, data = sub._queue.get_nowait()
     assert len(data["items"]) == 2 and {i["shop_id"] for i in data["items"]} == {a}
     assert data["shop_counts"] == {a: 3, b: 2}
+
+
+def test_overdue_counts_and_disabled_shops_excluded(engine, clock):
+    events = EventBus()
+    a = add_shop(engine, name="店A")
+    off = add_shop(engine, name="店停", status="disabled")
+    _seed(engine, a, "late", exp_ship_time="2026-11-30T20:00:00Z")  # 已超时
+    _seed(engine, a, "soon", exp_ship_time="2026-12-01T03:00:00Z")
+    _seed(engine, off, "off-late", exp_ship_time="2026-11-30T20:00:00Z")
+    sub = events.subscribe()
+    result = _watcher(engine, clock, events).scan()
+    _event, data = sub._queue.get_nowait()
+    assert [i["order_no"] for i in result["items"]] == ["late", "soon"]
+    assert data["shop_counts"] == {a: 2} and data["shop_overdue"] == {a: 1}

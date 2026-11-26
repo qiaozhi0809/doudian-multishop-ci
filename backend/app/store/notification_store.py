@@ -83,8 +83,9 @@ def list_page(
 
 
 def unread_count(conn: sa.Connection) -> int:
+    """未读数；未解决的强状态不计（横条 / 待处理代表它们），解决后照常计入。"""
     return int(conn.execute(
-        sa.select(sa.func.count()).select_from(n).where(n.c.read_at.is_(None))
+        sa.select(sa.func.count()).select_from(n).where(n.c.read_at.is_(None), ~_open_strong())
     ).scalar_one())
 
 

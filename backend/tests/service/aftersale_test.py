@@ -351,3 +351,38 @@ async def test_manual_sync_publishes_result_check_new_does_not(env):
     env.transport.responses[:] = [counts_with(1), list_of(("a1", OPEN))]
     await svc.check_new(env.shop_id)
     assert drain(sub, "sync_result") == []
+
+
+# ---- 终审修复：拉满页数 / 出错不循环完整同步 ----
+
+async def test_check_new_max_pages_exhausted_builds_baseline_and_stops_relisting(
+    env, monkeypatch,
+):
+    from app.service import aftersale as aftersale_mod
+    monkeypatch.setattr(aftersale_mod, "MAX_PAGES", 1)
+    clock = Clock()
+    svc = checker(env, clock)
+    full = [(f"id{i}", OPEN) for i in range(50)]
+    env.transport.responses[:] = [counts_with(1), list_of(*full)]
+    await svc.check_new(env.shop_id)
+    assert has_baseline(env)  # 拉满页数也建基线
+    clock.advance(300)
+    env.transport.requests.clear()
+    env.transport.responses[:] = [counts_with(1)]
+    await svc.check_new(env.shop_id)
+    assert list_requests(env) == 0  # 计数没变：不再完整同步
+
+
+async def test_check_new_error_run_counts_as_a_round(env):
+    clock = Clock()
+    svc = checker(env, clock)
+    env.transport.responses[:] = [counts_with(1), list_of(("a1", OPEN))]
+    await svc.check_new(env.shop_id)
+    clock.advance(300)
+    env.transport.responses[:] = [counts_with(2), BizRejected("100021", "售后数据不可用")]
+    await svc.check_new(env.shop_id)
+    clock.advance(300)
+    env.transport.requests.clear()
+    env.transport.responses[:] = [counts_with(2)]
+    await svc.check_new(env.shop_id)
+    assert list_requests(env) == 0  # 出错那轮算一轮：同样计数不立即重试

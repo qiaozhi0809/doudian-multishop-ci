@@ -94,6 +94,14 @@ def test_unread_count_and_mark_read(engine):
         assert ns.unread_count(conn) == 0 and ns.get(conn, a)["read_at"] == T1
 
 
+def test_unread_count_skips_open_states(engine):
+    with engine.begin() as conn:
+        _ins(conn)
+        _ins(conn, state_key="open")
+        _ins(conn, state_key="done", resolved_at=T1)
+        assert ns.unread_count(conn) == 2
+
+
 def test_open_strong_states(engine):
     with engine.begin() as conn:
         _ins(conn)

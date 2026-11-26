@@ -51,6 +51,7 @@ class ShopSync:
     error: str | None = None
     synced_at: str | None = None
     new: int = 0  # 本次新出现、且仍属待办的售后单（无基线时为 0）
+    exhausted: bool = False  # 拉满 MAX_PAGES 页仍未到底（未出错，但不算完整）
 
 
 @dataclass(frozen=True)
@@ -73,9 +74,11 @@ class AftersaleService:
         self._clock = clock
         self._events = events
         self._counts_cache: ShopTtlCache[dict[str, int]] = ShopTtlCache(clock)
-        # 上次完整同步时的各待办分组计数（进程内）；新进程第一轮必然同步一次
+        # 上次跑完（拉全或拉满页数）同步时的各待办分组计数（进程内）；新进程第一轮必然同步一次
         self._last_pending: dict[int, dict[str, int]] = {}
-        self._unchanged: dict[int, int] = {}  # 自上次完整同步以来计数未变的轮数
+        # 上次同步出错时的计数：同样计数不立即重试，按兜底轮数再试；成功后清掉
+        self._failed_pending: dict[int, dict[str, int]] = {}
+        self._unchanged: dict[int, int] = {}  # 自上次同步以来计数未变的轮数
 
     # ---- 同步 ----
 
@@ -99,6 +102,7 @@ class AftersaleService:
                 fetched=int(r.data[0]) if r.data else 0,
                 complete=bool(r.data[1]) if r.data else False,
                 new=int(r.data[2]) if r.data else 0,
+                exhausted=bool(r.data[3]) if r.data else False,
                 error=r.error,
                 synced_at=None if r.error else now,
             )
@@ -112,20 +116,27 @@ class AftersaleService:
         if c.source != "upstream":
             return 0
         snapshot = {f: int((c.counts or {}).get(f, 0)) for f in PENDING_FIELDS}
-        if self._last_pending.get(shop_id) == snapshot:
+        basis = self._failed_pending.get(shop_id, self._last_pending.get(shop_id))
+        if basis == snapshot:
             unchanged = self._unchanged.get(shop_id, 0) + 1
             if unchanged < FORCE_SYNC_EVERY:
                 self._unchanged[shop_id] = unchanged
                 return 0
         (result,) = await self._sync_all([shop_id], actor)
-        if result.error is None and result.complete:  # 失败的下一轮重试
+        # 每次同步都算一轮重新计数：拉满页数不会每轮重拉；出错也按兜底轮数再试
+        self._unchanged[shop_id] = 0
+        if result.error is None:
             self._last_pending[shop_id] = snapshot
-            self._unchanged[shop_id] = 0
+            self._failed_pending.pop(shop_id, None)
+        else:  # 保留上次成功的快照
+            self._failed_pending[shop_id] = snapshot
         return result.new
 
-    async def _sync_shop(self, shop_id: int, client: FxgClient) -> tuple[int, bool, int]:
+    async def _sync_shop(
+        self, shop_id: int, client: FxgClient,
+    ) -> tuple[int, bool, int, bool]:
         now = self._stamp()
-        fetched, complete, new = 0, False, 0
+        fetched, complete, new, exhausted = 0, False, 0, False
         base = ep.AFTERSALE_LIST.page_base or 1  # 售后列表 1-based
         try:
             for page in range(base, base + MAX_PAGES):
@@ -141,25 +152,29 @@ class AftersaleService:
                 if len(items) < ep.AFTERSALE_PAGE_SIZE:
                     complete = True
                     break
+            else:
+                exhausted = True
+                log.warning("aftersale.max_pages_exhausted", shop_id=shop_id, pages=MAX_PAGES)
         except BaseException:  # 中途失败也报已入库的新单（下一轮它们已在库里）
             try:
-                self._report_new(shop_id, new, now, complete=False)
+                self._report_new(shop_id, new, now, establish=False)
             except Exception:  # 报告出错不能盖住原异常
                 log.exception("aftersale.report_new_failed", shop_id=shop_id)
             raise
         # 先报新单再清理：清理出错也不丢提醒
-        reported = self._report_new(shop_id, new, now, complete=complete)
+        # 拉满页数也建基线：最新的售后在前几页，之后新增的都能识别
+        reported = self._report_new(shop_id, new, now, establish=complete or exhausted)
         if complete:  # 只有拉全了才能判断哪些售后单已不在平台列表
             with self._engine.begin() as conn:
                 aftersale_store.prune_unseen(conn, shop_id, now)
-        return fetched, complete, reported
+        return fetched, complete, reported, exhausted
 
-    def _report_new(self, shop_id: int, new: int, now: str, *, complete: bool) -> int:
+    def _report_new(self, shop_id: int, new: int, now: str, *, establish: bool) -> int:
         """有基线：报本轮新入库的待办单（部分同步也报）。无基线：不报，返回 0；
-        完整同步才建基线（0 条也建）。"""
+        拉全或拉满页数（未出错）才建基线（0 条也建）。"""
         with self._engine.begin() as conn:
             if not sync_baseline_store.has(conn, shop_id, BASELINE_KIND):
-                if complete:
+                if establish:
                     sync_baseline_store.establish(conn, shop_id, BASELINE_KIND, now)
                 return 0
         if new > 0 and self._events is not None:

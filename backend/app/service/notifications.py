@@ -29,6 +29,9 @@ _NO_MERGE: frozenset[str] = frozenset({"recovered"})  # 每条对应一个具体
 _MERGE_BY_LINK: frozenset[str] = frozenset({"sync_done", "sync_failed"})  # 链接区分同步类型
 MAX_PAGE_SIZE = 200
 _DEADLINE_LABEL = "临近发货超时"
+# 未读时合并后数量变多仍要再提醒的种类（又来了新单）
+_ALERT_ON_GROWTH: frozenset[str] = frozenset({"new_order", "new_aftersale"})
+_STATE_FIELDS = ("kind", "level", "link", "title", "body", "count")
 
 
 def utc_now() -> datetime:
@@ -109,7 +112,7 @@ class NotificationService:
                 conn, prev["id"], now, count=total,
                 title=title_for(kind, shop_name=name, count=total, detail=detail), **fields,
             )
-            return prev["id"], "updated", False
+            return prev["id"], "updated", kind in _ALERT_ON_GROWTH and count > 0
         nid = notification_store.insert(
             conn, kind=kind, level=LEVEL_BY_KIND[kind], shop_id=shop_id,
             title=title_for(kind, shop_name=name, count=count, detail=detail), body=body,
@@ -121,14 +124,22 @@ class NotificationService:
 
     def raise_state(
         self, family: KindFamily, kind: Kind, *, shop_id: int, count: int = 1,
-        detail: str | None = None,
+        detail: str | None = None, link: str | None = None,
     ) -> None:
+        """link 不给时按种类生成；未解决记录内容没变时什么都不做（不改时间、不发事件）。"""
         key = state_key(family, shop_id)
         now = self._now()
         with self._engine.begin() as conn:
             name = _shop_name(conn, shop_id)
+            fields: dict[str, Any] = {
+                "kind": kind, "level": LEVEL_BY_KIND[kind],
+                "link": link or link_for(kind, shop_id),
+                "title": title_for(kind, shop_name=name, count=count, detail=detail),
+                "body": detail, "count": count,
+            }
             row = notification_store.open_state(conn, key)
-            fields: dict[str, Any] = {"body": detail, "count": count}
+            if row is not None and all(row[f] == fields[f] for f in _STATE_FIELDS):
+                return
             if row is None:
                 last = notification_store.last_resolved_state(conn, key)
                 if last is not None and (
@@ -136,18 +147,12 @@ class NotificationService:
                 ):
                     row, fields["resolved_at"] = last, None
             if row is not None:
-                fields.update(
-                    kind=kind, level=LEVEL_BY_KIND[kind], link=link_for(kind, shop_id),
-                    title=title_for(kind, shop_name=name, count=count, detail=detail),
-                )
                 notification_store.update(conn, row["id"], now, **fields)
                 nid, action, alert = row["id"], "updated", False
             else:
                 nid = notification_store.insert(
-                    conn, kind=kind, level=LEVEL_BY_KIND[kind], shop_id=shop_id,
-                    title=title_for(kind, shop_name=name, count=count, detail=detail),
-                    body=detail, link=link_for(kind, shop_id), count=count,
-                    state_key=key, created_at=now, updated_at=now,
+                    conn, shop_id=shop_id, state_key=key, created_at=now, updated_at=now,
+                    **fields,
                 )
                 action, alert = "created", True
             item = notification_store.get(conn, nid)
@@ -187,10 +192,11 @@ class NotificationService:
                 if group is None:
                     group = groups[sid] = {
                         "shop_id": sid, "shop_name": _shop_name(conn, sid) or "",
-                        "kinds": [], "link": row["link"],
+                        "kinds": [], "link": row["link"], "problems": [],
                     }
-                if row["kind"] not in group["kinds"]:
+                if row["kind"] not in group["kinds"]:  # 每个 state_key 至多一条，种类不重复
                     group["kinds"].append(row["kind"])
+                    group["problems"].append({"kind": row["kind"], "link": row["link"]})
         return {"unread": unread, "strong_open": [*groups.values()]}
 
     def mark_read(self, notification_id: int) -> bool:

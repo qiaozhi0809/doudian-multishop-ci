@@ -124,7 +124,32 @@ def test_disabled_shop_resolves_all_states(feed, svc, engine, shop_a):
     assert all(r["resolved_at"] for r in rows(svc) if r["state_key"])
 
 
+def test_disabled_shop_also_resolves_deadline(feed, svc, engine, shop_a):
+    feed.handle(SHIP_DEADLINE_WARNING, {"items": [], "shop_counts": {shop_a: 2}})
+    set_shop(engine, shop_a, status="disabled")
+    feed.handle(SHOP_STATUS_CHANGED, {"shop_id": shop_a})
+    assert rows(svc, "ship_deadline")[0]["resolved_at"] is not None
+
+
+def test_reconcile_all_covers_every_shop(feed, svc, engine, shop_a, shop_b):
+    save_session(engine, shop_a)
+    set_shop(engine, shop_a, status="needs_login")
+    set_shop(engine, shop_b, egress_status="unreachable")
+    feed.reconcile_all()
+    open_keys = {r["state_key"] for r in rows(svc) if r["state_key"] and not r["resolved_at"]}
+    assert open_keys == {f"login:{shop_a}", f"egress:{shop_b}"}
+
+
 # ---- 临近超时 ----
+
+def test_deadline_link_follows_overdue(feed, svc, shop_a):
+    """该店有已超时订单 → 跳「已超时」筛选；没有 → 跳「24 小时内需发货」。"""
+    feed.handle(SHIP_DEADLINE_WARNING, {
+        "items": [], "shop_counts": {str(shop_a): 3}, "shop_overdue": {str(shop_a): 1}})
+    assert rows(svc, "ship_deadline")[0]["link"] == f"/orders?quick=ship_delay&shops={shop_a}"
+    feed.handle(SHIP_DEADLINE_WARNING, {
+        "items": [], "shop_counts": {str(shop_a): 2}, "shop_overdue": {}})
+    assert rows(svc, "ship_deadline")[0]["link"] == f"/orders?quick=exp_ship&shops={shop_a}"
 
 def deadline_event(*shop_ids):
     items = [{"shop_id": s, "order_no": f"no-{i}"} for i, s in enumerate(shop_ids)]

@@ -16,7 +16,7 @@ from app.domain.order_status import (
     PlatformOrderStatus,
 )
 from app.store.aggregate_schema import aftersale
-from app.store.schema import order_items, orders
+from app.store.schema import order_items, orders, shop
 from app.store.sorting import SortOrder, order_by, rank_of, shop_name_of
 
 
@@ -192,36 +192,39 @@ def get_by_ids(conn: sa.Connection, order_ids: Sequence[int]) -> list[dict[str, 
     return [dict(r) for r in rows]
 
 
+def _deadline_cond(statuses: Sequence[str], until: str, *, before: bool = False) -> list[Any]:
+    """未发货、承诺发货时间不晚于 until（before=True 时早于 until）、店铺未停用。"""
+    return [
+        orders.c.status.in_(list(statuses)),
+        orders.c.exp_ship_time.is_not(None),
+        orders.c.exp_ship_time != "",
+        orders.c.exp_ship_time < until if before else orders.c.exp_ship_time <= until,
+        orders.c.shop_id.in_(sa.select(shop.c.id).where(shop.c.status != "disabled")),
+    ]
+
+
 def ship_deadline_due(
     conn: sa.Connection, statuses: Sequence[str], warn_until: str, limit: int = 200,
 ) -> list[dict[str, Any]]:
-    """未发货且 exp_ship_time 不晚于 warn_until 的订单，按最紧急排序（ENG-07）。"""
+    """未发货且 exp_ship_time 不晚于 warn_until 的订单，按最紧急排序（ENG-07）；停用店不算。"""
     if len(statuses) == 0:
         return []
     rows = conn.execute(
-        sa.select(orders).where(
-            orders.c.status.in_(list(statuses)),
-            orders.c.exp_ship_time.is_not(None),
-            orders.c.exp_ship_time != "",
-            orders.c.exp_ship_time <= warn_until,
-        ).order_by(orders.c.exp_ship_time, orders.c.id).limit(limit)
+        sa.select(orders).where(*_deadline_cond(statuses, warn_until))
+        .order_by(orders.c.exp_ship_time, orders.c.id).limit(limit)
     ).mappings()
     return [dict(r) for r in rows]
 
 
 def ship_deadline_counts(
-    conn: sa.Connection, statuses: Sequence[str], warn_until: str,
+    conn: sa.Connection, statuses: Sequence[str], until: str, *, before: bool = False,
 ) -> dict[int, int]:
-    """同 ship_deadline_due 的条件，按店计数（不设上限）。"""
+    """同 ship_deadline_due 的条件，按店计数（不设上限）；before=True 数已超时（早于 until）。"""
     if len(statuses) == 0:
         return {}
     rows = conn.execute(
-        sa.select(orders.c.shop_id, sa.func.count()).where(
-            orders.c.status.in_(list(statuses)),
-            orders.c.exp_ship_time.is_not(None),
-            orders.c.exp_ship_time != "",
-            orders.c.exp_ship_time <= warn_until,
-        ).group_by(orders.c.shop_id)
+        sa.select(orders.c.shop_id, sa.func.count())
+        .where(*_deadline_cond(statuses, until, before=before)).group_by(orders.c.shop_id)
     )
     return {int(shop_id): int(n) for shop_id, n in rows}
 
