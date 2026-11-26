@@ -1,6 +1,8 @@
-"""飞鸽状态接口：只列开启接收的店；手动重新连接在接口层校验。不打开真浏览器。"""
+"""飞鸽接口：接收状态、手动重新连接、会话列表与计数、消息记录。不打开真浏览器。"""
 
 from app.domain.im_rules import STATE_LABELS
+from app.service.im_session import ConvView
+from app.store import im_message_store
 from tests.conftest import ADMIN_USER
 from tests.service.im_watcher_support import FakeAttach, FakeRegistry
 
@@ -89,6 +91,140 @@ def test_switch_starts_and_stops_resident_page(api, monkeypatch):
     assert api.client.patch(f"/api/shops/{shop_id}", json={"im_enabled": False}).status_code == 200
     api.wait_for(lambda: registry.open_contexts() == [])
     assert status() == []
+
+
+# ---- 会话列表、计数、消息记录（时钟固定在 2026-12-01T00:00:00Z） ----
+
+_ROW_KEYS = {
+    "shop_id", "shop_name", "conversation_id", "buyer", "preview", "unread", "last_at",
+    "waiting_since", "wait_seconds",
+}
+
+
+def conv(conversation_id: str, *, last: str, waiting: str | None = None, pending: int = 0):
+    """last / waiting：2026-11-30 23 点内的「分:秒」。"""
+    return ConvView(
+        conversation_id, None, "在吗", "buyer", f"2026-11-30T23:{last}Z", pending,
+        None if waiting is None else f"2026-11-30T23:{waiting}Z", "测试买家",
+    )
+
+
+def two_shops(api, monkeypatch) -> tuple[int, int]:
+    first, second = enable(api, "测试小铺"), enable(api, "测试小店")
+    views = {
+        first: [
+            conv("conv-test-1", last="59:00", waiting="59:00", pending=1),
+            conv("conv-test-2", last="59:50"),
+        ],
+        second: [conv("conv-test-3", last="50:00", waiting="50:00", pending=2)],
+    }
+    monkeypatch.setattr(api.app.state.im, "snapshot", lambda shop_id: views.get(shop_id, []))
+    return first, second
+
+
+def ids(response) -> list[str]:
+    assert response.status_code == 200, response.text
+    return [r["conversation_id"] for r in response.json()["items"]]
+
+
+def test_conversations_requires_admin(api):
+    shop_id = enable(api, "测试小铺")
+    api.client.cookies.clear()
+
+    for path in (
+        "/api/im/conversations", "/api/im/conversations/counts",
+        f"/api/im/conversations/{shop_id}/conv-test-1/messages",
+    ):
+        assert api.client.get(path).status_code == 401, path
+
+
+def test_conversations_default_sort_waiting_desc(api, monkeypatch):
+    _, second = two_shops(api, monkeypatch)
+
+    r = api.client.get("/api/im/conversations")
+
+    assert ids(r) == ["conv-test-3", "conv-test-1", "conv-test-2"]
+    body = r.json()
+    assert (body["total"], body["page"], body["page_size"]) == (3, 1, 50)
+    top = body["items"][0]
+    assert set(top) == _ROW_KEYS
+    assert (top["shop_id"], top["shop_name"], top["buyer"], top["preview"]) == (
+        second, "测试小店", "测试买家", "在吗")
+    assert (top["unread"], top["wait_seconds"]) == (2, 600)
+    assert body["items"][2]["wait_seconds"] is None
+
+
+def test_conversations_filters_sort_and_page(api, monkeypatch):
+    two_shops(api, monkeypatch)
+    get = api.client.get
+
+    assert ids(get("/api/im/conversations?unread=true&sort=unread&order=asc")) == [
+        "conv-test-1", "conv-test-3"]
+    assert ids(get("/api/im/conversations?quick=overdue")) == ["conv-test-3"]
+    r = get("/api/im/conversations?page=2&page_size=2")
+    assert (ids(r), r.json()["total"]) == (["conv-test-2"], 3)
+
+
+def test_conversations_bad_sort_or_quick_422(api):
+    for query in (
+        "sort=preview", "quick=all", "order=up", "page=0", "page_size=201", "shop_ids=x",
+    ):
+        assert api.client.get(f"/api/im/conversations?{query}").status_code == 422, query
+
+
+def test_conversations_shop_filter(api, monkeypatch):
+    first, _ = two_shops(api, monkeypatch)
+
+    assert ids(api.client.get(f"/api/im/conversations?shop_ids={first}")) == [
+        "conv-test-1", "conv-test-2"]
+    assert api.client.get("/api/im/conversations?shop_ids=999").status_code == 404
+    counts = api.client.get(f"/api/im/conversations/counts?shop_ids={first}").json()
+    assert counts["unread"] == 1
+
+
+def test_counts_shape(api, monkeypatch):
+    two_shops(api, monkeypatch)
+
+    r = api.client.get("/api/im/conversations/counts")
+
+    # 北京时间 2026-12-01 08:00 看，这些消息都在今天 07 点多
+    assert r.status_code == 200
+    assert r.json() == {"unread": 2, "waiting": 2, "overdue": 1, "today": 3}
+
+
+def test_messages_ok(api):
+    shop_id = enable(api, "测试小铺")
+    with api.app.state.engine.begin() as conn:
+        im_message_store.insert_ignore(conn, shop_id, [{
+            "conversation_id": "conv-test-1", "message_id": "msg-test-1", "sender_role": "buyer",
+            "text": "在吗", "sent_at": "2026-11-30T23:59:00Z",
+        }], "2026-11-30T23:59:01Z")
+
+    r = api.client.get(f"/api/im/conversations/{shop_id}/conv-test-1/messages")
+
+    assert r.status_code == 200
+    assert r.json() == {"shop_id": shop_id, "conversation_id": "conv-test-1", "items": [{
+        "message_id": "msg-test-1", "sender_role": "buyer", "text": "在吗",
+        "sent_at": "2026-11-30T23:59:00Z",
+    }]}
+
+
+def test_messages_bad_conversation_id_422(api):
+    shop_id = enable(api, "测试小铺")
+
+    for bad in ("conv$1", "conv%20test", "a" * 129):
+        r = api.client.get(f"/api/im/conversations/{shop_id}/{bad}/messages")
+        assert r.status_code == 422, bad
+
+
+def test_messages_unknown_404(api):
+    shop_id = enable(api, "测试小铺")
+
+    unknown = api.client.get(f"/api/im/conversations/{shop_id}/conv-test-9/messages")
+    no_shop = api.client.get("/api/im/conversations/999/conv-test-1/messages")
+
+    assert unknown.status_code == 404 and unknown.json()["error"]["shop_id"] == shop_id
+    assert no_shop.status_code == 404 and no_shop.json()["error"]["shop_id"] == 999
 
 
 async def _must_not_call(*_args, **_kwargs):

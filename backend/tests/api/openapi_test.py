@@ -15,7 +15,9 @@ def test_export_is_deterministic_and_complete(tmp_path):
     spec = json.loads(a.read_text(encoding="utf-8"))
     assert {"/api/shops", "/api/proxy-pool", "/api/shops/{shop_id}/egress/check", "/api/orders",
             "/api/events", "/api/auth/status", "/api/orders/sync", "/api/im/status",
-            "/api/im/shops/{shop_id}/restart"} <= set(spec["paths"])
+            "/api/im/shops/{shop_id}/restart", "/api/im/conversations",
+            "/api/im/conversations/counts",
+            "/api/im/conversations/{shop_id}/{conversation_id}/messages"} <= set(spec["paths"])
     assert a.read_text(encoding="utf-8").endswith("}\n")
 
 
