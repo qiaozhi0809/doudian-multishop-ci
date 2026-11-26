@@ -8,8 +8,7 @@
 .metaRow {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-2) var(--space-3);
   color: var(--text-muted);
   font-size: var(--text-xs);
 }
@@ -93,7 +92,7 @@
 .kpiValue {
   flex: none;
   color: var(--foreground);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -139,19 +138,10 @@
   gap: var(--space-3);
 }
 
-.failureBlock {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
 .failList {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin: 0;
-  padding-left: var(--space-4);
-  color: var(--text-secondary);
+  margin-top: var(--space-2);
   font-size: var(--text-sm);
 }
-

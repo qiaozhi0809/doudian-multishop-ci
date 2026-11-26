@@ -37,9 +37,10 @@ export function DashboardPageView({ page }: { page: DashboardPage }) {
         {model.updatedAt && (
           <span title={formatBjTime(model.updatedAt)}>数据时间 {formatBjTimeSmart(model.updatedAt)}</span>
         )}
+        {failures.length > 0 && <span>合计不含未取到的店铺</span>}
       </div>
-      <KpiGrid kpis={model.kpis} sections={sections} />
       <SourceFailures failures={failures} shopName={page.shopName} bannerShopIds={page.bannerShopIds} />
+      <KpiGrid kpis={model.kpis} sections={sections} />
       <div className={styles.chartGrid}>
         <ShipPressureChart bars={model.shipBars} section={sections.orderCounts} />
         <FundBarsChart bars={model.fundBars} section={sections.fund} />
