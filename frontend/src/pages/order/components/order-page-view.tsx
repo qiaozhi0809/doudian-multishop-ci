@@ -42,6 +42,7 @@ export function OrderPageView({ page }: { page: OrderPage }) {
         state={counts.isLoading ? "loading" : counts.isError ? "error" : "ready"}
         data={counts.data}
         shopName={page.shopName}
+        bannerShopIds={page.bannerShopIds}
         onRetry={() => void counts.refetch()}
         cardProps={orders.quick.cardProps}
       />

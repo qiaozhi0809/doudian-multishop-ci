@@ -9,6 +9,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { useListSort, useSettledSort } from "@/lib/use-list-sort";
 import { useQuickFilter } from "@/lib/use-quick-filter";
 import { useShops } from "@/lib/use-shops";
+import { useShopsWithOpenProblems } from "@/lib/use-shops-with-open-problems";
 import { PAGE_SIZE, PRODUCT_QUICK_KEYS, PRODUCT_SORT_KEYS } from "../logic/catalog-page";
 import { useCatalogSync } from "./use-catalog-sync";
 
@@ -18,6 +19,7 @@ type GroupsResponse = components["schemas"]["ProductGroupsResponse"];
 /** 商品页数据：快捷筛选、关键字、排序与页码在 URL 里（可以同时生效）；计数与分组来自上游（每店一请求，失败隔离）。 */
 export function useCatalogPage() {
   const shops = useShops();
+  const bannerShopIds = useShopsWithOpenProblems();
   const { shopIds } = useShopFilter();
   const [params, setParams] = useSearchParams();
   const sorting = useListSort(PRODUCT_SORT_KEYS);
@@ -83,6 +85,7 @@ export function useCatalogPage() {
           : ("ready" as const),
     retryShops: () => void shops.refetch(),
     shopName: (id: number) => names.get(id) ?? `店铺 ${id}`,
+    bannerShopIds,
     keyword,
     setKeyword,
     page,

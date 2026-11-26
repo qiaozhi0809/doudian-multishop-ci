@@ -101,7 +101,7 @@
 | ENG-04 | P1 | 出单机部署与打包 | 打包方式、首次安装步骤、Edge / 打印组件依赖检查、升级方式；对应验收标准第 7 条 | | ✅ [design/deployment.md](design/deployment.md)：zip + venv（`backend/requirements.txt` 锁定）+ `scripts/start|stop.ps1|.bat`；首次安装、依赖检查清单、升级 / 回滚、排障齐全；PyInstaller 记作未验证的备选 |
 | ENG-05 | P1 | CI 守门脚本 | engineering-rules 第十节 7 个脚本全部「待建」，按其列出的顺序落地 | | ⏳ |
 | ENG-06 | P2 | 备份与恢复 | SQLite 每日快照的保留策略、恢复演练步骤 | | ✅ `service/backup.py`（sqlite3 在线备份，WAL 安全）+ `backup_run` 表（0007）+ 每日 04:00 快照、保留 `DD_BACKUP_KEEP`（默认 7）+ `GET /api/backup/snapshots` / `POST /api/backup/run` + 设置页「立即备份」；恢复步骤与演练见 deployment.md §7 |
-| ENG-07 | P2 | 通知通道 | 掉线 / 打印失败 / 临近超时发货的通知方式（界面内 / 系统通知 / 外部 IM） | | ✅ 界面内 SSE：掉线走会话健康指示（一键重登）、打印失败走通知中心 / 打单台、临近超时新增 `ship_deadline_warning`（每 30 分钟扫描 `exp_ship_time`，阈值 `DD_SHIP_DEADLINE_WARN_HOURS`，再由通知中心翻译成强提醒）；不接外部 IM |
+| ENG-07 | P2 | 通知通道 | 掉线 / 打印失败 / 临近超时发货的通知方式（界面内 / 系统通知 / 外部 IM） | | ✅ 界面内 SSE：掉线走通知中心强提醒横条（重登在店铺管理）、打印失败走通知中心 / 打单台、临近超时新增 `ship_deadline_warning`（每 30 分钟扫描 `exp_ship_time`，阈值 `DD_SHIP_DEADLINE_WARN_HOURS`，再由通知中心翻译成强提醒）；不接外部 IM |
 
 ---
 

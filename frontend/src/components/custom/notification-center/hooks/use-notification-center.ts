@@ -9,7 +9,7 @@ import { useProgress, useProgressSubscriptions } from "./use-progress";
 
 /**
  * 通知中心的全部状态，只在外壳里建一次：列表与摘要、进行中任务（SSE 订阅只挂这一处）、
- * 右下角弹窗（见 useAlertNotices）、面板开关与跳转。
+ * 提醒（见 useAlertNotices）、面板开关与跳转。
  */
 export function useNotificationCenterState() {
   const center = useNotifications();
@@ -29,7 +29,7 @@ export function useNotificationCenterState() {
     setMutedState(value);
   };
 
-  useAlertNotices(center.strongOpen);
+  useAlertNotices();
 
   const go = (link: string | null) => {
     setOpen(false);

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
 import { metricQueries } from "@/lib/metric-queries";
 import { useShops, type ShopRow } from "@/lib/use-shops";
+import { useShopsWithOpenProblems } from "@/lib/use-shops-with-open-problems";
 import { buildDashboard, type DashboardModel } from "../logic/dashboard";
 
 export interface SectionState {
@@ -14,6 +15,8 @@ export interface DashboardPage {
   shopsState: "loading" | "error" | "empty" | "ready";
   retryShops: () => void;
   shopName: (id: number) => string;
+  /** 顶部横条里已列出（登录 / 出口 / 风控）的店：未取到提示不再重复 */
+  bannerShopIds: ReadonlySet<number>;
   model: DashboardModel;
   sections: {
     orderCounts: SectionState;
@@ -30,6 +33,7 @@ const NO_SHOPS: ShopRow[] = [];
 export function useDashboardPage(): DashboardPage {
   const { shopIds } = useShopFilter();
   const shopsQuery = useShops();
+  const bannerShopIds = useShopsWithOpenProblems();
   const shops = shopsQuery.data ?? NO_SHOPS;
 
   const enabled = shops.length > 0;
@@ -74,6 +78,7 @@ export function useDashboardPage(): DashboardPage {
     shopsState,
     retryShops: () => void shopsQuery.refetch(),
     shopName,
+    bannerShopIds,
     model,
     sections: {
       orderCounts: section(orderCounts),

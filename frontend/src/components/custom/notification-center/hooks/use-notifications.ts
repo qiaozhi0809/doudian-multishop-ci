@@ -4,6 +4,7 @@ import type { ActionResult } from "@/lib/action-result";
 import { api, errorText } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import { useEventSubscription } from "@/lib/use-events";
+import { notificationSummaryQuery } from "@/lib/use-shops-with-open-problems";
 import {
   alertKey,
   lastPage,
@@ -49,10 +50,7 @@ export function useNotifications() {
     queryKey: queryKeys.notifications(unreadOnly, page),
     queryFn: () => api.get<NotificationPage>("/api/notifications", { unread: unreadOnly || undefined, page }),
   });
-  const summary = useQuery({
-    queryKey: queryKeys.notificationSummary(),
-    queryFn: () => api.get<NotificationSummary>("/api/notifications/summary"),
-  });
+  const summary = useQuery(notificationSummaryQuery());
 
   // 只看未读时把最后一页都标成已读后，这一页就空了：退回最后一个有内容的页
   // （渲染时比较并调整，不放 effect）

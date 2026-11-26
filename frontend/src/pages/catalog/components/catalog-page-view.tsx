@@ -46,6 +46,7 @@ export function CatalogPageView({ page }: { page: CatalogPageState }) {
         error={page.counts.isError}
         data={page.counts.data}
         shopName={page.shopName}
+        bannerShopIds={page.bannerShopIds}
         onRetry={() => void page.counts.refetch()}
         cardProps={page.quick.cardProps}
       />

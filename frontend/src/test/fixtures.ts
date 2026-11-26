@@ -28,3 +28,19 @@ export function makeShop(overrides: Partial<ShopRow> = {}): ShopRow {
     ...overrides,
   };
 }
+
+type StrongKind = components["schemas"]["StrongOpenShop"]["kinds"][number];
+
+/** 通知摘要：这些店有未解决的强提醒（顶部横条里列出的店）。 */
+export function strongOpenSummary(shops: { shopId: number; kinds: StrongKind[] }[]) {
+  return {
+    unread: shops.length,
+    strong_open: shops.map(({ shopId, kinds }) => ({
+      shop_id: shopId,
+      shop_name: `店铺 ${shopId}`,
+      kinds,
+      link: null,
+      problems: kinds.map((kind) => ({ kind, link: null })),
+    })),
+  };
+}

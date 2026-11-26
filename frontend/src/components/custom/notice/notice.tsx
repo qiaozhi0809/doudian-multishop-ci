@@ -24,8 +24,6 @@ interface Item {
 
 /** 没有 Provider 时为 null：调用方据此退回页面内提示（单独渲染页面的测试里会这样）。 */
 const NoticeContext = createContext<Notify | null>(null);
-/** 按 key 收起提示（如问题恢复后收起常驻的强提醒）；没有 Provider 时为 null。 */
-const NoticeDismissContext = createContext<((key: string) => void) | null>(null);
 
 const HOLD_MS = 4000;
 /** 报错多留一会儿，让人读完 */
@@ -126,17 +124,7 @@ export function NoticeProvider({ children }: { children: ReactNode }) {
     [clear, start],
   );
 
-  const dismissKey = useCallback(
-    (key: string) =>
-      setItems((list) => {
-        for (const old of list.filter((item) => item.key === key)) clear(old.id);
-        return list.filter((item) => item.key !== key);
-      }),
-    [clear],
-  );
-
   return (
-    <NoticeDismissContext.Provider value={dismissKey}>
     <NoticeContext.Provider value={notify}>
       {children}
       <div className={styles.toasts} aria-label="操作提示">
@@ -158,12 +146,8 @@ export function NoticeProvider({ children }: { children: ReactNode }) {
         ))}
       </div>
     </NoticeContext.Provider>
-    </NoticeDismissContext.Provider>
   );
 }
 
 /** 发右下角提示；不在 NoticeProvider 里时返回 null。 */
 export const useNotice = () => useContext(NoticeContext);
-
-/** 按 key 收起右下角提示；不在 NoticeProvider 里时返回 null。 */
-export const useNoticeDismiss = () => useContext(NoticeDismissContext);

@@ -97,10 +97,6 @@ export function bannerView(shops: StrongOpenShop[]): BannerView {
   return { kind: "rows", rows: openRows(shops) };
 }
 
-/** 摘要里该店是否仍有该问题。 */
-export const isStillOpen = (shops: StrongOpenShop[], shopId: number, kind: NotificationItem["kind"]): boolean =>
-  shops.some((shop) => shop.shop_id === shopId && shop.kinds.includes(kind));
-
 /** 分页的最后一页（至少为 1）。 */
 export const lastPage = (total: number, pageSize: number): number =>
   pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
@@ -116,12 +112,12 @@ export interface AlertNotice {
   holdMs?: number;
 }
 
-/** 通知在右下角弹窗里的 key（同一条通知只留一个弹窗，恢复时据此收起）。 */
+/** 通知在右下角弹窗里的 key（同一条通知只留一个弹窗）。 */
 export const noticeKey = (id: number): string => `notification:${id}`;
 
-/** 右下角弹窗：强档常驻、中档 5 秒、弱档不弹。 */
+/** 右下角弹窗：只弹事件类，强档常驻、中档 5 秒、弱档不弹；状态类（有 state_key）由顶部横条显示，不弹。 */
 export function alertNotice(item: NotificationItem): AlertNotice | null {
-  if (item.level === "weak") return null;
+  if (item.level === "weak" || item.state_key !== null) return null;
   const text = item.body ? `${item.title}，${item.body}` : item.title;
   const key = noticeKey(item.id);
   return item.level === "strong"

@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { makeShop } from "@/test/fixtures";
+import { makeShop, strongOpenSummary } from "@/test/fixtures";
 import { jsonResponse, mockFetch } from "@/test/mock-fetch";
 import CatalogPage from "./index";
 
@@ -61,6 +61,24 @@ describe("商品聚合页", () => {
     expect(await screen.findByRole("button", { name: /在售/ })).toHaveAttribute("aria-pressed", "false");
     expect(await screen.findByText("默认分组")).toBeInTheDocument();
     expect(screen.getByLabelText("搜索商品")).toBeInTheDocument();
+  });
+
+  it("未取到计数的店已在顶部横条时不再提示", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" }), makeShop({ id: 2, name: "店铺乙" })]),
+      "GET /api/catalog/products": jsonResponse({ items: [product()], total: 1, page: 1, page_size: 50 }),
+      "GET /api/catalog/products/counts": jsonResponse({
+        shops: [
+          { shop_id: 1, source: "upstream", error: null, fetched_at: null, counts: { onsale: 6 } },
+          { shop_id: 2, source: "error", error: "风控暂停", fetched_at: null, counts: {} },
+        ],
+      }),
+      "GET /api/catalog/products/groups": groups,
+      "GET /api/notifications/summary": jsonResponse(strongOpenSummary([{ shopId: 2, kinds: ["risk_paused"] }])),
+    });
+    renderPage();
+    expect(await screen.findByRole("button", { name: /在售/ })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/家店未取到/)).not.toBeInTheDocument());
   });
 
   it("点计数卡筛列表：快捷筛选与关键字、排序一起发给后端，换筛选回到第 1 页，再点清除", async () => {

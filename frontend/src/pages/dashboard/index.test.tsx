@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { makeShop } from "@/test/fixtures";
+import { makeShop, strongOpenSummary } from "@/test/fixtures";
 import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
 import DashboardPage from "./index";
 
@@ -96,6 +96,18 @@ describe("仪表盘", () => {
 
     expect(screen.queryByText("待补")).not.toBeInTheDocument();
     expect(screen.queryByText("支付 GMV")).not.toBeInTheDocument();
+  });
+
+  it("未取到数据的店已在顶部横条时不再提示", async () => {
+    mockFetch({
+      ...routes(),
+      "GET /api/notifications/summary": jsonResponse(strongOpenSummary([{ shopId: 2, kinds: ["login_expired"] }])),
+    });
+    renderPage();
+    const kpi = await screen.findByRole("region", { name: "关键指标" });
+    await waitFor(() => expect(within(kpi).getByText("待发货").closest("a")).toHaveTextContent("5"));
+    await waitFor(() => expect(screen.queryByText(/家店未取到/)).not.toBeInTheDocument());
+    expect(screen.queryByText("店铺乙：上游超时")).not.toBeInTheDocument();
   });
 
   it("单个数据源失败时只有对应卡片显示暂无，其他指标照常", async () => {

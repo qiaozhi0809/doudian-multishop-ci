@@ -50,6 +50,7 @@ export function AftersalePageView({ page }: { page: AftersalePageState }) {
         error={page.counts.isError}
         data={page.counts.data ? aggregateAftersaleCounts(page.counts.data) : undefined}
         shopName={page.shopName}
+        bannerShopIds={page.bannerShopIds}
         onRetry={() => void page.counts.refetch()}
         cardProps={page.quick.cardProps}
       />

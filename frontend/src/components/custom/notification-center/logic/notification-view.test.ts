@@ -1,4 +1,4 @@
-import { alertNotice, bannerView, isStillOpen, openRows, groupForPanel, lastPage, levelTone, shouldAlert, type NotificationItem, type StrongOpenShop } from "./notification-view";
+import { alertNotice, bannerView, openRows, groupForPanel, lastPage, levelTone, shouldAlert, type NotificationItem, type StrongOpenShop } from "./notification-view";
 
 const item = (over: Partial<NotificationItem> = {}): NotificationItem => ({
   id: 1, kind: "new_order", level: "medium", shop_id: 1, state_key: null, title: "示例店 新增 1 单",
@@ -91,14 +91,19 @@ describe("lastPage", () => {
 });
 
 describe("alertNotice", () => {
-  it("强档常驻、中档 5 秒、弱档不弹；有正文时接在标题后面", () => {
-    expect(alertNotice(item({ id: 5, level: "strong", title: "示例店 登录失效" }))).toEqual({
-      text: "示例店 登录失效", tone: "danger", key: "notification:5", persistent: true,
+  it("事件类强档常驻、中档 5 秒、弱档不弹；有正文时接在标题后面", () => {
+    expect(alertNotice(item({ id: 5, level: "strong", kind: "new_aftersale", title: "示例店 新增 1 个售后" }))).toEqual({
+      text: "示例店 新增 1 个售后", tone: "danger", key: "notification:5", persistent: true,
     });
     expect(alertNotice(item({ id: 6, level: "medium", title: "示例店 订单同步失败", body: "出口不通" }))).toEqual({
       text: "示例店 订单同步失败，出口不通", tone: "warning", key: "notification:6", persistent: false, holdMs: 5000,
     });
     expect(alertNotice(item({ level: "weak" }))).toBeNull();
+  });
+
+  it("状态类（有 state_key）不弹：由顶部横条常驻显示", () => {
+    expect(alertNotice(item({ level: "strong", kind: "login_expired", state_key: "login:1" }))).toBeNull();
+    expect(alertNotice(item({ level: "strong", kind: "ship_deadline", state_key: "deadline:1" }))).toBeNull();
   });
 });
 
@@ -108,14 +113,5 @@ describe("openRows", () => {
       shop_id: id, shop_name: `店${id}`, kinds: ["login_expired"], link: null, problems: [{ kind: "login_expired", link: null }],
     }));
     expect(openRows(shops).map((r) => r.text)).toEqual(["店1：登录失效", "店2：登录失效", "店3：登录失效", "店4：登录失效"]);
-  });
-});
-
-describe("isStillOpen", () => {
-  it("摘要里该店仍有该问题才算未解决", () => {
-    const shops: StrongOpenShop[] = [{ shop_id: 2, shop_name: "店2", kinds: ["login_expired", "egress_unreachable"], link: null, problems: [] }];
-    expect(isStillOpen(shops, 2, "egress_unreachable")).toBe(true);
-    expect(isStillOpen(shops, 2, "risk_paused")).toBe(false);
-    expect(isStillOpen(shops, 3, "login_expired")).toBe(false);
   });
 });

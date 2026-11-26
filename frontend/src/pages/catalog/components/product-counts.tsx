@@ -4,6 +4,7 @@ import { Badge } from "@/components/arc/badge/badge";
 import { Button } from "@/components/arc/button/button";
 import { MetricCard } from "@/components/arc/metric-card/metric-card";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { withoutShops } from "@/lib/open-problem-shops";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import {
   PRODUCT_COUNT_ITEMS,
@@ -19,13 +20,15 @@ interface CountsProps {
   error: boolean;
   data: ProductCountsResponse | undefined;
   shopName: (id: number) => string;
+  /** 顶部横条里已列出的店：不在未取到提示里重复 */
+  bannerShopIds: ReadonlySet<number>;
   onRetry: () => void;
   /** 快捷筛选：点卡片筛下方列表，再点清除。 */
   cardProps: (key: ProductCountKey) => { selected: boolean; onSelect: () => void };
 }
 
 /** 商品状态计数（平台口径），也是快捷筛选（点卡片筛下方本地列表）。 */
-export function ProductCounts({ loading, error, data, shopName, onRetry, cardProps }: CountsProps) {
+export function ProductCounts({ loading, error, data, shopName, bannerShopIds, onRetry, cardProps }: CountsProps) {
   const [expanded, setExpanded] = useState(false);
   if (loading) return <Skeleton label="正在读取商品计数" lines={2} />;
   if (error || !data) {
@@ -41,16 +44,17 @@ export function ProductCounts({ loading, error, data, shopName, onRetry, cardPro
     );
   }
   const aggregated = aggregateProductCounts(data);
+  const shownFailures = withoutShops(aggregated.failures, bannerShopIds);
   return (
     <div className={styles.counts}>
-      {aggregated.failedShopIds.length > 0 && (
-        <Alert tone="warning" title={`${aggregated.failedShopIds.length} 家店未取到商品计数`}>
+      {shownFailures.length > 0 && (
+        <Alert tone="warning" title={`${shownFailures.length} 家店未取到商品计数`}>
           <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
             {expanded ? "收起原因" : "查看原因"}
           </Button>
           {expanded && (
             <ul className={styles.failList}>
-              {aggregated.failures.map((f) => (
+              {shownFailures.map((f) => (
                 <li key={f.shopId}>
                   {shopName(f.shopId)}：{f.error ?? "原因未知，请稍后重试"}
                 </li>

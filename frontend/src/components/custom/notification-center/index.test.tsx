@@ -216,34 +216,19 @@ describe("通知面板", () => {
 });
 
 describe("右下角弹窗", () => {
-  const strongItem = item({ id: 12, level: "strong", kind: "login_expired", shop_id: 1, state_key: "login:1", title: "示例店 登录失效" });
-
-  it("问题恢复（resolved 事件）后强提醒弹窗自动收起", async () => {
-    setup();
-    await screen.findByRole("button", { name: "通知" });
-    act(() => FakeEventSource.latest().emit("notification", { action: "created", item: strongItem, alert: true }));
-    const toasts = screen.getByLabelText("操作提示");
-    expect(within(toasts).getByText("示例店 登录失效")).toBeInTheDocument();
-    act(() =>
-      FakeEventSource.latest().emit("notification", { action: "resolved", item: { ...strongItem, resolved_at: "2026-11-25T09:00:00" }, alert: false }),
-    );
-    expect(within(toasts).queryByText("示例店 登录失效")).not.toBeInTheDocument();
-  });
-
-  it("摘要里不再有该问题后强提醒弹窗自动收起；还没进摘要时不收", async () => {
-    setup();
-    await screen.findByRole("button", { name: "通知" });
-    act(() => FakeEventSource.latest().emit("notification", { action: "created", item: strongItem, alert: true }));
-    const toasts = screen.getByLabelText("操作提示");
-    // 事件触发重新拉摘要，但摘要还没包含它：不收
-    await waitFor(() => expect(within(toasts).getByText("示例店 登录失效")).toBeInTheDocument());
-    live.strongOpen = [shop(1, ["login_expired"])];
-    act(() => FakeEventSource.latest().emit("open"));
-    expect(await screen.findByRole("region", { name: "需要处理的店铺" })).toBeInTheDocument();
-    expect(within(toasts).getByText("示例店 登录失效")).toBeInTheDocument();
-    live.strongOpen = [];
-    act(() => FakeEventSource.latest().emit("open"));
-    await waitFor(() => expect(within(toasts).queryByText("示例店 登录失效")).not.toBeInTheDocument());
+  it("状态类强提醒不弹窗，但响提示音（横条已常驻显示）", async () => {
+    const play = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("Audio", vi.fn(() => ({ play })));
+    try {
+      setup();
+      await screen.findByRole("button", { name: "通知" });
+      const strongItem = item({ id: 12, level: "strong", kind: "login_expired", shop_id: 1, state_key: "login:1", title: "示例店 登录失效" });
+      act(() => FakeEventSource.latest().emit("notification", { action: "created", item: strongItem, alert: true }));
+      await waitFor(() => expect(play).toHaveBeenCalledTimes(1));
+      expect(within(screen.getByLabelText("操作提示")).queryByText("示例店 登录失效")).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("未读时又来新售后（合并后数量变多）：再弹一次并响提示音", async () => {
@@ -273,17 +258,17 @@ describe("右下角弹窗", () => {
     act(() => {
       FakeEventSource.latest().emit("notification", { action: "created", item: item({ id: 11, title: "示例店 新增 1 单待发货" }), alert: true });
       FakeEventSource.latest().emit("notification", {
-        action: "created", item: item({ id: 12, level: "strong", kind: "login_expired", title: "示例店 登录失效" }), alert: true,
+        action: "created", item: item({ id: 12, level: "strong", kind: "new_aftersale", title: "示例店 新增 1 个售后" }), alert: true,
       });
       FakeEventSource.latest().emit("notification", { action: "created", item: item({ id: 13, level: "weak", title: "示例店 订单同步完成" }), alert: true });
     });
     const toasts = screen.getByLabelText("操作提示");
     expect(within(toasts).getByText("示例店 新增 1 单待发货")).toBeInTheDocument();
-    expect(within(toasts).getByText("示例店 登录失效")).toBeInTheDocument();
+    expect(within(toasts).getByText("示例店 新增 1 个售后")).toBeInTheDocument();
     expect(within(toasts).queryByText("示例店 订单同步完成")).not.toBeInTheDocument();
     act(() => vi.advanceTimersByTime(5100));
     expect(within(toasts).queryByText("示例店 新增 1 单待发货")).not.toBeInTheDocument();
     act(() => vi.advanceTimersByTime(60_000));
-    expect(within(toasts).getByText("示例店 登录失效")).toBeInTheDocument();
+    expect(within(toasts).getByText("示例店 新增 1 个售后")).toBeInTheDocument();
   });
 });

@@ -9,6 +9,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { useListSort, useSettledSort } from "@/lib/use-list-sort";
 import { useQuickFilter } from "@/lib/use-quick-filter";
 import { useShops } from "@/lib/use-shops";
+import { useShopsWithOpenProblems } from "@/lib/use-shops-with-open-problems";
 import { AFTERSALE_QUICK_KEYS, AFTERSALE_SORT_KEYS, PAGE_SIZE, isView, parseStatus, type View } from "../logic/aftersale-page";
 import { useAftersaleSync } from "./use-aftersale-sync";
 
@@ -18,6 +19,7 @@ type StatusesResponse = components["schemas"]["AftersaleStatusesResponse"];
 /** 售后页的全部数据：视图（待办 / 全部）、状态筛选、排序、页码都在 URL 里。 */
 export function useAftersalePage() {
   const shops = useShops();
+  const bannerShopIds = useShopsWithOpenProblems();
   const { shopIds } = useShopFilter();
   const [params, setParams] = useSearchParams();
   const sorting = useListSort(AFTERSALE_SORT_KEYS);
@@ -109,6 +111,7 @@ export function useAftersalePage() {
           : ("ready" as const),
     retryShops: () => void shops.refetch(),
     shopName: (id: number) => names.get(id) ?? `店铺 ${id}`,
+    bannerShopIds,
     view,
     setView: (value: View) => update({ view: value }),
     status,

@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { makeShop } from "@/test/fixtures";
+import { makeShop, strongOpenSummary } from "@/test/fixtures";
 import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
 import OrderPage from "./index";
 
@@ -89,6 +89,42 @@ describe("订单列表页", () => {
     expect(screen.getByText("合计不含未取到的店铺")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "查看原因" }));
     expect(screen.getByText(/店铺乙：出口不通/)).toBeInTheDocument();
+  });
+
+  it("未取到的店已在顶部横条（登录 / 出口 / 风控）时不再提示；其他原因的店照常提示", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/orders": page([]),
+      "GET /api/orders/counts": jsonResponse({
+        shops: [
+          { shop_id: 1, source: "error", error: "平台接口报错" },
+          { shop_id: 2, source: "error", error: "出口不通，请检查代理是否到期或更换代理" },
+        ],
+      }),
+      "GET /api/notifications/summary": jsonResponse(strongOpenSummary([{ shopId: 2, kinds: ["egress_unreachable"] }])),
+    });
+    renderPage();
+    expect(await screen.findByText("1 家店未取到")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "查看原因" }));
+    expect(screen.getByText(/店铺甲：平台接口报错/)).toBeInTheDocument();
+    expect(screen.queryByText(/店铺乙：出口不通/)).not.toBeInTheDocument();
+  });
+
+  it("未取到的店都已在顶部横条时整条提示不显示", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/orders": page([]),
+      "GET /api/orders/counts": jsonResponse({
+        shops: [
+          { shop_id: 1, source: "upstream", counts: counts(5) },
+          { shop_id: 2, source: "error", error: "登录失效" },
+        ],
+      }),
+      "GET /api/notifications/summary": jsonResponse(strongOpenSummary([{ shopId: 2, kinds: ["login_expired"] }])),
+    });
+    renderPage();
+    expect(await screen.findByText("待发货")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/家店未取到/)).not.toBeInTheDocument());
   });
 
   it("所有店铺计数都失败：只提示未取到，不显示任何 0", async () => {
