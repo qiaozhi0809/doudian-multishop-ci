@@ -68,10 +68,13 @@ export type BannerView = { kind: "none" } | { kind: "rows"; rows: BannerRow[] } 
 
 /**
  * 后端没给链接时兜底：临近超时 → 该店订单（不加快捷筛选，已超时与临近的都在；
- * 后端按是否有超时单给 ship_delay / exp_ship），其余 → 店铺页高亮该店。
+ * 后端按是否有超时单给 ship_delay / exp_ship），飞鸽等待超时 → 该店消息页的超时筛选，
+ * 其余 → 店铺页高亮该店。
  */
 function fallbackLink(kind: NotificationItem["kind"], shopId: number): string {
-  return kind === "ship_deadline" ? `/orders?shops=${shopId}` : `/shops?shop=${shopId}`;
+  if (kind === "ship_deadline") return `/orders?shops=${shopId}`;
+  if (kind === "im_waiting") return `/messages?shops=${shopId}&quick=overdue`;
+  return `/shops?shop=${shopId}`;
 }
 
 /** 未解决的强提醒，一店一行「店A：登录失效、出口不通」，每个问题跳各自的链接（面板「待处理」全部列出）。 */

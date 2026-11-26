@@ -1,10 +1,10 @@
 import { FOOTER_NAV, NAV_ITEMS, NAV_SECTIONS, pageTitle } from "./nav-items";
 
 describe("导航分组（frontend.md 1.1）", () => {
-  it("一级结构为概览、订单、商品、资金，底部是店铺管理", () => {
+  it("一级结构为概览、订单、客服、商品、资金，底部是店铺管理", () => {
     expect(
       NAV_SECTIONS.map((section) => (section.kind === "link" ? section.item.label : section.label)),
-    ).toEqual(["概览", "订单", "商品", "资金"]);
+    ).toEqual(["概览", "订单", "客服", "商品", "资金"]);
     expect(FOOTER_NAV.map((item) => item.label)).toEqual(["店铺管理", "代理池"]);
   });
 
@@ -16,6 +16,17 @@ describe("导航分组（frontend.md 1.1）", () => {
       "售后处理",
       "发货异常",
     ]);
+  });
+
+  it("客服组紧跟订单组，只有「消息」一项", () => {
+    const index = NAV_SECTIONS.findIndex((section) => section.kind === "group" && section.id === "orders");
+    expect(NAV_SECTIONS[index + 1]).toMatchObject({
+      kind: "group",
+      id: "service",
+      label: "客服",
+      items: [{ path: "/messages", label: "消息" }],
+    });
+    expect(pageTitle("/messages")).toBe("消息");
   });
 
   it("发货台已并入打单发货，导航里不再有单独入口", () => {
