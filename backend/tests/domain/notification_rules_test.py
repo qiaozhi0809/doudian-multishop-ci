@@ -13,8 +13,8 @@ from app.domain.notification_rules import (
 )
 
 STRONG = {"new_aftersale", "login_expired", "egress_unreachable", "egress_changed",
-          "egress_duplicate", "risk_paused", "ship_deadline"}
-MEDIUM = {"new_order", "batch_failed", "sync_failed"}
+          "egress_duplicate", "risk_paused", "ship_deadline", "im_waiting"}
+MEDIUM = {"new_order", "batch_failed", "sync_failed", "new_message", "im_stopped"}
 WEAK = {"batch_done", "sync_done", "reconcile_done", "recovered"}
 
 
@@ -108,3 +108,25 @@ def test_batch_title_shows_follow_ups_and_omits_zero_parts():
     assert title_for("batch_failed", shop_name=None, count=0,
                      detail=batch_detail("print", failed=2, manual=1)
                      ) == "打印完成：成功 0，失败 2，需补打 1"
+
+
+def test_new_message_level_link_title():
+    assert LEVEL_BY_KIND["new_message"] == "medium"
+    assert link_for("new_message", 3) == "/messages?shops=3"
+    assert title_for("new_message", shop_name="测试小铺", count=4, detail=None
+                     ) == "测试小铺 新增 4 条未读消息"
+
+
+def test_im_stopped_level_link_title():
+    assert LEVEL_BY_KIND["im_stopped"] == "medium"
+    assert link_for("im_stopped", 3) == "/messages?shops=3"
+    assert title_for("im_stopped", shop_name="测试小铺", count=1, detail="需重新连接"
+                     ) == "测试小铺 飞鸽消息已停止接收：需重新连接"
+
+
+def test_im_waiting_strong_link_quick_overdue_title():
+    assert LEVEL_BY_KIND["im_waiting"] == "strong"
+    assert link_for("im_waiting", 3) == "/messages?shops=3&quick=overdue"
+    assert title_for("im_waiting", shop_name="测试小铺", count=2, detail=None
+                     ) == "测试小铺 2 个会话超 3 分钟未回复"
+    assert state_key("im_wait", 3) == "im_wait:3"

@@ -1699,7 +1699,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered";
+            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered" | "new_message" | "im_stopped" | "im_waiting";
             /**
              * Level
              * @enum {string}
@@ -2653,7 +2653,7 @@ export interface components {
          */
         StrongOpenShop: {
             /** Kinds */
-            kinds: ("new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered")[];
+            kinds: ("new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered" | "new_message" | "im_stopped" | "im_waiting")[];
             /** Link */
             link: string | null;
             /** Problems */
@@ -2669,7 +2669,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered";
+            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered" | "new_message" | "im_stopped" | "im_waiting";
             /** Link */
             link: string | null;
         };
