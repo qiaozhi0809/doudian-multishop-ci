@@ -1,60 +1,83 @@
-/* 右下角浮动提示（同壹帆智播）：白底、轻阴影、左边一个状态色小圆点 */
+/* 右下角浮动提示：操作结果与事件弹窗同一套卡片。左侧状态图标、标题与第二行、右上关闭 */
 .toasts {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: var(--space-6);
+  bottom: var(--space-6);
   z-index: 1200;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: min(380px, calc(100vw - 48px));
+  gap: var(--space-2);
+  width: min(380px, calc(100vw - var(--space-12)));
   pointer-events: none;
 }
 
 .toast {
+  --toast-tone: var(--text-muted);
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px 12px 12px 14px;
-  border-radius: var(--radius-panel);
-  background: var(--surface);
-  box-shadow: var(--shadow-raised);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-floating);
   color: var(--foreground);
   font-size: var(--text-sm);
-  line-height: 1.5;
+  line-height: var(--leading-body);
   pointer-events: auto;
-  animation: toast-in 180ms ease-out both;
 }
 
-.dot {
+.toast[data-tone="success"] { --toast-tone: var(--success); }
+.toast[data-tone="warning"] { --toast-tone: var(--warning); }
+.toast[data-tone="danger"] { --toast-tone: var(--danger); }
+.toast[data-tone="info"] { --toast-tone: var(--accent); }
+
+/* 事件弹窗（新订单、新售后、新消息等）：多一条状态色左边线，上下留白略大 */
+.toast[data-event] {
+  padding-block: var(--space-4);
+  box-shadow: inset 3px 0 0 var(--toast-tone), var(--shadow-floating);
+}
+
+.toast[data-leaving] {
+  pointer-events: none;
+}
+
+/* 图标与首行文字中线对齐 */
+.icon {
   flex: none;
-  width: 6px;
-  height: 6px;
-  margin-top: 7px;
-  border-radius: 50%;
-  background: var(--text-muted);
+  margin-top: 1px;
+  color: var(--toast-tone);
 }
 
-.toast[data-tone="success"] .dot { background: var(--success); }
-.toast[data-tone="warning"] .dot { background: var(--warning); }
-.toast[data-tone="danger"] .dot { background: var(--danger); }
-.toast[data-tone="info"] .dot { background: var(--accent); }
-
-.text {
+.copy {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
+.title {
+  font-weight: 500;
+}
+
+.body {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+/* 负外边距让 28 的点击区不撑高单行提示 */
 .close {
   display: grid;
   flex: none;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
+  margin: -4px -4px -4px 0;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -69,16 +92,9 @@
   }
 }
 
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .toast {
-    animation: none;
+  .close {
+    transition: none;
   }
 }
 

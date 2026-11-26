@@ -14,6 +14,9 @@ export function useAlertNotices(): void {
   useNotificationAlerts((item) => {
     if (item.level === "strong") alertStrong(item);
     const notice = alertNotice(item);
-    if (notify && notice) notify(notice.text, notice.tone, { key: notice.key, persistent: notice.persistent, holdMs: notice.holdMs });
+    if (notify && notice) {
+      const { text, tone, ...options } = notice;
+      notify(text, tone, options);
+    }
   });
 }

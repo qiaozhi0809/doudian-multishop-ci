@@ -133,21 +133,49 @@
   cursor: default;
 }
 
+/* 一店的问题：店名 + 若干胶囊，放不下时折行 */
+.problems {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.problemShop {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+/* 单个问题：红色描边胶囊 + 右箭头，一眼看出可点 */
 .problemLink {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 26px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid color-mix(in oklab, var(--danger) 30%, var(--border));
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--foreground);
   font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 400;
   cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
-  text-underline-offset: 3px;
+  transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+
+.problemLink svg {
+  flex: none;
+  color: var(--text-muted);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .problemLink:hover {
-    text-decoration-color: currentColor;
+    border-color: var(--danger);
+    background: color-mix(in oklab, var(--danger) 6%, var(--surface));
   }
 }
 
@@ -163,6 +191,11 @@
   margin-top: 7px;
   border-radius: 50%;
   background: var(--accent);
+}
+
+/* 待处理行比普通通知高（胶囊 26），圆点跟着下移到首行中线 */
+.item[data-static] .dot {
+  margin-top: 10px;
 }
 
 .dot[data-tone="danger"] { background: var(--danger); }
@@ -221,21 +254,24 @@
 }
 
 /* ---------- 顶部强提醒横条 ---------- */
+/* 描边、圆角、图标与 Arc Alert 一致；一店一行，行高 44 */
 .banner {
   display: flex;
   flex-direction: column;
   margin-top: var(--space-2);
   overflow: hidden;
-  border-radius: var(--radius-panel);
-  background: color-mix(in oklab, var(--danger) 11%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--danger) 28%, var(--border));
+  border-radius: var(--radius-control);
+  background: color-mix(in oklab, var(--danger) 8%, var(--surface));
 }
 
 .bannerRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
   width: 100%;
-  padding: 10px 14px;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
   border: 0;
   background: transparent;
   color: var(--foreground);
@@ -259,4 +295,18 @@
 .bannerIcon {
   flex: none;
   color: var(--danger);
+}
+
+/* 合并行右端的箭头：点开通知面板看全部 */
+.bannerMore {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bannerRow,
+  .problemLink {
+    transition: none;
+  }
 }

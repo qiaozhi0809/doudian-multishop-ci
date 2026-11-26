@@ -1,7 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import { NoticeProvider, useNotice, type Notify } from "./notice";
+
+// 离场动画在假计时器下走不完：测试里让提示直接移除
+vi.mock("motion/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("motion/react")>()),
+  AnimatePresence: ({ children }: { children?: ReactNode }) => children,
+}));
 
 const ref: { notify: Notify | null } = { notify: null };
 function Grab() {
@@ -90,6 +96,21 @@ describe("右下角浮动提示", () => {
     expect(screen.getByText("示例店 新增 1 个售后")).toBeInTheDocument();
     expect(screen.queryByText("普通提示 1")).not.toBeInTheDocument();
     for (const n of [2, 3, 4, 5]) expect(screen.getByText(`普通提示 ${n}`)).toBeInTheDocument();
+  });
+
+  it("事件弹窗：标题与第二行分开，带种类标记", () => {
+    renderProvider();
+    act(() => notify("示例店 订单同步失败", "warning", { body: "出口不通", event: "system" }));
+    expect(screen.getByText("示例店 订单同步失败")).toBeInTheDocument();
+    expect(screen.getByText("出口不通")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveAttribute("data-event", "system");
+  });
+
+  it("操作结果提示不带事件标记", () => {
+    renderProvider();
+    act(() => notify("已同步", "success"));
+    expect(screen.getByRole("status")).not.toHaveAttribute("data-event");
+    expect(screen.getByRole("status")).toHaveAttribute("data-tone", "success");
   });
 
   it("不在 Provider 里时 useNotice 返回 null（调用方退回页面内提示）", () => {

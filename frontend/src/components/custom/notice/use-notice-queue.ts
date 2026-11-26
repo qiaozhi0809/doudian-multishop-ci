@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { NoticeTone } from "./notice";
+import type { NoticeTone } from "./notice-types";
 
 export interface QueuedNotice {
   id: number;
