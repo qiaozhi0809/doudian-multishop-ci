@@ -162,9 +162,10 @@ def list_of(*items: tuple[str, int]) -> object:
     return reply(body)
 
 
-def counts_with(all_audit: int) -> object:
+def counts_with(all_audit: int, return_for_receive: int = 1) -> object:
     body = fx("aftersale_counts")
     body["data"]["all_audit"] = all_audit
+    body["data"]["return_for_receive"] = return_for_receive
     return reply(body)
 
 
@@ -256,3 +257,50 @@ async def test_incomplete_aftersale_sync_no_baseline(env):
     env.transport.responses[:] = [list_of(*full), BizRejected("100021", "售后数据不可用")]
     (outcome,) = await checker(env).sync([env.shop_id], "admin")
     assert outcome.error and not has_baseline(env)
+
+
+async def test_check_new_syncs_when_breakdown_changes_with_same_total(env):
+    """一单进待审核、一单离开待收货：合计不变但分组变了，也要同步。"""
+    clock = Clock()
+    svc = checker(env, clock)
+    env.transport.responses[:] = [counts_with(1, 1), list_of(("a1", OPEN))]
+    await svc.check_new(env.shop_id)
+    clock.advance(300)
+    env.transport.requests.clear()
+    env.transport.responses[:] = [counts_with(2, 0), list_of(("a1", OPEN), ("a2", OPEN))]
+    assert await svc.check_new(env.shop_id) == 1
+    assert list_requests(env) == 1
+
+
+async def test_check_new_forces_sync_on_sixth_unchanged_check(env):
+    clock = Clock()
+    svc = checker(env, clock)
+    env.transport.responses[:] = [counts_with(1), list_of(("a1", OPEN))]
+    await svc.check_new(env.shop_id)
+    env.transport.requests.clear()
+    for _ in range(5):
+        clock.advance(300)
+        env.transport.responses[:] = [counts_with(1)]
+        await svc.check_new(env.shop_id)
+    assert list_requests(env) == 0  # 前 5 轮没变：只取计数
+    clock.advance(300)
+    env.transport.responses[:] = [counts_with(1), list_of(("a1", OPEN), ("a2", OPEN))]
+    assert await svc.check_new(env.shop_id) == 1  # 第 6 轮兜底同步
+    assert list_requests(env) == 1
+    clock.advance(300)
+    env.transport.requests.clear()
+    env.transport.responses[:] = [counts_with(1)]
+    await svc.check_new(env.shop_id)
+    assert list_requests(env) == 0  # 兜底后重新计数
+
+
+async def test_partial_aftersale_sync_with_baseline_notifies_inserted(env):
+    svc = checker(env)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [list_of()]
+    await svc.sync([env.shop_id], "admin")
+    full = [(f"id{i}", OPEN) for i in range(49)] + [("closed", 0)]
+    env.transport.responses[:] = [list_of(*full), BizRejected("100021", "售后数据不可用")]
+    (outcome,) = await svc.sync([env.shop_id], "admin")
+    assert outcome.error
+    assert drain(sub, "aftersales_new") == [{"shop_id": env.shop_id, "count": 49}]

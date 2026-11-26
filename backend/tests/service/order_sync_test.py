@@ -240,7 +240,8 @@ async def test_incomplete_sync_no_baseline_no_event(env):
     assert drain(sub, "orders_new") == []
 
 
-async def test_failed_sync_with_baseline_does_not_notify(env):
+async def test_failed_sync_with_baseline_still_notifies_inserted(env):
+    """有基线时中途失败：已入库的新单照样提醒（下一轮它们已在库里，不报就丢了）。"""
     svc = service(env)
     env.transport.responses[:] = [page_of(0, 1)]
     await svc.sync_pending(env.shop_id, "admin")
@@ -248,4 +249,24 @@ async def test_failed_sync_with_baseline_does_not_notify(env):
     env.transport.responses[:] = [page_of(100, 200), ok(code=10008)]
     with pytest.raises(SessionExpired):
         await svc.sync_pending(env.shop_id, "admin")
+    assert drain(sub, "orders_new") == [{"shop_id": env.shop_id, "count": 200}]
+
+
+async def test_incomplete_sync_with_baseline_notifies_inserted(env):
+    svc = service(env, max_pages=2)
+    env.transport.responses[:] = [page_of(0, 1)]
+    await svc.sync_pending(env.shop_id, "admin")
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 200), page_of(200, 200)]
+    result = await svc.sync_pending(env.shop_id, "admin")
+    assert result.complete is False
+    assert drain(sub, "orders_new") == [{"shop_id": env.shop_id, "count": 399}]
+
+
+async def test_failed_first_sync_no_baseline_no_event(env):
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 200), ok(code=10008)]
+    with pytest.raises(SessionExpired):
+        await service(env).sync_pending(env.shop_id, "admin")
+    assert not has_baseline(env, "orders")
     assert drain(sub, "orders_new") == []

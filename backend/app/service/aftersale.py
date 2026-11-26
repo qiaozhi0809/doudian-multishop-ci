@@ -16,7 +16,12 @@ from app.adapter.doudian.aftersale_parsers import (
     parse_aftersale_list,
 )
 from app.adapter.doudian.client import FxgClient
-from app.domain.aftersale_status import counts_fields_param, is_open, pending_total
+from app.domain.aftersale_status import (
+    PENDING_FIELDS,
+    counts_fields_param,
+    is_open,
+    pending_total,
+)
 from app.service.events import AFTERSALES_NEW, EventBus
 from app.service.periodic import SYSTEM_ACTOR
 from app.service.shop_cache import ShopTtlCache
@@ -27,6 +32,7 @@ from app.store.sorting import SortOrder
 
 MAX_PAGES = 50
 BASELINE_KIND = "aftersales"
+FORCE_SYNC_EVERY = 6  # 计数一直没变时，每店至少每 6 轮（约 30 分钟）完整同步一次
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -64,8 +70,9 @@ class AftersaleService:
         self._clock = clock
         self._events = events
         self._counts_cache: ShopTtlCache[dict[str, int]] = ShopTtlCache(clock)
-        # 上次完整同步时的待办合计（进程内）；新进程第一轮必然同步一次
-        self._last_pending: dict[int, int] = {}
+        # 上次完整同步时的各待办分组计数（进程内）；新进程第一轮必然同步一次
+        self._last_pending: dict[int, dict[str, int]] = {}
+        self._unchanged: dict[int, int] = {}  # 自上次完整同步以来计数未变的轮数
 
     # ---- 同步 ----
 
@@ -89,43 +96,56 @@ class AftersaleService:
         ]
 
     async def check_new(self, shop_id: int, actor: str = SYSTEM_ACTOR) -> int:
-        """定时检查：只取一次计数（60 秒缓存）；待办合计变了才完整同步。返回待办新单数。"""
+        """定时检查：只取一次计数（60 秒缓存）；各待办分组计数变了才完整同步，
+        计数一直不变时每 FORCE_SYNC_EVERY 轮兜底同步一次。返回本次报出的待办新单数。"""
         (c,) = await self.counts([shop_id], actor)
-        if c.source != "upstream" or self._last_pending.get(shop_id) == c.pending_total:
+        if c.source != "upstream":
             return 0
+        snapshot = {f: int((c.counts or {}).get(f, 0)) for f in PENDING_FIELDS}
+        if self._last_pending.get(shop_id) == snapshot:
+            unchanged = self._unchanged.get(shop_id, 0) + 1
+            if unchanged < FORCE_SYNC_EVERY:
+                self._unchanged[shop_id] = unchanged
+                return 0
         (result,) = await self.sync([shop_id], actor)
         if result.error is None and result.complete:  # 失败的下一轮重试
-            self._last_pending[shop_id] = c.pending_total
+            self._last_pending[shop_id] = snapshot
+            self._unchanged[shop_id] = 0
         return result.new
 
     async def _sync_shop(self, shop_id: int, client: FxgClient) -> tuple[int, bool, int]:
         now = self._stamp()
         fetched, complete, new = 0, False, 0
         base = ep.AFTERSALE_LIST.page_base or 1  # 售后列表 1-based
-        for page in range(base, base + MAX_PAGES):
-            resp = await client.call(ep.AFTERSALE_LIST, body=ep.aftersale_list_body(page))
-            items, _total = parse_aftersale_list(resp)
-            with self._engine.begin() as conn:  # 每页立即入库：后面的页失败也不丢
-                known = aftersale_store.existing_ids(
-                    conn, shop_id, [a.after_sale_id for a in items])
-                new += len({a.after_sale_id for a in items
-                            if a.after_sale_id not in known and is_open(a.status_deadline)})
-                aftersale_store.upsert_aftersales(conn, shop_id, items, now)
-            fetched += len(items)
-            if len(items) < ep.AFTERSALE_PAGE_SIZE:
-                complete = True
-                break
+        try:
+            for page in range(base, base + MAX_PAGES):
+                resp = await client.call(ep.AFTERSALE_LIST, body=ep.aftersale_list_body(page))
+                items, _total = parse_aftersale_list(resp)
+                with self._engine.begin() as conn:  # 每页立即入库：后面的页失败也不丢
+                    known = aftersale_store.existing_ids(
+                        conn, shop_id, [a.after_sale_id for a in items])
+                    new += len({a.after_sale_id for a in items
+                                if a.after_sale_id not in known and is_open(a.status_deadline)})
+                    aftersale_store.upsert_aftersales(conn, shop_id, items, now)
+                fetched += len(items)
+                if len(items) < ep.AFTERSALE_PAGE_SIZE:
+                    complete = True
+                    break
+        except BaseException:  # 中途失败也报已入库的新单（下一轮它们已在库里）
+            self._report_new(shop_id, new, now, complete=False)
+            raise
         if complete:  # 只有拉全了才能判断哪些售后单已不在平台列表
             with self._engine.begin() as conn:
                 aftersale_store.prune_unseen(conn, shop_id, now)
-            new = self._report_new(shop_id, new, now)
-        return fetched, complete, new
+        return fetched, complete, self._report_new(shop_id, new, now, complete=complete)
 
-    def _report_new(self, shop_id: int, new: int, now: str) -> int:
-        """分页拉全后：有基线才报待办新单；没有基线只建基线（0 条也建），返回 0。"""
+    def _report_new(self, shop_id: int, new: int, now: str, *, complete: bool) -> int:
+        """有基线：报本轮新入库的待办单（部分同步也报）。无基线：不报，返回 0；
+        完整同步才建基线（0 条也建）。"""
         with self._engine.begin() as conn:
             if not sync_baseline_store.has(conn, shop_id, BASELINE_KIND):
-                sync_baseline_store.establish(conn, shop_id, BASELINE_KIND, now)
+                if complete:
+                    sync_baseline_store.establish(conn, shop_id, BASELINE_KIND, now)
                 return 0
         if new > 0 and self._events is not None:
             self._events.publish(AFTERSALES_NEW, {"shop_id": shop_id, "count": new})

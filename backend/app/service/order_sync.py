@@ -62,32 +62,37 @@ class OrderSyncService:
 
     async def _sync(self, client: FxgClient, shop_id: int) -> SyncResult:
         fetched, seen, complete, new = 0, set[str](), False, 0
-        for page in range(ep.SEARCHLIST_PAGE_BASE, ep.SEARCHLIST_PAGE_BASE + self._max_pages):
-            resp = await client.call(ep.SEARCHLIST, params=ep.searchlist_pending_params(page))
-            orders = parse_orders(resp)
-            with self._engine.begin() as conn:  # 每页立即入库：后面的页失败也不丢
-                known = order_store.existing_order_nos(conn, shop_id, [o.order_no for o in orders])
-                new += len({o.order_no for o in orders} - known)
-                order_store.upsert_orders(conn, shop_id, orders, _now())
-            fetched += len(orders)
-            seen.update(o.order_no for o in orders)
-            self._events.publish(
-                SYNC_PROGRESS, {"shop_id": shop_id, "kind": "orders", "fetched": fetched}
-            )
-            if len(orders) < ep.SEARCHLIST_MAX_PAGE_SIZE:
-                complete = True
-                break
+        try:
+            for page in range(
+                ep.SEARCHLIST_PAGE_BASE, ep.SEARCHLIST_PAGE_BASE + self._max_pages
+            ):
+                resp = await client.call(ep.SEARCHLIST, params=ep.searchlist_pending_params(page))
+                orders = parse_orders(resp)
+                nos = [o.order_no for o in orders]
+                with self._engine.begin() as conn:  # 每页立即入库：后面的页失败也不丢
+                    new += len(set(nos) - order_store.existing_order_nos(conn, shop_id, nos))
+                    order_store.upsert_orders(conn, shop_id, orders, _now())
+                fetched += len(orders)
+                seen.update(nos)
+                self._events.publish(
+                    SYNC_PROGRESS, {"shop_id": shop_id, "kind": "orders", "fetched": fetched}
+                )
+                if len(orders) < ep.SEARCHLIST_MAX_PAGE_SIZE:
+                    complete = True
+                    break
+        finally:  # 中途失败也报已入库的新单（否则下一轮它们已在库里，提醒就丢了）
+            self._report_new(shop_id, new, complete)
         rechecked, cancelled = 0, 0
-        if complete:  # 分页没拉全时，「没出现」不代表离开了待发货；新单也不报、不建基线
-            self._report_new(shop_id, new)
+        if complete:  # 分页没拉全时，「没出现」不代表离开了待发货
             rechecked, cancelled = await self._recheck_vanished(client, shop_id, seen)
         return SyncResult(fetched, fetched, cancelled, rechecked, complete)
 
-    def _report_new(self, shop_id: int, new: int) -> None:
-        """分页拉全后：有基线才报新单；没有基线（首次完整同步）只建基线，0 单也建。"""
+    def _report_new(self, shop_id: int, new: int, complete: bool) -> None:
+        """有基线：报本轮新入库的单（部分同步也报）。无基线：不报；完整同步才建基线，0 单也建。"""
         with self._engine.begin() as conn:
             if not sync_baseline_store.has(conn, shop_id, BASELINE_KIND):
-                sync_baseline_store.establish(conn, shop_id, BASELINE_KIND, _now())
+                if complete:
+                    sync_baseline_store.establish(conn, shop_id, BASELINE_KIND, _now())
                 return
         if new > 0:
             self._events.publish(ORDERS_NEW, {"shop_id": shop_id, "count": new})
