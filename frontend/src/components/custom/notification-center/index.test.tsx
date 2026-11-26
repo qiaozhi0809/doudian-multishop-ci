@@ -108,13 +108,14 @@ describe("铃铛", () => {
     const bell = await screen.findByRole("button", { name: "通知" });
     await waitFor(() => expect(screen.getByTestId("notification-count")).toHaveTextContent("3"));
     expect(screen.getByTestId("notification-count")).toHaveAttribute("data-urgent", "true");
-    expect(bell).toBeInTheDocument();
+    expect(bell).toHaveAccessibleDescription("3 条未读，有店铺需要处理");
   });
 
   it("没有未读时不显示数字", async () => {
     setup({ items: [item({ read_at: "2026-11-25T09:00:00" })], unread: 0 });
     await screen.findByRole("button", { name: "通知" });
     expect(screen.queryByTestId("notification-count")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "通知" })).toHaveAccessibleDescription("");
   });
 });
 

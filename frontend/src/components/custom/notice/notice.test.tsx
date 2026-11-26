@@ -85,6 +85,15 @@ describe("右下角浮动提示", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("超过 4 条时先挤掉最旧的普通提示，常驻的不被挤掉", () => {
+    renderProvider();
+    act(() => notify("示例店 登录失效", "danger", { persistent: true }));
+    for (const n of [1, 2, 3, 4, 5]) act(() => notify(`普通提示 ${n}`, "success"));
+    expect(screen.getByText("示例店 登录失效")).toBeInTheDocument();
+    expect(screen.queryByText("普通提示 1")).not.toBeInTheDocument();
+    for (const n of [2, 3, 4, 5]) expect(screen.getByText(`普通提示 ${n}`)).toBeInTheDocument();
+  });
+
   it("按 key 收起提示（含常驻的）", () => {
     renderProvider();
     act(() => notify("示例店 登录失效", "danger", { key: "notification:5", persistent: true }));

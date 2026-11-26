@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { Bell as BellIcon } from "lucide-react";
 import { Button } from "@/components/arc/button/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
@@ -16,14 +16,21 @@ interface BellProps {
 
 /** 右上角铃铛：纯图标按钮 + 未读数徽标，点开为右上展开的通知面板。 */
 export function Bell({ unread, urgent, open, onOpenChange, children }: BellProps) {
+  const describedBy = useId();
+  const parts = [unread > 0 ? `${unread} 条未读` : "", urgent ? "有店铺需要处理" : ""].filter(Boolean);
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <span className={styles.bellWrap}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" iconOnly aria-label="通知">
+          <Button variant="ghost" iconOnly aria-label="通知" aria-describedby={parts.length > 0 ? describedBy : undefined}>
             <BellIcon size={20} strokeWidth={1.75} aria-hidden="true" />
           </Button>
         </PopoverTrigger>
+        {parts.length > 0 && (
+          <span id={describedBy} className={styles.srOnly}>
+            {parts.join("，")}
+          </span>
+        )}
         {unread > 0 && (
           <span className={styles.count} data-urgent={urgent} data-testid="notification-count" aria-hidden="true">
             {unread > 99 ? "99+" : unread}

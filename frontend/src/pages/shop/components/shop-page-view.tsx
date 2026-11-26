@@ -58,7 +58,7 @@ export function ShopPageView({ page }: { page: ShopPage }) {
       )}
       {page.status === "empty" && <EmptyShops onAdd={() => dialogs.setAddOpen(true)} />}
       {page.status === "ready" && (
-        <ShopTable shops={page.shops} pending={actions.pending} waitingShopIds={actions.waitingShopIds} actionsFor={(s) => rowActions(s)} highlightId={page.highlightId} />
+        <ShopTable shops={page.shops} pending={actions.pending} waitingShopIds={actions.waitingShopIds} actionsFor={(s) => rowActions(s)} highlightId={page.highlightId} claimScroll={page.claimScroll} />
       )}
       <BackupCard backup={page.backup} />
 

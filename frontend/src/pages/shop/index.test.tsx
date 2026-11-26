@@ -47,6 +47,10 @@ describe("店铺与设置页", () => {
     expect(rowOf("店铺甲")).not.toHaveAttribute("aria-current");
     await waitFor(() => expect(scroll).toHaveBeenCalled());
     expect(scroll.mock.contexts[0]).toBe(rowOf("店铺乙"));
+    // 排序会重新挂载表格：仍高亮，但不再滚动
+    await userEvent.setup().click(within(screen.getByRole("columnheader", { name: "店铺" })).getByRole("button"));
+    expect(rowOf("店铺乙")).toHaveAttribute("aria-current", "true");
+    expect(scroll).toHaveBeenCalledTimes(1);
     scroll.mockRestore();
   });
 

@@ -30,7 +30,15 @@ const NoticeDismissContext = createContext<((key: string) => void) | null>(null)
 const HOLD_MS = 4000;
 /** 报错多留一会儿，让人读完 */
 const HOLD_DANGER_MS = 8000;
+/** 普通提示最多同时显示几条；常驻的强提醒不计入、也不会被挤掉。 */
 const MAX_VISIBLE = 4;
+
+function trim(list: Item[]): Item[] {
+  const evict = list.filter((item) => !item.persistent).length - MAX_VISIBLE;
+  if (evict <= 0) return list;
+  const dropped = new Set(list.filter((item) => !item.persistent).slice(0, evict).map((item) => item.id));
+  return list.filter((item) => !dropped.has(item.id));
+}
 
 interface Timer {
   handle: number;
@@ -111,7 +119,7 @@ export function NoticeProvider({ children }: { children: ReactNode }) {
       setItems((list) => {
         for (const old of list.filter((item) => item.key === key)) clear(old.id);
         const persistent = options.persistent === true;
-        return [...list.filter((item) => item.key !== key), { id, key, text, tone, persistent }].slice(-MAX_VISIBLE);
+        return trim([...list.filter((item) => item.key !== key), { id, key, text, tone, persistent }]);
       });
       if (!options.persistent) start(id, options.holdMs ?? (tone === "danger" ? HOLD_DANGER_MS : HOLD_MS));
     },

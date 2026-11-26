@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useNotice, useNoticeDismiss } from "@/components/custom/notice/notice";
 import { useEventSubscription } from "@/lib/use-events";
 import {
@@ -27,10 +27,13 @@ export function useAlertNotices(strongOpen: StrongOpenShop[]): void {
   const dismiss = useNoticeDismiss();
   const shown = useRef(new Map<string, Shown>());
 
-  const close = (key: string) => {
-    shown.current.delete(key);
-    dismiss?.(key);
-  };
+  const close = useCallback(
+    (key: string) => {
+      shown.current.delete(key);
+      dismiss?.(key);
+    },
+    [dismiss],
+  );
 
   useNotificationAlerts((item) => {
     const notice = alertNotice(item);
@@ -48,10 +51,7 @@ export function useAlertNotices(strongOpen: StrongOpenShop[]): void {
   useEffect(() => {
     for (const [key, entry] of shown.current) {
       if (isStillOpen(strongOpen, entry.shopId, entry.kind)) shown.current.set(key, { ...entry, seen: true });
-      else if (entry.seen) {
-        shown.current.delete(key);
-        dismiss?.(key);
-      }
+      else if (entry.seen) close(key);
     }
-  }, [strongOpen, dismiss]);
+  }, [strongOpen, close]);
 }

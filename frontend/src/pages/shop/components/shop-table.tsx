@@ -12,12 +12,14 @@ interface ShopTableProps {
   actionsFor: (row: ShopRow) => RowActions & { onResume: () => void };
   /** 通知跳转来的店（`?shop=<id>`）：高亮并滚动到该行 */
   highlightId: number | null;
+  /** 该店这次高亮是否还没滚动过（每个 ?shop= 只滚一次） */
+  claimScroll: (id: number) => boolean;
 }
 
 /** 店铺列表（一次全量返回，前端排序）：序号由 DataTable 按显示顺序编号；店铺名、平台店铺名、状态、到期可排序。 */
-export function ShopTable({ shops, pending, waitingShopIds, actionsFor, highlightId }: ShopTableProps) {
+export function ShopTable({ shops, pending, waitingShopIds, actionsFor, highlightId, claimScroll }: ShopTableProps) {
   const columns: TableColumn<ShopRow>[] = [
-    { key: "name", label: "店铺", sortable: true, width: 110, render: (v, row) => <NameCell name={String(v)} highlighted={row.id === highlightId} /> },
+    { key: "name", label: "店铺", sortable: true, width: 110, render: (v, row) => <NameCell name={String(v)} highlighted={row.id === highlightId} onMark={() => claimScroll(row.id)} /> },
     {
       key: "shop_name",
       label: "平台店铺名",

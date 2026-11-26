@@ -6,6 +6,16 @@
   display: inline-flex;
 }
 
+/* 只给读屏：未读数与是否有店铺需要处理 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .count {
   position: absolute;
   top: 2px;

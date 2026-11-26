@@ -13,6 +13,10 @@ import {
   type NotificationSummary,
 } from "../logic/notification-view";
 
+/** 没有数据时共用的空数组：引用稳定，依赖它的 effect 不会每次渲染都跑。 */
+const NO_ITEMS: NotificationItem[] = [];
+const NO_STRONG: NotificationSummary["strong_open"] = [];
+
 /** 本会话已弹过提醒的通知 id；存 sessionStorage，刷新页面不重复弹。 */
 export const ALERTED_KEY = "notify.alerted";
 const ALERTED_LIMIT = 200;
@@ -77,11 +81,11 @@ export function useNotifications() {
   };
 
   return {
-    items: list.data?.items ?? [],
+    items: list.data?.items ?? NO_ITEMS,
     total: list.data?.total ?? 0,
     pageSize: list.data?.page_size ?? 0,
     unread: summary.data?.unread ?? 0,
-    strongOpen: summary.data?.strong_open ?? [],
+    strongOpen: summary.data?.strong_open ?? NO_STRONG,
     page,
     setPage,
     unreadOnly,

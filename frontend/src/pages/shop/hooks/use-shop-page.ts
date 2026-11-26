@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
 import { useShops, type ShopRow } from "@/lib/use-shops";
@@ -15,6 +16,13 @@ export function useShopPage() {
   const { shopIds } = useShopFilter();
   const [params] = useSearchParams();
   const highlight = Number(params.get(HIGHLIGHT_PARAM));
+  // 同一个 ?shop= 只滚动一次：排序等让表格重新挂载时不再把人拉回去
+  const scrolledFor = useRef<number | null>(null);
+  const claimScroll = (id: number): boolean => {
+    if (scrolledFor.current === id) return false;
+    scrolledFor.current = id;
+    return true;
+  };
   const all = query.data ?? [];
   const shops = shopIds.length ? all.filter((s) => shopIds.includes(s.id)) : all;
   const actions = useShopActions(all);
@@ -28,6 +36,7 @@ export function useShopPage() {
     retry: () => void query.refetch(),
     shops,
     highlightId: Number.isInteger(highlight) && highlight > 0 ? highlight : null,
+    claimScroll,
     allShops: all,
     actions,
     dialogs,

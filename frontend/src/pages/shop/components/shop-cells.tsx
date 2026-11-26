@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Badge } from "@/components/arc/badge/badge";
 import { Button } from "@/components/arc/button/button";
 import { RowMenu } from "@/components/custom/row-menu/row-menu";
@@ -16,13 +16,20 @@ import {
 } from "../logic/shop-status";
 import styles from "../shop-page.module.css";
 
-/** 店铺名单元格；highlighted 时把所在行标为当前（`aria-current`，带底色）并滚动到视野中间。 */
-export function NameCell({ name, highlighted }: { name: string; highlighted: boolean }) {
+/**
+ * 店铺名单元格；highlighted 时把所在行标为当前（`aria-current`，带底色），
+ * onMark 返回 true（这次高亮还没滚过）时滚动到视野中间。
+ */
+export function NameCell({ name, highlighted, onMark }: { name: string; highlighted: boolean; onMark: () => boolean }) {
+  const latest = useRef(onMark);
+  useEffect(() => {
+    latest.current = onMark;
+  });
   const mark = useCallback((el: HTMLSpanElement | null) => {
     const row = el?.closest("tr");
     if (!row) return;
     row.setAttribute("aria-current", "true");
-    row.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (latest.current()) row.scrollIntoView({ block: "center", behavior: "smooth" });
     return () => row.removeAttribute("aria-current");
   }, []);
   return (
