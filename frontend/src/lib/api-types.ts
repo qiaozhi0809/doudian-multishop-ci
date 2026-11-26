@@ -1075,7 +1075,7 @@ export interface paths {
         put?: never;
         /**
          * Scrape Profile
-         * @description 手动读取平台页面上可见、但没有接口的收款信息（开户行 + 卡号尾号）。
+         * @description 手动读取平台页面上可见、但没有接口的固定信息：店铺ID、主体、收款账户摘要。
          */
         post: operations["scrape_profile_api_shops__shop_id__profile_scrape_post"];
         delete?: never;
