@@ -48,25 +48,24 @@ describe("店铺字段展示与编辑", () => {
     expect(within(rowOf("店铺乙")).getByText("2")).toBeInTheDocument();
   });
 
-  it("显示主体、店铺号与负责人，为空时显示占位", async () => {
+  it("显示平台店铺名与负责人，为空时显示占位", async () => {
     mockPageFetch({
       "GET /api/shops": jsonResponse([
-        makeShop({ id: 1, name: "店铺甲", entity: "某主体", shop_no: "123456", admin_name: "李四" }),
-        makeShop({ id: 2, name: "店铺乙", entity: null, shop_no: null, admin_name: null }),
+        makeShop({ id: 1, name: "店铺甲", shop_name: "平台甲店", admin_name: "李四" }),
+        makeShop({ id: 2, name: "店铺乙", shop_name: null, admin_name: null }),
       ]),
     });
     renderPage();
     const a = within(await screen.findByRole("row", { name: /店铺甲/ }));
-    expect(a.getByText("某主体")).toBeInTheDocument();
-    expect(a.getByText("123456")).toBeInTheDocument();
+    expect(a.getByText("平台甲店")).toBeInTheDocument();
     expect(a.getByText("李四")).toBeInTheDocument();
-    expect(within(rowOf("店铺乙")).getAllByText("—")).toHaveLength(3);
+    expect(within(rowOf("店铺乙")).getAllByText("—")).toHaveLength(2);
   });
 
-  it("编辑店铺：保存时 PATCH 名称与主体", async () => {
+  it("编辑店铺：保存时 PATCH 本地别名", async () => {
     const fetchMock = mockPageFetch({
-      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲", entity: null })]),
-      "PATCH /api/shops/1": jsonResponse(makeShop({ id: 1, name: "新名", entity: "某主体" })),
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "PATCH /api/shops/1": jsonResponse(makeShop({ id: 1, name: "新名" })),
     });
     renderPage();
     const user = userEvent.setup();
@@ -77,11 +76,10 @@ describe("店铺字段展示与编辑", () => {
     const nameInput = within(dialog).getByLabelText("店铺名称");
     await user.clear(nameInput);
     await user.type(nameInput, "新名");
-    await user.type(within(dialog).getByLabelText("营业执照主体（选填）"), "某主体");
     await user.click(within(dialog).getByRole("button", { name: "保存" }));
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
-      expect(JSON.parse(String(call![1]!.body))).toEqual({ name: "新名", entity: "某主体" });
+      expect(JSON.parse(String(call![1]!.body))).toEqual({ name: "新名" });
     });
   });
 

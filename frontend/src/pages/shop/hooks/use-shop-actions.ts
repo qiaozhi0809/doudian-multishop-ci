@@ -168,9 +168,9 @@ export function useShopActions(shops: ShopRow[]) {
       }
     });
 
-  /** 改名 / 改主体：PATCH /api/shops/{id}。 */
+  /** 改本地别名：PATCH /api/shops/{id}。 */
   const updateShop = async (
-    id: number, patch: { name?: string; entity?: string | null },
+    id: number, patch: { name: string },
   ): Promise<{ ok: true; error: null } | { ok: false; error: string }> =>
     track(`edit:${id}`, async () => {
       try {

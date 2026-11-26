@@ -6,7 +6,7 @@ import { Input } from "@/components/arc/input/input";
 import type { ShopRow } from "@/lib/use-shops";
 import styles from "../shop-page.module.css";
 
-type Patch = { name: string; entity: string | null };
+type Patch = { name: string };
 type Result = { ok: true; error: null } | { ok: false; error: string };
 
 interface EditShopDialogProps {
@@ -16,7 +16,7 @@ interface EditShopDialogProps {
   onSubmit: (patch: Patch) => Promise<Result>;
 }
 
-/** 改名 / 补主体。店铺号来自平台、不可编辑，因此不放在这里。 */
+/** 只改本地别名。平台店铺名、店铺号、主体都来自平台，不可在此编辑。 */
 export function EditShopDialog({ shop, pending, onOpenChange, onSubmit }: EditShopDialogProps) {
   return (
     <Dialog open={shop != null} onOpenChange={onOpenChange}>
@@ -39,7 +39,6 @@ function EditShopForm({
   shop, pending, onSubmit, onDone,
 }: { shop: ShopRow; pending: boolean; onSubmit: (p: Patch) => Promise<Result>; onDone: () => void }) {
   const [name, setName] = useState(shop.name);
-  const [entity, setEntity] = useState(shop.entity ?? "");
   const [nameError, setNameError] = useState<string>();
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +51,7 @@ function EditShopForm({
     }
     setNameError(undefined);
     setError(null);
-    const r = await onSubmit({ name: trimmed, entity: entity.trim() || null });
+    const r = await onSubmit({ name: trimmed });
     if (r.ok) onDone();
     else setError(r.error);
   };
@@ -60,11 +59,6 @@ function EditShopForm({
   return (
     <form onSubmit={submit}>
       <Input label="店铺名称" value={name} error={nameError} onChange={(e) => setName(e.target.value)} />
-      <Input
-        label="营业执照主体（选填）"
-        value={entity}
-        onChange={(e) => setEntity(e.target.value)}
-      />
       {error && <Alert tone="danger" title={error} />}
       <div className={styles.formActions}>
         <Button type="submit" loading={pending}>

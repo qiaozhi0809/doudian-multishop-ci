@@ -216,5 +216,6 @@ class ShopAdminService:
             "egress_status": shop["egress_status"], "proxy_expires_at": shop["proxy_expires_at"],
             "ready_for_label": ready, "not_ready_reasons": reasons,
             "admin_name": (profile or {}).get("admin_name"),
+            "shop_name": (profile or {}).get("shop_name"),
         }
 

@@ -28,6 +28,7 @@ class ShopRow(BaseModel):
     ready_for_label: bool
     not_ready_reasons: list[str]
     admin_name: str | None
+    shop_name: str | None
 
 
 class ShopCreate(BaseModel):

@@ -7,7 +7,7 @@ from tests.fakes import ok
 SHOP_ROW_KEYS = {
     "id", "name", "status", "health", "expires_at", "paused_reason", "egress_mode",
     "proxy_display", "egress_ip", "egress_ip_pending", "egress_status", "proxy_expires_at",
-    "ready_for_label", "not_ready_reasons", "entity", "shop_no", "admin_name",
+    "ready_for_label", "not_ready_reasons", "entity", "shop_no", "admin_name", "shop_name",
 }
 TOKEN_A = "tok_" + "a" * 8
 
@@ -157,6 +157,7 @@ def test_login_flow_success_runs_probe_and_base_sync(api):
     row = api.shop(sid)
     assert row["status"] == "active"
     assert row["admin_name"] == "张三"  # 登录后自动同步的店铺负责人
+    assert row["shop_name"] == "示例小铺"  # 平台店铺名，与本地别名 name 分开
     (profile, channel, proxy, _), = api.scan_calls
     assert profile.name == str(sid) and proxy == proxy_url(5)  # 扫码经该店出口
 

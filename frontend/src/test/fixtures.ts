@@ -21,6 +21,7 @@ export function makeShop(overrides: Partial<ShopRow> = {}): ShopRow {
     ready_for_label: true,
     not_ready_reasons: [],
     admin_name: null,
+    shop_name: null,
     ...overrides,
   };
 }

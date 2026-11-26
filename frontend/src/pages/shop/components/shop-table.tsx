@@ -22,8 +22,13 @@ export function ShopTable({ shops, pending, waitingShopIds, actionsFor }: ShopTa
       render: (_, row) => shops.findIndex((s) => s.id === row.id) + 1,
     },
     { key: "name", label: "店铺", sortable: true, width: 110, render: (v) => <span className={styles.shopName}>{String(v)}</span> },
-    { key: "entity", label: "主体", sortable: false, width: 130, render: (v) => (v ? String(v) : "—") },
-    { key: "shop_no", label: "店铺号", sortable: false, width: 110, render: (v) => (v ? String(v) : "—") },
+    {
+      key: "shop_name",
+      label: "平台店铺名",
+      sortable: false,
+      width: 150,
+      render: (v) => (v ? String(v) : "—"),
+    },
     { key: "admin_name", label: "负责人", sortable: false, width: 100, render: (v) => (v ? String(v) : "—") },
     {
       key: "status",

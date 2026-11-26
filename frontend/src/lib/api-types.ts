@@ -2360,6 +2360,8 @@ export interface components {
             proxy_expires_at: string | null;
             /** Ready For Label */
             ready_for_label: boolean;
+            /** Shop Name */
+            shop_name: string | null;
             /** Shop No */
             shop_no: string | null;
             /**

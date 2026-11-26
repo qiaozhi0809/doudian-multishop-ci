@@ -4219,6 +4219,17 @@
             "title": "Ready For Label",
             "type": "boolean"
           },
+          "shop_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop Name"
+          },
           "shop_no": {
             "anyOf": [
               {
@@ -4257,7 +4268,8 @@
           "proxy_expires_at",
           "ready_for_label",
           "not_ready_reasons",
-          "admin_name"
+          "admin_name",
+          "shop_name"
         ],
         "title": "ShopRow",
         "type": "object"
