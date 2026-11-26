@@ -457,6 +457,7 @@ cookie、订单数据等仍只存本机。
 | 启动清理 | `lifespan` 启动后：结束 `--user-data-dir` 位于 `profiles/` 之下且未登记的浏览器进程；删除所有未登记店铺目录里残留的 `SingletonLock` / `SingletonSocket` / `SingletonCookie` |
 | 定时巡检 | 每 5 分钟（`run_every`，首轮等满一个间隔）：关闭超过最长存活时间的、注销进程已不在的、结束未登记的孤儿并清其锁文件。启动中的浏览器已登记，不会被误杀 |
 | 退出 | `lifespan` 退出时关闭全部已登记浏览器 |
+| 关闭原因 | `open()` / `open_cloak()` 可传 `on_close(reason)`，浏览器关闭并注销后调用一次：`done`（持有方退出）/ `expired`（超时，im 即每日重启）/ `process_gone`（关窗或崩溃）/ `preempted`（`close_shop` 让出目录）/ `shutdown`（后端退出）；回调时目录已空出，可直接重新打开 |
 | 边界 | 只按命令行 `--user-data-dir` 判定归属，只动 `profiles/` 目录下的进程，**绝不碰用户自己的 Chrome** |
 | 日志 | `browser.opened` / `browser.closed`（含 `reason`：`done` / `expired` / `process_gone` / `shutdown` 等，`killed` 是否强杀）/ `browser.orphan_killed` / `browser.locks_removed`，只记 `shop_id`、用途、原因，不记路径、命令行与代理地址 |
 | 依赖 | `psutil`（跨平台进程枚举与结束进程树） |

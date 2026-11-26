@@ -43,6 +43,16 @@ class Purpose(StrEnum):
     IM = "im"  # 飞鸽只读消息：常驻，到期由巡检关闭，持有方重新 open（即每天重启一次）
 
 
+class CloseReason(StrEnum):
+    """关闭原因（on_close 收到的值）。close_shop / close_all 可传其他原因，原样转交。"""
+
+    DONE = "done"  # 持有方退出 async with
+    EXPIRED = "expired"  # 巡检：超过最长存活时间（im 即每日重启）
+    PROCESS_GONE = "process_gone"  # 巡检：进程已不在（用户关窗、浏览器崩溃）
+    PREEMPTED = "preempted"  # close_shop 让出该店目录（如扫码前关闭常驻 im）
+    SHUTDOWN = "shutdown"  # 后端退出
+
+
 MAX_AGE_S: dict[Purpose, float] = {
     Purpose.LOGIN: 10 * 60,
     Purpose.SCRAPE: 2 * 60,
@@ -76,6 +86,7 @@ class _Entry:
     t0: float
     pid: int | None = None
     ctx: Any = None
+    on_close: Callable[[str], None] | None = None
     closing: asyncio.Task | None = field(default=None, repr=False)
 
     @property
@@ -103,17 +114,19 @@ class BrowserRegistry:
     @asynccontextmanager
     async def open(
         self, profile_dir: Path, purpose: Purpose, launch: Callable[[], Awaitable[Any]],
-        *, max_age_s: float | None = None,
+        *, max_age_s: float | None = None, on_close: Callable[[str], None] | None = None,
     ) -> AsyncIterator[Any]:
         """登记并启动；``launch()`` 返回 Playwright 上下文。同一目录已登记时直接拒绝。
 
         先登记后启动：启动途中的浏览器不会被巡检当成孤儿。
+        ``on_close(reason)`` 在浏览器关闭并注销后调用一次，reason 见 ``CloseReason``
+        （``close_shop`` / ``close_all`` 传入的原因原样给出）；启动失败不调用。
         """
         if any(same_dir(e.profile_dir, profile_dir) for e in self._entries):
             raise cloak_launch.CloakUnavailable(cloak_launch.PROFILE_IN_USE)
         entry = _Entry(
             profile_dir, purpose, MAX_AGE_S[purpose] if max_age_s is None else max_age_s,
-            datetime.now(UTC), self._clock(),
+            datetime.now(UTC), self._clock(), on_close=on_close,
         )
         self._entries.append(entry)
         try:
@@ -127,27 +140,28 @@ class BrowserRegistry:
         try:
             yield entry.ctx
         finally:
-            await self._close(entry, "done")
+            await self._close(entry, CloseReason.DONE)
 
     def open_cloak(
         self, profile_dir: Path, purpose: Purpose, proxy: dict | None, *,
         offscreen: bool = False, max_age_s: float | None = None,
+        on_close: Callable[[str], None] | None = None,
     ):
         """用 CloakBrowser 打开该店浏览器（proxy 为 playwright_proxy() 的结果）。"""
         return self.open(
             profile_dir, purpose,
             lambda: cloak_launch.launch_cloak(profile_dir, proxy, offscreen=offscreen),
-            max_age_s=max_age_s,
+            max_age_s=max_age_s, on_close=on_close,
         )
 
-    async def close_shop(self, shop_id: int, reason: str) -> bool:
+    async def close_shop(self, shop_id: int, reason: str = CloseReason.PREEMPTED) -> bool:
         """关闭该店已登记的浏览器（如扫码前让出常驻的飞鸽浏览器）；没有则返回 False。"""
         hits = [e for e in self._entries if e.shop_id == shop_id and e.ctx is not None]
         for e in hits:
             await self._close(e, reason)
         return bool(hits)
 
-    async def close_all(self, reason: str) -> None:
+    async def close_all(self, reason: str = CloseReason.SHUTDOWN) -> None:
         for e in [e for e in self._entries if e.ctx is not None]:
             await self._close(e, reason)
 
@@ -157,9 +171,9 @@ class BrowserRegistry:
             if e.ctx is None or e.closing is not None:
                 continue  # 还在启动 / 已在关闭
             if now - e.t0 > e.max_age_s:
-                await self._close(e, "expired")
+                await self._close(e, CloseReason.EXPIRED)
             elif e.pid is not None and not await asyncio.to_thread(self._procs.alive, e.pid):
-                await self._close(e, "process_gone")
+                await self._close(e, CloseReason.PROCESS_GONE)
         await self._kill_orphans(profiles_dir)
 
     async def startup_cleanup(self, profiles_dir: Path) -> None:
@@ -226,7 +240,13 @@ class BrowserRegistry:
         if entry in self._entries:
             self._entries.remove(entry)
         log.info("browser.closed", shop_id=entry.shop_id, purpose=entry.purpose.value,
-                 reason=reason, killed=killed)
+                 reason=str(reason), killed=killed)
+        if entry.on_close is not None:
+            try:
+                entry.on_close(str(reason))
+            except Exception:  # noqa: BLE001 - 持有方回调出错不影响注销
+                log.exception("browser.on_close_failed", shop_id=entry.shop_id,
+                              purpose=entry.purpose.value)
 
 
 REGISTRY = BrowserRegistry()

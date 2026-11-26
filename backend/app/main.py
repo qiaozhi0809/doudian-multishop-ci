@@ -15,7 +15,11 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.adapter.browser.browser_registry import SWEEP_INTERVAL_S, BrowserRegistry
+from app.adapter.browser.browser_registry import (
+    SWEEP_INTERVAL_S,
+    BrowserRegistry,
+    CloseReason,
+)
 from app.adapter.print.component import PrintComponent
 from app.api import aftersale as aftersale_api
 from app.api import auth as auth_api
@@ -129,7 +133,7 @@ def create_app(
             stop.set()
             await asyncio.gather(*tasks, return_exceptions=True)
             await app.state.tasks.shutdown()
-            await app.state.browsers.close_all("shutdown")
+            await app.state.browsers.close_all(CloseReason.SHUTDOWN)
             engine.dispose()
 
     app = FastAPI(
