@@ -19,6 +19,13 @@ Job = Callable[[int, FxgClient], Awaitable[object]]
 _USER_FACING = (DoudianError, EgressNotReady, EgressConflict, ShopPaused, NotFound)
 
 
+def user_error(e: Exception) -> str:
+    """给用户看的失败原因：业务异常用原文，其他一律「内部错误」（不外泄程序细节）。"""
+    if isinstance(e, _USER_FACING):
+        return str(e) or type(e).__name__
+    return "内部错误"
+
+
 @dataclass(frozen=True)
 class ShopResult[T]:
     shop_id: int
@@ -42,8 +49,7 @@ async def _one(
 
     try:
         return ShopResult(shop_id, True, await runner.run(shop_id, wrapped, actor=actor))
-    except _USER_FACING as e:
-        return ShopResult(shop_id, False, error=str(e) or type(e).__name__)
     except Exception as e:
-        log.error(event, shop_id=shop_id, error=type(e).__name__)
-        return ShopResult(shop_id, False, error="内部错误")
+        if not isinstance(e, _USER_FACING):
+            log.error(event, shop_id=shop_id, error=type(e).__name__)
+        return ShopResult(shop_id, False, error=user_error(e))

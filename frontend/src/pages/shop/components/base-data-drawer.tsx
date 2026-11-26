@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import type { components } from "@/lib/api-types";
 import type { ShopRow } from "@/lib/use-shops";
 import { BaseDataSections } from "./base-data-sections";
+import styles from "../shop-page.module.css";
 import { ShopProfileSections } from "./shop-profile-sections";
 
 interface BaseDataDrawerProps {
@@ -16,7 +17,7 @@ interface BaseDataDrawerProps {
   syncing?: boolean;
 }
 
-/** 查看本店资料：加载中、出错（可重试）、成功三种状态都有。 */
+/** 店铺资料抽屉：店铺信息与收款账户，加上发货资料（加载中、出错可重试、成功三种状态）。 */
 export function BaseDataDrawer({
   shop, onOpenChange, state, onRetry, onSyncCard, syncing = false,
 }: BaseDataDrawerProps) {
@@ -26,13 +27,15 @@ export function BaseDataDrawer({
         {shop && (
           <ShopProfileSections shop={shop} onSyncCard={onSyncCard} syncing={syncing} />
         )}
-        {state.isLoading && <Skeleton label="正在读取基础数据" lines={6} />}
+        {state.isLoading && <Skeleton label="正在读取发货资料" lines={6} />}
         {state.isError && (
-          <div>
-            <Alert tone="danger" title="读取基础数据失败，请重试" />
-            <Button variant="secondary" onClick={onRetry}>
-              重新读取
-            </Button>
+          <div className={styles.page}>
+            <Alert tone="danger" title="读取发货资料失败，请重试" />
+            <div>
+              <Button variant="secondary" onClick={onRetry}>
+                重新读取
+              </Button>
+            </div>
           </div>
         )}
         {state.data && <BaseDataSections data={state.data} />}

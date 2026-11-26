@@ -7,6 +7,7 @@ from alembic import command
 from app.store import (  # noqa: F401  M4 / M5 / M7 表注册到同一 metadata
     aggregate_schema,
     backup_schema,
+    notification_schema,
     reconcile_schema,
     schema,
     shipping_schema,
@@ -25,7 +26,7 @@ TABLES = {
     "waybills", "tasks", "print_job",
     "aftersale", "product_snapshot", "stock_snapshot", "fund_unsettled", "margin_account",
     "order_fact", "reconcile_run", "reconcile_findings", "shipment",
-    "backup_run", "proxy_pool",
+    "backup_run", "proxy_pool", "notification", "sync_baseline",
 }
 
 

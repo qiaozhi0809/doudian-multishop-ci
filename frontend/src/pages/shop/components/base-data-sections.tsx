@@ -1,4 +1,5 @@
 import type { components } from "@/lib/api-types";
+import { EMPTY_TEXT, orEmpty } from "@/lib/empty-text";
 import styles from "../shop-page.module.css";
 
 type BaseData = components["schemas"]["BaseData"];
@@ -6,8 +7,8 @@ type BaseData = components["schemas"]["BaseData"];
 function Section({ title, empty, children }: { title: string; empty: boolean; children: React.ReactNode }) {
   return (
     <section className={styles.section}>
-      <h3 className={styles.sectionTitle}>{title}</h3>
-      {empty ? <p className={styles.muted}>暂无</p> : <ul className={styles.list}>{children}</ul>}
+      <h3 className="section-title">{title}</h3>
+      {empty ? <p className={styles.muted}>{EMPTY_TEXT}</p> : <ul className={styles.list}>{children}</ul>}
     </section>
   );
 }
@@ -23,8 +24,6 @@ function Item({ main, sub, end }: { main: string; sub?: string | null; end?: str
     </li>
   );
 }
-
-const orEmpty = (v: string | null | undefined) => v || "暂无";
 
 /** 本店基础数据：发货地址、快递、面单模板、面单账户（只读）。 */
 export function BaseDataSections({ data }: { data: BaseData }) {
@@ -51,7 +50,7 @@ export function BaseDataSections({ data }: { data: BaseData }) {
             key={a.ebill_id}
             main={orEmpty(a.net_name)}
             sub={a.courier_code}
-            end={`${a.is_default ? "默认 · " : ""}余额 ${a.balance ?? "暂无"}`}
+            end={`${a.is_default ? "默认 · " : ""}余额 ${a.balance ?? EMPTY_TEXT}`}
           />
         ))}
       </Section>

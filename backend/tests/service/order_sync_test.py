@@ -187,3 +187,121 @@ async def test_local_status_not_overwritten_by_resync(env):
     env.transport.responses[:] = [page_of(0, 1)]
     await svc.sync_pending(env.shop_id, "admin")
     assert db_orders(env)[order_no(0)][0] == "pending_label"
+
+
+# ---- 新订单识别与基线（通知中心 6.3）----
+
+def drain(sub, name: str) -> list[dict]:
+    out = []
+    while not sub._queue.empty():
+        event, data = sub._queue.get_nowait()
+        if event == name:
+            out.append(data)
+    return out
+
+
+def has_baseline(env, kind: str) -> bool:
+    with env.engine.connect() as conn:
+        return conn.execute(sa.text(
+            "SELECT 1 FROM sync_baseline WHERE shop_id = :s AND kind = :k"
+        ), {"s": env.shop_id, "k": kind}).first() is not None
+
+
+async def test_first_sync_establishes_baseline_then_new_orders_notify(env):
+    svc = service(env)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 30)]
+    await svc.sync_pending(env.shop_id, "admin")
+    assert drain(sub, "orders_new") == []  # 首次只入库不提醒
+    assert has_baseline(env, "orders")
+
+    env.transport.responses[:] = [page_of(0, 31)]
+    await svc.sync_pending(env.shop_id, "admin")
+    assert drain(sub, "orders_new") == [{"shop_id": env.shop_id, "count": 1}]
+
+    env.transport.responses[:] = [page_of(0, 31)]
+    await svc.sync_pending(env.shop_id, "admin")
+    assert drain(sub, "orders_new") == []  # 没有新单不发
+
+
+async def test_empty_first_sync_still_establishes_baseline(env):
+    env.transport.responses[:] = [empty_page()]
+    await service(env).sync_pending(env.shop_id, "admin")
+    assert has_baseline(env, "orders")
+
+
+async def test_incomplete_sync_no_baseline_no_event(env):
+    svc = service(env, max_pages=2)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 200), page_of(200, 200)]
+    result = await svc.sync_pending(env.shop_id, "admin")
+    assert result.complete is False
+    assert not has_baseline(env, "orders")
+    assert drain(sub, "orders_new") == []
+
+
+async def test_failed_sync_with_baseline_still_notifies_inserted(env):
+    """有基线时中途失败：已入库的新单照样提醒（下一轮它们已在库里，不报就丢了）。"""
+    svc = service(env)
+    env.transport.responses[:] = [page_of(0, 1)]
+    await svc.sync_pending(env.shop_id, "admin")
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(100, 200), ok(code=10008)]
+    with pytest.raises(SessionExpired):
+        await svc.sync_pending(env.shop_id, "admin")
+    assert drain(sub, "orders_new") == [{"shop_id": env.shop_id, "count": 200}]
+
+
+async def test_incomplete_sync_with_baseline_notifies_inserted(env):
+    svc = service(env, max_pages=2)
+    env.transport.responses[:] = [page_of(0, 1)]
+    await svc.sync_pending(env.shop_id, "admin")
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 200), page_of(200, 200)]
+    result = await svc.sync_pending(env.shop_id, "admin")
+    assert result.complete is False
+    assert drain(sub, "orders_new") == [{"shop_id": env.shop_id, "count": 399}]
+
+
+async def test_failed_first_sync_no_baseline_no_event(env):
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 200), ok(code=10008)]
+    with pytest.raises(SessionExpired):
+        await service(env).sync_pending(env.shop_id, "admin")
+    assert not has_baseline(env, "orders")
+    assert drain(sub, "orders_new") == []
+
+
+async def test_report_error_on_failed_sync_keeps_original_exception(env, monkeypatch):
+    from app.store import sync_baseline_store
+    svc = service(env)
+    env.transport.responses[:] = [page_of(0, 1)]
+    await svc.sync_pending(env.shop_id, "admin")
+
+    def boom(*_a, **_k):
+        raise RuntimeError("report failed")
+
+    monkeypatch.setattr(sync_baseline_store, "has", boom)
+    env.transport.responses[:] = [page_of(100, 200), ok(code=10008)]
+    with pytest.raises(SessionExpired):
+        await svc.sync_pending(env.shop_id, "admin")
+
+
+async def test_sync_manual_publishes_result(env):
+    svc = service(env)
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 1)]
+    await svc.sync_manual(env.shop_id, "admin")
+    env.transport.responses[:] = [ok(code=10008)]
+    with pytest.raises(SessionExpired):
+        await svc.sync_manual(env.shop_id, "admin")
+    results = drain(sub, "sync_result")
+    assert results[0] == {"kind": "orders", "shop_id": env.shop_id, "ok": True, "error": None}
+    assert results[1]["ok"] is False and results[1]["error"]
+
+
+async def test_periodic_sync_pending_publishes_no_result(env):
+    sub = env.events.subscribe()
+    env.transport.responses[:] = [page_of(0, 1)]
+    await service(env).sync_pending(env.shop_id, "admin")
+    assert drain(sub, "sync_result") == []

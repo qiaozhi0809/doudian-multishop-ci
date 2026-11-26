@@ -11,15 +11,11 @@
   gap: var(--space-3);
 }
 
-/* 数据备份卡片（ENG-06）：最近一次快照与手动触发。 */
+/* 数据备份卡片（ENG-06）：最近一次快照与手动触发。卡片表面用全站 .panel，这里只管内部排列 */
 .backupCard {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  background: var(--surface);
 }
 
 .backupHead {
@@ -35,33 +31,15 @@
   font-size: var(--text-sm);
 }
 
-.notices {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* 宽表格只在自身卡片内横向滚动：首列（店铺名）固定在左，操作列固定在右，窄屏下也总能看到操作按钮。 */
-/* 列宽合计约 750：1100 宽的窗口里放得下，不用横向滚动 */
-.tableWrap table {
-  min-width: 47rem;
-}
-
-/* 首列（店铺）和末列（操作）固定；中间横向滚动时从两条分隔线下面穿过，不会半截字露在外面 */
-.tableWrap :is(td, th):first-child {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: var(--surface);
-  border-right: 1px solid var(--border-subtle);
-}
-
-.tableWrap :is(td, th):last-child {
-  position: sticky;
-  right: 0;
-  z-index: 2;
-  background: var(--surface);
-  border-left: 1px solid var(--border-subtle);
+/* 宽表格只在自身卡片内横向滚动：序号 + 「店铺」列固定在左（全站 .table-fit 规则），操作列固定在右，窄屏下也总能看到店铺名和操作按钮。 */
+@media (min-width: 621px) {
+  .tableWrap :is(td, th):last-child {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    /* 不另刷底色：沿用单元格自身的填充（悬停、排序列着色与左侧固定列一样不断开） */
+    border-left: 1px solid var(--border-subtle);
+  }
 }
 
 .cellStack {
@@ -104,6 +82,11 @@
   font-weight: 500;
 }
 
+/* 通知跳转来的店（?shop=<id>）：整行浅强调底色，与勾选行同一写法 */
+.tableWrap tbody tr[aria-current="true"] td {
+  --cell-fill: color-mix(in oklab, var(--accent) 8%, var(--cell-base));
+}
+
 .tabular {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -142,13 +125,8 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--section-gap);
   margin-bottom: var(--space-6);
-}
-
-.sectionTitle {
-  font-size: var(--text-base);
-  font-weight: 500;
 }
 
 .sectionHeader {

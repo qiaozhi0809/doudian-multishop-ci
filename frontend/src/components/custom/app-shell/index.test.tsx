@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -19,6 +19,8 @@ function renderShell(path: string, extraRoutes: Record<string, ReturnType<typeof
   mockFetch({
     "GET /api/auth/status": jsonResponse(IN),
     "GET /api/shops": jsonResponse(shops),
+    "GET /api/notifications": jsonResponse({ items: [], total: 0, page: 1, page_size: 20 }),
+    "GET /api/notifications/summary": jsonResponse({ unread: 0, strong_open: [] }),
     ...extraRoutes,
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -94,87 +96,37 @@ describe("App Shell", () => {
     );
   });
 
-  it("侧栏常驻任务中心", async () => {
-    renderShell("/orders");
-    expect(await screen.findByRole("button", { name: "任务中心" })).toBeInTheDocument();
+  it("侧栏不再有任务入口；标题行右边只有通知铃铛，没有店铺状态胶囊", async () => {
+    renderShell("/orders", {}, [makeShop(), makeShop({ id: 2, name: "店铺乙", status: "needs_login", health: "expired" })]);
+    const bell = await screen.findByRole("button", { name: "通知" });
+    expect(screen.queryByRole("button", { name: /任务/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("任务")).not.toBeInTheDocument();
+    const head = screen.getByRole("heading", { level: 1 }).closest("header")!;
+    expect(head).toContainElement(bell);
+    expect(within(head).getAllByRole("button")).toEqual([bell]);
+    expect(screen.queryByText(/店铺正常|家店需处理/)).not.toBeInTheDocument();
   });
 
-  it("会话掉线时可在顶栏一键重登", async () => {
-    renderShell(
-      "/orders",
-      { "POST /api/shops/2/login": jsonResponse({ status: "started" }, 202) },
-      [makeShop(), makeShop({ id: 2, name: "店铺乙", status: "needs_login", health: "expired" })],
-    );
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: /1 家店需处理/ }));
-    await user.click(await screen.findByRole("button", { name: "重新登录" }));
-    expect(await screen.findByText("等待扫码")).toBeInTheDocument();
-    act(() => FakeEventSource.latest().emit("shop_status_changed", { shop_id: 2, status: "active" }));
-    await waitFor(() => expect(screen.queryByText("等待扫码")).not.toBeInTheDocument());
-  });
-
-  it("重登失败的原因显示在店铺这一行", async () => {
-    renderShell(
-      "/orders",
-      { "POST /api/shops/2/login": jsonResponse({ status: "started" }, 202) },
-      [makeShop(), makeShop({ id: 2, name: "店铺乙", status: "needs_login", health: "expired" })],
-    );
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: /1 家店需处理/ }));
-    await user.click(await screen.findByRole("button", { name: "重新登录" }));
-    act(() =>
-      FakeEventSource.latest().emit("shop_login_failed", { shop_id: 2, reason: "请先检查出口" }),
-    );
-    expect(await screen.findByText("请先检查出口")).toBeInTheDocument();
+  it("有未解决的强提醒时内容区最上方显示横条", async () => {
+    renderShell("/orders", {
+      "GET /api/notifications/summary": jsonResponse({
+        unread: 1,
+        strong_open: [{
+          shop_id: 1, shop_name: "示例店", kinds: ["login_expired"], link: "/shops?shop=1",
+          problems: [{ kind: "login_expired", link: "/shops?shop=1" }],
+        }],
+      }),
+    });
+    const banner = await screen.findByRole("region", { name: "需要处理的店铺" });
+    expect(banner).toHaveTextContent("示例店：登录失效");
+    await userEvent.setup().click(within(banner).getByRole("button", { name: "登录失效" }));
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/shops?shop=1"));
   });
 
   it("导航链接带着当前店铺筛选", async () => {
     renderShell("/orders?shops=1&page=3");
     const nav = await screen.findByRole("navigation", { name: "主导航" });
     expect(within(nav).getByRole("link", { name: "店铺管理" })).toHaveAttribute("href", "/shops?shops=1");
-  });
-
-  it("店铺都正常时显示店铺正常", async () => {
-    renderShell("/orders");
-    expect(await screen.findByText("店铺正常")).toBeInTheDocument();
-  });
-
-  it("没有店铺时显示还没有店铺，并链接到店铺页", async () => {
-    renderShell("/orders", {}, []);
-    const link = await screen.findByRole("link", { name: "还没有店铺" });
-    expect(link).toHaveAttribute("href", "/shops");
-    expect(screen.queryByText("店铺正常")).not.toBeInTheDocument();
-  });
-
-  it("有店铺需处理时显示数量，弹层列出店铺与最严重的问题", async () => {
-    renderShell("/orders", {}, [
-      makeShop(),
-      makeShop({ id: 2, name: "店铺乙", status: "needs_login", health: "expired", egress_status: "duplicate" }),
-    ]);
-    const trigger = await screen.findByRole("button", { name: /1 家店需处理/ });
-    await userEvent.setup().click(trigger);
-    expect(await screen.findByText("店铺乙")).toBeInTheDocument();
-    expect(screen.getByText("需重新登录")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "前往店铺页" })).toHaveAttribute("href", "/shops");
-  });
-
-  it("即将过期时显示警告数量", async () => {
-    renderShell("/orders", {}, [makeShop({ health: "expiring" })]);
-    expect(await screen.findByRole("button", { name: /1 家店即将到期/ })).toBeInTheDocument();
-  });
-
-  it("风控暂停、出口异常的店铺也算需处理，不显示店铺正常", async () => {
-    renderShell("/orders", {}, [
-      makeShop({ id: 1, name: "甲", paused_reason: "risk_blocked:1" }),
-      makeShop({ id: 2, name: "乙", egress_status: "unreachable" }),
-    ]);
-    expect(await screen.findByRole("button", { name: /2 家店需处理/ })).toBeInTheDocument();
-    expect(screen.queryByText("店铺正常")).not.toBeInTheDocument();
-  });
-
-  it("店铺列表读取失败时健康指示显示出错并可重试", async () => {
-    renderShell("/orders", { "GET /api/shops": errorResponse(500, "Internal", "boom") });
-    expect(await screen.findByRole("button", { name: "重新读取店铺" })).toBeInTheDocument();
   });
 
   it("店铺筛选写入 URL，并在切换时回到第 1 页", async () => {

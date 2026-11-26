@@ -171,3 +171,30 @@ def test_parse_margin_cents():
 def test_margin_missing_data_is_parse_error():
     with pytest.raises(ParseError):
         parse_margin({"code": 0})
+
+
+def test_parse_stock_data_as_list_with_top_level_stats():
+    # 真实响应同订单列表：data 是数组，统计字段在顶层（docs/api/catalog.md D.2）
+    resp = {"code": 0, "data": [
+        {"product_id": "1", "total_stock_num": 5, "spot_stock_num": 5, "future_stock_num": 0},
+    ], "total": 1, "stock_alarm_cnt": 1, "sold_out_cnt": 0}
+    items, summary = parse_stock(resp)
+    assert [i.product_id for i in items] == ["1"]
+    assert (summary.total, summary.stock_alarm_cnt) == (1, 1)
+
+
+@pytest.mark.parametrize("data", [None, []])
+def test_parse_stock_empty_data(data):
+    items, summary = parse_stock({"code": 0, "data": data, "total": 0})
+    assert items == [] and summary.total == 0
+
+
+def test_parse_stock_null_data_without_total_is_empty():
+    items, summary = parse_stock({"code": 0, "data": None})
+    assert items == [] and summary.total == 0
+
+
+def test_parse_stock_null_data_with_positive_total_raises():
+    # 平台偶发 data=null 但 total>0：必须报错，不能当空店而清掉库存快照
+    with pytest.raises(ParseError):
+        parse_stock({"code": 0, "data": None, "total": 5})

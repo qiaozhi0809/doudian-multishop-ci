@@ -39,7 +39,7 @@ export function DashboardPageView({ page }: { page: DashboardPage }) {
         )}
       </div>
       <KpiGrid kpis={model.kpis} sections={sections} />
-      <SourceFailures failures={failures} shopName={page.shopName} />
+      <SourceFailures failures={failures} shopName={page.shopName} bannerShopIds={page.bannerShopIds} />
       <div className={styles.chartGrid}>
         <ShipPressureChart bars={model.shipBars} section={sections.orderCounts} />
         <FundBarsChart bars={model.fundBars} section={sections.fund} />

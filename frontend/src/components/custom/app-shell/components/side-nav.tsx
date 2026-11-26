@@ -43,13 +43,11 @@ interface SideNavProps {
   shopIds: number[];
   /** 品牌下方的全局店铺范围。 */
   scope: ReactNode;
-  /** 个人中心上方的任务中心入口。 */
-  tasks: ReactNode;
   account: ReactNode;
 }
 
-/** 浮动侧栏：品牌 → 店铺范围 → 分组导航（灰色组名，组内常显）→ 任务中心 → 左下角账号菜单。 */
-export function SideNav({ shopIds, scope, tasks, account }: SideNavProps) {
+/** 浮动侧栏：品牌 → 店铺范围 → 分组导航（灰色组名，组内常显）→ 左下角账号菜单。 */
+export function SideNav({ shopIds, scope, account }: SideNavProps) {
   return (
     <aside className={styles.sideNav}>
       <div className={styles.brand}>抖店管理</div>
@@ -77,7 +75,6 @@ export function SideNav({ shopIds, scope, tasks, account }: SideNavProps) {
         </div>
       </nav>
       <div className={styles.sideFoot}>
-        {tasks}
         {account}
       </div>
     </aside>

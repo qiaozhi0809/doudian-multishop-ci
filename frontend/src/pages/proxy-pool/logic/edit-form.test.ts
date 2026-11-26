@@ -19,16 +19,16 @@ describe("edit-form", () => {
   });
   it("没有改动或端口非法时报错", () => {
     expect(buildPatch(item, initialEditForm(item))).toEqual({ ok: false, error: "没有需要保存的改动" });
-    expect(buildPatch(item, { ...initialEditForm(item), port: "8a" })).toEqual({ ok: false, error: "端口必须是数字" });
+    expect(buildPatch(item, { ...initialEditForm(item), port: "8a" })).toEqual({ ok: false, error: "端口必须是数字", field: "port" });
   });
   it("主机含 @ 等字符或为 IPv6 时拒绝", () => {
     for (const host of ["x@5.6.7.8", "a/b", "a?b", "a#b", "a:b", "[::1]", "a b"]) {
-      expect(buildPatch(item, { ...initialEditForm(item), host })).toEqual({ ok: false, error: "代理主机格式不正确" });
+      expect(buildPatch(item, { ...initialEditForm(item), host })).toEqual({ ok: false, error: "代理主机格式不正确", field: "host" });
     }
   });
   it("端口超出 1-65535 时拒绝", () => {
     for (const port of ["0", "65536"]) {
-      expect(buildPatch(item, { ...initialEditForm(item), port })).toEqual({ ok: false, error: "端口必须在 1-65535 之间" });
+      expect(buildPatch(item, { ...initialEditForm(item), port })).toEqual({ ok: false, error: "端口必须在 1-65535 之间", field: "port" });
     }
     expect(buildPatch(item, { ...initialEditForm(item), port: "65535" })).toEqual({ ok: true, patch: { port: 65535 } });
   });

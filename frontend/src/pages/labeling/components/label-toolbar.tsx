@@ -46,7 +46,7 @@ export function LabelToolbar({
         label="打单发货阶段"
       />
       <div className={styles.toolbarActions}>
-        <span className={styles.muted}>已选 {selectedCount} 单</span>
+        {selectedCount > 0 && <span className={styles.muted}>已选 {selectedCount} 单</span>}
         {stage === "pending" ? (
           <>
             <Button onClick={() => onPreview("obtain")} disabled={none} loading={busy}>

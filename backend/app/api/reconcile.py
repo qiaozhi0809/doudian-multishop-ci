@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.deps import require_admin
+from app.api.list_sort import FindingSort, SortOrder
 from app.api.params import parse_shop_ids
 from app.api.reconcile_schemas import (
     ReconcileFindingRow,
@@ -43,11 +44,14 @@ def findings(
     status: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    sort: FindingSort | None = None,
+    order: SortOrder = "asc",
 ) -> ReconcileFindingsPage:
+    """默认最新发现的在前；sort 指定白名单字段时按该字段排序后再分页。"""
     state = request.app.state
     ids = state.shop_admin.target_ids(parse_shop_ids(shop_ids))
     rows, total, run_row = state.reconcile.findings(
-        ids, run_id, kind, status, page, page_size)
+        ids, run_id, kind, status, page, page_size, sort, order)
     return ReconcileFindingsPage(
         items=[ReconcileFindingRow(**r) for r in rows], total=total,
         page=page, page_size=page_size, run=_run_row(run_row),

@@ -170,15 +170,15 @@ def test_patch_manual_profile_fields(api):
     row = api.client.patch(f"/api/shops/{sid}", json={
         "entity": "某主体",
         "platform_shop_id": "100000001",
-        "bank_name": "中国工商银行",
-        "bank_tail": "7433",
+        "bank_name": "示例银行",
+        "bank_tail": "0000",
     }).json()
 
     assert (row["entity"], row["platform_shop_id"], row["bank_name"], row["bank_tail"]) == (
-        "某主体", "100000001", "中国工商银行", "7433")
+        "某主体", "100000001", "示例银行", "0000")
 
 
-
+def test_second_login_while_running_is_conflict(api):
     sid = api.new_shop()
 
     async def slow_scan(*_):

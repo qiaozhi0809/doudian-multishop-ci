@@ -8,6 +8,7 @@ from sqlalchemy import Engine
 from app.domain.errors import InvalidRequest
 from app.domain.labeling_rules import order_blockers
 from app.store import order_store, shop_store, waybill_store
+from app.store.sorting import SortOrder
 
 STAGE_PENDING = "pending"
 STAGE_LABELED = "labeled"
@@ -22,13 +23,15 @@ class LabelPoolService:
         self._engine = engine
 
     def list(
-        self, shop_ids: Sequence[int] | None, stage: str, page: int, page_size: int
+        self, shop_ids: Sequence[int] | None, stage: str, page: int, page_size: int,
+        sort: str | None = None, order: SortOrder = "asc",
     ) -> tuple[list[dict[str, Any]], int]:
         statuses = STAGE_STATUSES.get(stage)
         if statuses is None:
             raise InvalidRequest(f"不支持的阶段: {stage}")
         with self._engine.connect() as conn:
-            rows, total = order_store.pool_orders(conn, shop_ids, statuses, page, page_size)
+            rows, total = order_store.pool_orders(
+                conn, shop_ids, statuses, page, page_size, sort, order)
             items = order_store.items_by_order(conn, [r["id"] for r in rows])
             active = waybill_store.active_by_orders(conn, [r["id"] for r in rows])
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}

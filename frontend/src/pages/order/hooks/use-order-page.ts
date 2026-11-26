@@ -1,20 +1,23 @@
 import { useShops } from "@/lib/use-shops";
+import { useShopsWithOpenProblems } from "@/lib/use-shops-with-open-problems";
 import { useOrderCounts } from "./use-order-counts";
 import { useOrderSync } from "./use-order-sync";
 import { useOrders } from "./use-orders";
 
-/** 订单页的全部数据：店铺、订单列表、计数、同步。 */
+/** 订单页的全部数据：店铺、订单列表、计数、同步、顶部横条里已列出的店。 */
 export function useOrderPage() {
   const shops = useShops();
   const orders = useOrders();
   const counts = useOrderCounts();
   const sync = useOrderSync();
+  const bannerShopIds = useShopsWithOpenProblems();
   const names = new Map((shops.data ?? []).map((s) => [s.id, s.name]));
 
   return {
     shopsState: shops.isLoading ? ("loading" as const) : shops.isError ? ("error" as const) : (shops.data ?? []).length === 0 ? ("empty" as const) : ("ready" as const),
     retryShops: () => void shops.refetch(),
     shopName: (id: number) => names.get(id) ?? `店铺 ${id}`,
+    bannerShopIds,
     orders,
     counts,
     sync,

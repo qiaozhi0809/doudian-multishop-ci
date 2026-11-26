@@ -58,10 +58,15 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
 }
 
-.close:hover {
-  color: var(--foreground);
+/* 纯图标按钮：平时无底色，悬停才出浅底（与 Dialog / Drawer 的 × 一致） */
+@media (hover: hover) and (pointer: fine) {
+  .close:hover {
+    background: var(--surface-muted);
+    color: var(--foreground);
+  }
 }
 
 @keyframes toast-in {
@@ -75,4 +80,11 @@
   .toast {
     animation: none;
   }
+}
+
+/* 没有 NoticeProvider 时的页面内退路：提示条竖排 */
+.inline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }

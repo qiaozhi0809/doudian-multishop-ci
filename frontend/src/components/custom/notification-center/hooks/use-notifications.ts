@@ -1,0 +1,107 @@
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ActionResult } from "@/lib/action-result";
+import { api, errorText } from "@/lib/api-client";
+import { queryKeys } from "@/lib/query-keys";
+import { useEventSubscription } from "@/lib/use-events";
+import { notificationSummaryQuery } from "@/lib/use-shops-with-open-problems";
+import {
+  alertKey,
+  lastPage,
+  shouldAlert,
+  type NotificationEvent,
+  type NotificationItem,
+  type NotificationPage,
+  type NotificationSummary,
+} from "../logic/notification-view";
+
+/** 没有数据时共用的空数组：引用稳定，依赖它的 effect 不会每次渲染都跑。 */
+const NO_ITEMS: NotificationItem[] = [];
+const NO_STRONG: NotificationSummary["strong_open"] = [];
+
+/** 本会话已弹过的提醒（`id:数量`）；存 sessionStorage，刷新页面不重复弹。 */
+export const ALERTED_KEY = "notify.alerted";
+const ALERTED_LIMIT = 200;
+
+function readAlerted(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(sessionStorage.getItem(ALERTED_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberAlerted(key: string): void {
+  try {
+    sessionStorage.setItem(ALERTED_KEY, JSON.stringify([...readAlerted(), key].slice(-ALERTED_LIMIT)));
+  } catch {
+    // 存储不可用时只是可能重复提醒，不影响功能
+  }
+}
+
+/** 通知列表与摘要：`notification` 事件与 SSE 重连（`open`）都让通知查询失效，断线期间的通知不会漏。 */
+export function useNotifications() {
+  const client = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [unreadOnly, setUnreadOnlyState] = useState(false);
+
+  const list = useQuery({
+    queryKey: queryKeys.notifications(unreadOnly, page),
+    queryFn: () => api.get<NotificationPage>("/api/notifications", { unread: unreadOnly || undefined, page }),
+  });
+  const summary = useQuery(notificationSummaryQuery());
+
+  // 只看未读时把最后一页都标成已读后，这一页就空了：退回最后一个有内容的页
+  // （渲染时比较并调整，不放 effect）
+  const data = list.data;
+  if (data && page > 1 && data.items.length === 0) {
+    const target = Math.min(page - 1, lastPage(data.total, data.page_size));
+    if (target !== page) setPage(target);
+  }
+
+  const refresh = () => client.invalidateQueries({ queryKey: queryKeys.notificationsRoot() });
+  useEventSubscription("notification", () => void refresh());
+  useEventSubscription("open", () => void refresh());
+
+  const write = async (path: string): Promise<ActionResult> => {
+    try {
+      await api.post(path);
+      await refresh();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errorText(e) };
+    }
+  };
+
+  const setUnreadOnly = (value: boolean) => {
+    setUnreadOnlyState(value);
+    setPage(1);
+  };
+
+  return {
+    items: list.data?.items ?? NO_ITEMS,
+    total: list.data?.total ?? 0,
+    pageSize: list.data?.page_size ?? 0,
+    unread: summary.data?.unread ?? 0,
+    strongOpen: summary.data?.strong_open ?? NO_STRONG,
+    page,
+    setPage,
+    unreadOnly,
+    setUnreadOnly,
+    markRead: (id: number) => write(`/api/notifications/${id}/read`),
+    markAllRead: () => write("/api/notifications/read-all"),
+    loading: list.isPending || summary.isPending,
+    error: list.isError,
+    retry: () => void list.refetch(),
+  };
+}
+
+/** 只对 `alert === true` 且本会话未提醒过的通知回调一次（合并后数量变多再回调）。 */
+export function useNotificationAlerts(onAlert: (item: NotificationItem) => void): void {
+  useEventSubscription<NotificationEvent>("notification", (event) => {
+    if (!shouldAlert(event, readAlerted()) || event.item === null) return;
+    rememberAlerted(alertKey(event.item));
+    onAlert(event.item);
+  });
+}

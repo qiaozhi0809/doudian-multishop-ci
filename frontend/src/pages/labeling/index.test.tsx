@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FakeEventSource } from "@/test/fake-event-source";
 import { jsonResponse, mockFetch } from "@/test/mock-fetch";
@@ -92,6 +92,33 @@ describe("打单发货", () => {
     await user.click(screen.getByRole("button", { name: "打单" }));
     expect(await screen.findByText(/演练模式：本次只记录请求/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /按住确认打单（演练）/ })).toBeEnabled();
+  });
+
+  it("序号在勾选列之后、翻页连续；点支付时间表头带排序请求，再点改降序", async () => {
+    const fetchMock = mockFetch({
+      ...printRoutes(),
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/labels/pool": page([row(1), row(2)], 120, 2),
+    });
+    renderPage("/labeling?page=2");
+    const first = await screen.findByRole("row", { name: /69000001/ });
+    expect(within(first).getAllByRole("cell")[1]).toHaveTextContent("51");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "支付时间" }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain(
+        "/api/labels/pool?stage=pending&page=1&page_size=50&sort=pay_time&order=asc",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("columnheader", { name: "支付时间" })).toHaveAttribute("aria-sort", "ascending"),
+    );
+    await user.click(screen.getByRole("button", { name: "支付时间" }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain(
+        "/api/labels/pool?stage=pending&page=1&page_size=50&sort=pay_time&order=desc",
+      ),
+    );
   });
 
   it("阶段切换写入 URL 并请求对应阶段", async () => {

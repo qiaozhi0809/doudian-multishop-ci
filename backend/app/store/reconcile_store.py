@@ -13,8 +13,9 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.domain.models import OrderFactDTO
-from app.domain.reconcile_rules import Finding
+from app.domain.reconcile_rules import FINDING_KINDS, Finding
 from app.store.reconcile_schema import order_fact, reconcile_findings, reconcile_run
+from app.store.sorting import SortOrder, order_by, rank_of, shop_name_of
 
 _CHUNK_ROWS = 200
 _CHUNK_IDS = 900  # SQLite 参数上限（旧版本 999）以内；一窗几千单时分批读写
@@ -104,10 +105,21 @@ def insert_findings(
         conn.execute(sa.insert(reconcile_findings), chunk)
 
 
+FINDING_SORTS: dict[str, Any] = {
+    "shop_name": shop_name_of(reconcile_findings.c.shop_id),
+    # 按界面顺序：异常类型按定义顺序，处理状态 未处理 → 已处理
+    "kind": rank_of(reconcile_findings.c.kind, FINDING_KINDS),
+    "created_at": reconcile_findings.c.created_at,
+    "status": rank_of(reconcile_findings.c.status, ("open", "handled")),
+}
+
+
 def list_findings(
     conn: sa.Connection, shop_ids: Sequence[int] | None, run_id: str | None,
     kind: str | None, status: str | None, page: int, page_size: int,
+    sort: str | None = None, order: SortOrder = "asc",
 ) -> tuple[list[dict[str, Any]], int]:
+    """默认按发现顺序倒序（最新的在前）。"""
     if shop_ids is not None and len(shop_ids) == 0:
         return [], 0
     cond = []
@@ -124,7 +136,8 @@ def list_findings(
     ).scalar_one()
     rows = conn.execute(
         sa.select(reconcile_findings).where(*cond)
-        .order_by(reconcile_findings.c.id.desc())
+        .order_by(*order_by(FINDING_SORTS, sort, order, (reconcile_findings.c.id.desc(),),
+                            reconcile_findings.c.id))
         .limit(page_size).offset((page - 1) * page_size)
     ).mappings()
     return [dict(r) for r in rows], int(total)

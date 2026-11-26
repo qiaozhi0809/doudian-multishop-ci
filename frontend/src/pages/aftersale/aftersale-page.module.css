@@ -29,11 +29,6 @@
   gap: var(--space-3);
 }
 
-.countGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
 
 .countMeta {
   display: flex;
@@ -50,25 +45,6 @@
   font-size: var(--text-sm);
 }
 
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
-
-.tableWrap table {
-  min-width: 68rem;
-}
-
-.tableWrap :is(td, th):first-child {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: var(--surface);
-}
 
 .tabular {
   font-variant-numeric: tabular-nums;

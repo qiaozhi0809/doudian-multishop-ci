@@ -1,0 +1,45 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* 数字列右对齐：箭头放在文字左边，文字与下面的数字对齐（同 Arc） */
+.button[data-numeric] {
+  flex-direction: row-reverse;
+}
+
+.button[data-active] {
+  color: var(--foreground);
+}
+
+.arrow {
+  flex: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+}
+
+.button[data-active] .arrow {
+  opacity: 1;
+}
+
+.arrow[data-desc] {
+  transform: rotate(180deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button:not([data-active]):hover .arrow {
+    opacity: 0.6;
+  }
+}
+
+.button:focus-visible:not([data-active]) .arrow {
+  opacity: 0.6;
+}

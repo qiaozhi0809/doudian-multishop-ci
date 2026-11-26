@@ -1,11 +1,12 @@
 import { Alert } from "@/components/arc/alert/alert";
+import { ListPager } from "@/components/custom/list-pager/list-pager";
 import { Button } from "@/components/arc/button/button";
-import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
 import { SyncMessageBar } from "@/components/custom/sync-control/sync-control";
+import { seqOffset } from "@/lib/list-sort";
 import type { StockPageState } from "../hooks/use-stock-page";
-import { PAGE_SIZE, groupWarehouses, pageCount } from "../logic/stock-page";
+import { PAGE_SIZE, groupWarehouses } from "../logic/stock-page";
 import styles from "../stock-page.module.css";
 import { StockSummaryCards, WarehouseList } from "./stock-summary";
 import { StockTable } from "./stock-table";
@@ -34,8 +35,6 @@ export function StockPageView({ page }: { page: StockPageState }) {
   return (
     <div className={styles.page}>
       <StockToolbar
-        view={page.view}
-        onViewChange={page.setView}
         syncPending={page.sync.pending}
         onSync={() => void page.sync.sync()}
       />
@@ -45,6 +44,8 @@ export function StockPageView({ page }: { page: StockPageState }) {
         error={page.summary.isError}
         data={page.summary.data}
         onRetry={() => void page.summary.refetch()}
+        quick={page.quick.quick}
+        onQuickChange={page.quick.toggle}
       />
       <WarehouseList
         shops={page.warehouses.data ? groupWarehouses(page.warehouses.data) : []}
@@ -64,18 +65,13 @@ export function StockPageView({ page }: { page: StockPageState }) {
       )}
       {data && (
         <>
-          <StockTable rows={data.items} />
-          <div className={styles.pager}>
-            <span>
-              共 {data.total} 条库存记录，每页 {PAGE_SIZE} 条
-            </span>
-            <Pagination
-              page={page.page}
-              pageCount={pageCount(data.total)}
-              onPageChange={page.setPage}
-              label="库存分页"
-            />
-          </div>
+          <StockTable
+            rows={data.items}
+            sort={page.sort}
+            onSortChange={page.setSort}
+            seqOffset={seqOffset(data.page, PAGE_SIZE)}
+          />
+          <ListPager total={data.total} page={page.page} pageSize={PAGE_SIZE} onPageChange={page.setPage} label="库存分页" noun="条库存记录" pageUnit="条" />
         </>
       )}
     </div>

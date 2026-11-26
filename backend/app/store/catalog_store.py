@@ -7,7 +7,9 @@ from typing import Any
 import sqlalchemy as sa
 
 from app.domain.aggregate_models import ProductDTO, StockDTO
+from app.domain.product_status import PRODUCT_STATES, tab_aliases
 from app.store.aggregate_schema import product_snapshot, stock_snapshot
+from app.store.sorting import SortOrder, order_by, shop_name_of
 
 
 def upsert_products(
@@ -47,15 +49,40 @@ def prune_products(conn: sa.Connection, shop_id: int, now: str) -> int:
     return result.rowcount or 0
 
 
+_TAB = sa.func.lower(product_snapshot.c.tab)
+# 状态列按界面顺序（在售 → 草稿 → 审核中 → 售罄 → 未通过 → 禁售 / 下架）排，同一口径的别名同名次
+_TAB_RANK = sa.case(
+    (product_snapshot.c.tab.is_(None), None),
+    *[(_TAB.in_(aliases), i) for i, (_, _, aliases) in enumerate(PRODUCT_STATES)],
+    else_=len(PRODUCT_STATES),
+)
+
+PRODUCT_SORTS: dict[str, Any] = {
+    "shop_name": shop_name_of(product_snapshot.c.shop_id),
+    "tab": _TAB_RANK,
+    "price": product_snapshot.c.price_lower_cents,
+    "stock_num": product_snapshot.c.stock_num,
+    "sell_num": product_snapshot.c.sell_num,
+    # 30 天销量只在平台原始报文里（展示选摘），用 SQLite JSON 函数取出排序
+    # 平台可能给字符串 "12"：按整数排，和页面显示（opt_int）一致
+    "sell_num_30d": sa.cast(
+        sa.func.json_extract(product_snapshot.c.raw_json, "$.sell_num_30d"), sa.Integer),
+}
+
+
 def list_products(
     conn: sa.Connection, shop_ids: Sequence[int], *, tab: str | None = None,
     keyword: str | None = None, page: int = 1, page_size: int = 50,
+    sort: str | None = None, order: SortOrder = "asc", quick: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
+    """默认按销量倒序（快照里没有商品创建 / 更新时间）。quick 为计数卡快捷筛选（状态口径）。"""
     if not shop_ids:
         return [], 0
     conds: list[Any] = [product_snapshot.c.shop_id.in_(list(shop_ids))]
     if tab:
         conds.append(product_snapshot.c.tab == tab)
+    if quick:
+        conds.append(_TAB.in_(tab_aliases(quick)))
     if keyword:
         conds.append(product_snapshot.c.name.like(f"%{keyword}%"))
     total = conn.execute(
@@ -63,7 +90,11 @@ def list_products(
     ).scalar_one()
     rows = conn.execute(
         sa.select(product_snapshot).where(*conds)
-        .order_by(product_snapshot.c.sell_num.desc(), product_snapshot.c.id.desc())
+        .order_by(*order_by(
+            PRODUCT_SORTS, sort, order,
+            (product_snapshot.c.sell_num.desc(), product_snapshot.c.id.desc()),
+            product_snapshot.c.id,
+        ))
         .limit(page_size).offset((page - 1) * page_size)
     ).mappings().all()
     return [dict(r) for r in rows], int(total)
@@ -119,16 +150,37 @@ def prune_stock(conn: sa.Connection, shop_id: int, now: str) -> int:
     return result.rowcount or 0
 
 
+STOCK_SORTS: dict[str, Any] = {
+    "shop_name": shop_name_of(stock_snapshot.c.shop_id),
+    "total_stock_num": stock_snapshot.c.total_stock_num,
+    "spot_stock_num": stock_snapshot.c.spot_stock_num,
+    "future_stock_num": stock_snapshot.c.future_stock_num,
+    "total_occupied_stock_num": stock_snapshot.c.total_occupied_stock_num,
+    "total_unoccupied_stock_num": stock_snapshot.c.total_unoccupied_stock_num,
+    # 与界面徽标一致：正常 → 预警 → 售罄（预警优先于售罄，见前端 stockBadge）
+    "status": sa.case(
+        (stock_snapshot.c.is_alarming == 1, 1),
+        (stock_snapshot.c.total_stock_num == 0, 2),
+        else_=0,
+    ),
+    "synced_at": stock_snapshot.c.synced_at,
+}
+
+
 def list_stock(
     conn: sa.Connection, shop_ids: Sequence[int], *, alarm_only: bool = False,
-    page: int = 1, page_size: int = 50,
+    page: int = 1, page_size: int = 50, sort: str | None = None, order: SortOrder = "asc",
+    quick: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
-    """库存行左连商品快照取名称（stock_snapshot 无名称列）。"""
+    """库存行左连商品快照取名称（stock_snapshot 无名称列）。
+    默认按总库存升序（缺货的在前，未知库存排最后）。"""
     if not shop_ids:
         return [], 0
     conds: list[Any] = [stock_snapshot.c.shop_id.in_(list(shop_ids))]
-    if alarm_only:
+    if alarm_only or quick == "alarm":
         conds.append(stock_snapshot.c.is_alarming == 1)
+    if quick == "sold_out":  # 与汇总的「售罄」同口径：总库存为 0
+        conds.append(stock_snapshot.c.total_stock_num == 0)
     base = stock_snapshot.outerjoin(
         product_snapshot,
         sa.and_(
@@ -148,7 +200,10 @@ def list_stock(
             stock_snapshot.c.synced_at, product_snapshot.c.name,
         )
         .select_from(base).where(*conds)
-        .order_by(stock_snapshot.c.is_alarming.desc(), stock_snapshot.c.id.desc())
+        .order_by(*order_by(
+            STOCK_SORTS, sort or "total_stock_num", order if sort else "asc", (),
+            stock_snapshot.c.id,
+        ))
         .limit(page_size).offset((page - 1) * page_size)
     ).mappings().all()
     return [dict(r) for r in rows], int(total)

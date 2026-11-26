@@ -8,11 +8,16 @@ import sqlalchemy as sa
 
 from app.domain.models import OrderDTO
 from app.domain.order_status import (
+    LOCAL_STATUS_DISPLAY_ORDER,
     PLATFORM_FINAL_STATUSES,
+    PLATFORM_STATUS_DISPLAY_ORDER,
     RECHECK_EXCLUDED_STATUSES,
     LocalOrderStatus,
+    PlatformOrderStatus,
 )
-from app.store.schema import order_items, orders
+from app.store.aggregate_schema import aftersale
+from app.store.schema import order_items, orders, shop
+from app.store.sorting import SortOrder, order_by, rank_of, shop_name_of
 
 
 def _platform_values(o: OrderDTO, now: str) -> dict[str, Any]:
@@ -25,6 +30,16 @@ def _platform_values(o: OrderDTO, now: str) -> dict[str, Any]:
         "raw_json": json.dumps(o.raw, ensure_ascii=False),
         "synced_at": now, "last_sync_at": now,
     }
+
+
+def existing_order_nos(conn: sa.Connection, shop_id: int, order_nos: Sequence[str]) -> set[str]:
+    """本店库里已有的订单号（新订单识别用）。"""
+    if not order_nos:
+        return set()
+    rows = conn.execute(sa.select(orders.c.order_no).where(
+        orders.c.shop_id == shop_id, orders.c.order_no.in_(list(order_nos))
+    ))
+    return {r[0] for r in rows}
 
 
 def upsert_orders(conn: sa.Connection, shop_id: int, items: Sequence[OrderDTO], now: str) -> int:
@@ -65,11 +80,48 @@ def set_local_status(
     )
 
 
+# 订单列表 / 打单台可排序的列（接口层 Literal 与此一致，见 tests/api/list_sort_test.py）
+ORDER_SORTS: dict[str, Any] = {
+    "shop_name": shop_name_of(orders.c.shop_id),
+    # 状态列按界面显示顺序排（不是按内部代码的字典序）
+    "platform_status": rank_of(orders.c.platform_status, PLATFORM_STATUS_DISPLAY_ORDER),
+    "status": rank_of(orders.c.status, LOCAL_STATUS_DISPLAY_ORDER),
+    "amount_cents": orders.c.amount_cents,
+    "pay_time": orders.c.pay_time,
+    "exp_ship_time": orders.c.exp_ship_time,
+}
+POOL_SORTS: dict[str, Any] = {
+    k: ORDER_SORTS[k] for k in ("shop_name", "status", "amount_cents", "pay_time")
+}
+
+
+# 计数卡快捷筛选（与 /api/orders/counts 的四项同名）：按平台状态与承诺发货时间在 SQL 里筛
+ORDER_QUICK_FILTERS = ("stock_up", "exp_ship", "ship_delay", "in_aftersale")
+
+
+def _quick_cond(quick: str, now: str, in_24h: str) -> Any:
+    stock_up = orders.c.platform_status == int(PlatformOrderStatus.STOCK_UP)
+    if quick == "stock_up":
+        return stock_up
+    if quick == "exp_ship":
+        return sa.and_(stock_up, orders.c.exp_ship_time >= now, orders.c.exp_ship_time < in_24h)
+    if quick == "ship_delay":
+        return sa.and_(stock_up, orders.c.exp_ship_time < now)
+    if quick == "in_aftersale":
+        # 本地售后快照里有仍在流转（有处理截止时间）的售后单
+        return sa.exists().where(
+            aftersale.c.shop_id == orders.c.shop_id, aftersale.c.order_no == orders.c.order_no,
+            aftersale.c.status_deadline.is_not(None))
+    raise ValueError(f"未知的订单快捷筛选: {quick}")
+
+
 def list_orders(
     conn: sa.Connection, shop_ids: Sequence[int] | None, status: LocalOrderStatus | None,
-    page: int, page_size: int,
+    page: int, page_size: int, sort: str | None = None, order: SortOrder = "asc",
+    *, quick: str | None = None, now: str = "", in_24h: str = "",
 ) -> tuple[Sequence[Mapping[str, Any]], int]:
-    """shop_ids 为 None 表示全部店铺，空序列表示没有店铺；page 从 1 起；按支付时间倒序。"""
+    """shop_ids 为 None 表示全部店铺，空序列表示没有店铺；page 从 1 起；默认按支付时间倒序。
+    quick 是计数卡快捷筛选，时间类筛选需要 now / in_24h（ISO 字符串，与库里格式一致）。"""
     if shop_ids is not None and len(shop_ids) == 0:
         return [], 0
     cond = []
@@ -77,10 +129,13 @@ def list_orders(
         cond.append(orders.c.shop_id.in_(shop_ids))
     if status is not None:
         cond.append(orders.c.status == str(status.value))
+    if quick is not None:
+        cond.append(_quick_cond(quick, now, in_24h))
     total = conn.execute(sa.select(sa.func.count()).select_from(orders).where(*cond)).scalar_one()
     rows = conn.execute(
         sa.select(orders).where(*cond)
-        .order_by(orders.c.pay_time.desc(), orders.c.id.desc())
+        .order_by(*order_by(ORDER_SORTS, sort, order,
+                            (orders.c.pay_time.desc(), orders.c.id.desc()), orders.c.id))
         .limit(page_size).offset((page - 1) * page_size)
     ).mappings().all()
     return [dict(r) for r in rows], int(total)
@@ -137,28 +192,48 @@ def get_by_ids(conn: sa.Connection, order_ids: Sequence[int]) -> list[dict[str, 
     return [dict(r) for r in rows]
 
 
+def _deadline_cond(statuses: Sequence[str], until: str, *, before: bool = False) -> list[Any]:
+    """未发货、承诺发货时间不晚于 until（before=True 时早于 until）、店铺未停用。"""
+    return [
+        orders.c.status.in_(list(statuses)),
+        orders.c.exp_ship_time.is_not(None),
+        orders.c.exp_ship_time != "",
+        orders.c.exp_ship_time < until if before else orders.c.exp_ship_time <= until,
+        orders.c.shop_id.in_(sa.select(shop.c.id).where(shop.c.status != "disabled")),
+    ]
+
+
 def ship_deadline_due(
     conn: sa.Connection, statuses: Sequence[str], warn_until: str, limit: int = 200,
 ) -> list[dict[str, Any]]:
-    """未发货且 exp_ship_time 不晚于 warn_until 的订单，按最紧急排序（ENG-07）。"""
+    """未发货且 exp_ship_time 不晚于 warn_until 的订单，按最紧急排序（ENG-07）；停用店不算。"""
     if len(statuses) == 0:
         return []
     rows = conn.execute(
-        sa.select(orders).where(
-            orders.c.status.in_(list(statuses)),
-            orders.c.exp_ship_time.is_not(None),
-            orders.c.exp_ship_time != "",
-            orders.c.exp_ship_time <= warn_until,
-        ).order_by(orders.c.exp_ship_time, orders.c.id).limit(limit)
+        sa.select(orders).where(*_deadline_cond(statuses, warn_until))
+        .order_by(orders.c.exp_ship_time, orders.c.id).limit(limit)
     ).mappings()
     return [dict(r) for r in rows]
 
 
+def ship_deadline_counts(
+    conn: sa.Connection, statuses: Sequence[str], until: str, *, before: bool = False,
+) -> dict[int, int]:
+    """同 ship_deadline_due 的条件，按店计数（不设上限）；before=True 数已超时（早于 until）。"""
+    if len(statuses) == 0:
+        return {}
+    rows = conn.execute(
+        sa.select(orders.c.shop_id, sa.func.count())
+        .where(*_deadline_cond(statuses, until, before=before)).group_by(orders.c.shop_id)
+    )
+    return {int(shop_id): int(n) for shop_id, n in rows}
+
+
 def pool_orders(
     conn: sa.Connection, shop_ids: Sequence[int] | None, statuses: Sequence[str],
-    page: int, page_size: int,
+    page: int, page_size: int, sort: str | None = None, order: SortOrder = "asc",
 ) -> tuple[list[dict[str, Any]], int]:
-    """打单台订单池：按本地状态集合过滤，按支付时间从早到晚（先处理老单）。"""
+    """打单台订单池：按本地状态集合过滤，默认按支付时间从早到晚（先处理老单）。"""
     if shop_ids is not None and len(shop_ids) == 0:
         return [], 0
     cond = [orders.c.status.in_(list(statuses))]
@@ -169,7 +244,8 @@ def pool_orders(
     ).scalar_one()
     rows = conn.execute(
         sa.select(orders).where(*cond)
-        .order_by(orders.c.pay_time.asc(), orders.c.id.asc())
+        .order_by(*order_by(POOL_SORTS, sort, order,
+                            (orders.c.pay_time.asc(), orders.c.id.asc()), orders.c.id))
         .limit(page_size).offset((page - 1) * page_size)
     ).mappings()
     return [dict(r) for r in rows], int(total)

@@ -1,0 +1,257 @@
+/* 通知中心：右上角铃铛、弹出面板、全站顶部强提醒横条 */
+
+/* ---------- 铃铛 ---------- */
+.bellWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* 只给读屏：未读数与是否有店铺需要处理 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: var(--text-xs);
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.count[data-urgent="true"] {
+  background: var(--danger);
+  color: var(--background);
+}
+
+/* ---------- 面板 ---------- */
+.panel {
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(560px, var(--radix-popover-content-available-height));
+  padding: 0;
+  overflow-y: auto;
+}
+
+.panelBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.heading {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.toggles {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .item:not([data-static]):hover {
+    background: var(--surface-muted);
+  }
+}
+
+/* 待处理 / 横条一行里的单个问题：各自可点 */
+.item[data-static],
+.bannerRow[data-static] {
+  cursor: default;
+}
+
+.problemLink {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .problemLink:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+.item[data-unread] {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.dot[data-tone="danger"] { background: var(--danger); }
+.dot[data-tone="warning"] { background: var(--warning); }
+
+.itemTitle {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.time {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+}
+
+.progressCounts {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-4) var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ---------- 顶部强提醒横条 ---------- */
+.banner {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+  background: color-mix(in oklab, var(--danger) 11%, var(--surface));
+}
+
+.bannerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.bannerRow + .bannerRow {
+  border-top: 1px solid color-mix(in oklab, var(--danger) 16%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bannerRow:not([data-static]):hover {
+    background: color-mix(in oklab, var(--danger) 8%, transparent);
+  }
+}
+
+.bannerIcon {
+  flex: none;
+  color: var(--danger);
+}

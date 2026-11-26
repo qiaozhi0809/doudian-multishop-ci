@@ -1,11 +1,12 @@
 import { Alert } from "@/components/arc/alert/alert";
+import { ListPager } from "@/components/custom/list-pager/list-pager";
 import { Button } from "@/components/arc/button/button";
-import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
 import { SyncMessageBar } from "@/components/custom/sync-control/sync-control";
 import type { FundPageState } from "../hooks/use-fund-page";
-import { UNSETTLED_PAGE_SIZE, unsettledPageCount } from "../logic/fund-page";
+import { seqOffset } from "@/lib/list-sort";
+import { UNSETTLED_PAGE_SIZE } from "../logic/fund-page";
 import styles from "../fund-page.module.css";
 import { FundSummaryCards } from "./fund-summary";
 import { BillsTable, MarginTable, UnsettledTable } from "./fund-tables";
@@ -72,18 +73,13 @@ export function FundPageView({ page }: { page: FundPageState }) {
           )}
           {page.unsettled.data && (
             <>
-              <UnsettledTable rows={page.unsettled.data.items} />
-              <div className={styles.pager}>
-                <span>
-                  共 {page.unsettled.data.total} 条，每页 {UNSETTLED_PAGE_SIZE} 条
-                </span>
-                <Pagination
-                  page={page.page}
-                  pageCount={unsettledPageCount(page.unsettled.data.total)}
-                  onPageChange={page.setPage}
-                  label="待结算分页"
-                />
-              </div>
+              <UnsettledTable
+                rows={page.unsettled.data.items}
+                sort={page.sort}
+                onSortChange={page.setSort}
+                seqOffset={seqOffset(page.unsettled.data.page, UNSETTLED_PAGE_SIZE)}
+              />
+              <ListPager total={page.unsettled.data.total} page={page.page} pageSize={UNSETTLED_PAGE_SIZE} onPageChange={page.setPage} label="待结算分页" noun="条" />
             </>
           )}
         </>

@@ -6,7 +6,7 @@ import { motionTokens } from "../lib/motion-tokens";
 import { AnimatedCounter } from "../animated-counter/animated-counter";
 import { KpiDot, type KpiTone } from "@/lib/kpi-tone";
 import styles from "./metric-card.module.css";
-export interface MetricCardProps { label: string; value: number; suffix?: string; context?: string; change?: string; /** 名称前的含义色小圆点（本项目加的）。 */ tone?: KpiTone }
+export interface MetricCardProps { label: string; value: number; suffix?: string; context?: string; change?: string; /** 名称前的含义色小圆点（本项目加的）。 */ tone?: KpiTone; /** 快捷筛选（本项目加的）：给了 onSelect 卡片就是一个切换按钮，selected 为当前筛选。 */ selected?: boolean; onSelect?: () => void }
 
 /** Copy that holds a number enters from the side it moved toward: a larger value rises from below, a smaller one drops from above. */
 const rise: Variants = { hidden: (direction: number) => ({ opacity: 0, y: `${.3 * direction}em`, filter: `blur(${motionTokens.blur.soft}px)` }), shown: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: motionTokens.duration.standard, ease: [...motionTokens.ease.enter] } }, gone: (direction: number) => ({ opacity: 0, y: `${-.3 * direction}em`, filter: `blur(${motionTokens.blur.subtle}px)`, transition: { duration: motionTokens.duration.fast, ease: [...motionTokens.ease.standard] } }) };
@@ -41,11 +41,14 @@ function Swap({ text, morph = false, block = false }: { text: string; morph?: bo
   </motion.span>;
 }
 
-export function MetricCard({ label, value, suffix, context, change, tone }: MetricCardProps) {
+export function MetricCard({ label, value, suffix, context, change, tone, selected = false, onSelect }: MetricCardProps) {
   const reduceMotion = !!useReducedMotion();
-  return <article className={styles.card}>
+  const Root = onSelect ? "button" : "article";
+  // 按钮的名称写明「名称 数字」：数字滚动用的数字列不进无障碍名称
+  const interactive = onSelect ? { type: "button" as const, "aria-pressed": selected, "aria-label": `${label} ${value}${suffix ?? ""}`, onClick: onSelect, "data-selectable": "" } : {};
+  return <Root className={styles.card} {...interactive}>
     <div className={styles.top}><span className={styles.name}>{tone ? <KpiDot tone={tone} value={value} /> : null}<Swap text={label} block /></span><AnimatePresence initial={false}>{change && <motion.small key="change" data-trend={/^[+]/.test(change) ? "up" : /^[-−]/.test(change) ? "down" : undefined} initial={{ opacity: 0, scale: reduceMotion ? 1 : .96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: reduceMotion ? 1 : .96, transition: { duration: motionTokens.duration.fast, ease: [...motionTokens.ease.standard] } }} transition={reduceMotion ? { duration: 0 } : motionTokens.spring.snappy}><Swap text={change} morph /></motion.small>}</AnimatePresence></div>
     <AnimatedCounter value={value} suffix={suffix} />
     {context ? <p><Swap text={context} block /></p> : null}
-  </article>;
+  </Root>;
 }

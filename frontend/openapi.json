@@ -1453,6 +1453,194 @@
         "title": "MarginRow",
         "type": "object"
       },
+      "NotificationItem": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "new_order",
+              "new_aftersale",
+              "login_expired",
+              "egress_unreachable",
+              "egress_changed",
+              "egress_duplicate",
+              "risk_paused",
+              "ship_deadline",
+              "batch_done",
+              "batch_failed",
+              "sync_failed",
+              "sync_done",
+              "reconcile_done",
+              "recovered"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "strong",
+              "medium",
+              "weak"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "shop_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop Id"
+          },
+          "state_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Key"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "level",
+          "shop_id",
+          "title",
+          "body",
+          "link",
+          "count",
+          "state_key",
+          "resolved_at",
+          "read_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "NotificationItem",
+        "type": "object"
+      },
+      "NotificationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "NotificationPage",
+        "type": "object"
+      },
+      "NotificationSummary": {
+        "properties": {
+          "strong_open": {
+            "items": {
+              "$ref": "#/components/schemas/StrongOpenShop"
+            },
+            "title": "Strong Open",
+            "type": "array"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread",
+          "strong_open"
+        ],
+        "title": "NotificationSummary",
+        "type": "object"
+      },
       "OrderCounts": {
         "properties": {
           "exp_ship": {
@@ -3632,6 +3820,17 @@
             "title": "Name",
             "type": "string"
           },
+          "platform_shop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Shop Id"
+          },
           "shop_no": {
             "anyOf": [
               {
@@ -3641,6 +3840,7 @@
                 "type": "null"
               }
             ],
+            "description": "旧字段，界面已不用；店铺ID 用 platform_shop_id",
             "title": "Shop No"
           }
         },
@@ -4643,6 +4843,110 @@
         "title": "StockSyncResponse",
         "type": "object"
       },
+      "StrongOpenShop": {
+        "description": "一店一行：该店所有未解决的强状态；problems 每个问题带自己的链接。",
+        "properties": {
+          "kinds": {
+            "items": {
+              "enum": [
+                "new_order",
+                "new_aftersale",
+                "login_expired",
+                "egress_unreachable",
+                "egress_changed",
+                "egress_duplicate",
+                "risk_paused",
+                "ship_deadline",
+                "batch_done",
+                "batch_failed",
+                "sync_failed",
+                "sync_done",
+                "reconcile_done",
+                "recovered"
+              ],
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/StrongProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "kinds",
+          "link",
+          "problems"
+        ],
+        "title": "StrongOpenShop",
+        "type": "object"
+      },
+      "StrongProblem": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "new_order",
+              "new_aftersale",
+              "login_expired",
+              "egress_unreachable",
+              "egress_changed",
+              "egress_duplicate",
+              "risk_paused",
+              "ship_deadline",
+              "batch_done",
+              "batch_failed",
+              "sync_failed",
+              "sync_done",
+              "reconcile_done",
+              "recovered"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          }
+        },
+        "required": [
+          "kind",
+          "link"
+        ],
+        "title": "StrongProblem",
+        "type": "object"
+      },
       "SyncStarted": {
         "properties": {
           "already_running": {
@@ -5277,6 +5581,7 @@
   "paths": {
     "/api/aftersale": {
       "get": {
+        "description": "默认按申请时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。",
         "operationId": "list_aftersale_api_aftersale_get",
         "parameters": [
           {
@@ -5358,6 +5663,65 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "type",
+                    "status",
+                    "refund_amount_cents",
+                    "apply_time",
+                    "status_deadline"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "audit",
+                    "due_soon"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -5540,7 +5904,7 @@
     },
     "/api/aftersale/todo": {
       "get": {
-        "description": "跨店待办队列：仍在流转（有处理截止时间）的售后单，按截止时间升序。",
+        "description": "跨店待办队列：仍在流转（有处理截止时间）的售后单，默认按截止时间升序。",
         "operationId": "list_todo_api_aftersale_todo_get",
         "parameters": [
           {
@@ -5580,6 +5944,65 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "type",
+                    "status",
+                    "refund_amount_cents",
+                    "apply_time",
+                    "status_deadline"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "audit",
+                    "due_soon"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -5920,6 +6343,7 @@
     },
     "/api/catalog/products": {
       "get": {
+        "description": "默认按销量倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。",
         "operationId": "list_products_api_catalog_products_get",
         "parameters": [
           {
@@ -5991,6 +6415,68 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "tab",
+                    "price",
+                    "stock_num",
+                    "sell_num",
+                    "sell_num_30d"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "onsale",
+                    "draft",
+                    "audit",
+                    "sell_out_new",
+                    "unpass",
+                    "forbidden"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -6171,6 +6657,7 @@
     },
     "/api/catalog/stock": {
       "get": {
+        "description": "默认按总库存升序（缺货的在前）；sort 指定白名单字段时按该字段排序后再分页；\nquick 为计数卡快捷筛选（alarm 预警 / sold_out 售罄）。",
         "operationId": "list_stock_api_catalog_stock_get",
         "parameters": [
           {
@@ -6220,6 +6707,66 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "total_stock_num",
+                    "spot_stock_num",
+                    "future_stock_num",
+                    "total_occupied_stock_num",
+                    "total_unoccupied_stock_num",
+                    "status",
+                    "synced_at"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "alarm",
+                    "sold_out"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -6649,6 +7196,7 @@
     },
     "/api/fund/unsettled": {
       "get": {
+        "description": "默认最近同步进来的在前；sort 指定白名单字段时按该字段排序后再分页。",
         "operationId": "list_unsettled_api_fund_unsettled_get",
         "parameters": [
           {
@@ -6688,6 +7236,44 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "income_amount_cents",
+                    "platform_service_fee_cents",
+                    "unsettled_amount_cents",
+                    "ecom_order_status",
+                    "synced_at"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
             }
           }
         ],
@@ -6872,6 +7458,7 @@
     },
     "/api/labels/pool": {
       "get": {
+        "description": "默认按支付时间从早到晚；sort 指定白名单字段时按该字段排序后再分页。",
         "operationId": "pool_api_labels_pool_get",
         "parameters": [
           {
@@ -6925,6 +7512,42 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "status",
+                    "amount_cents",
+                    "pay_time"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
             }
           }
         ],
@@ -7079,8 +7702,153 @@
         ]
       }
     },
+    "/api/notifications": {
+      "get": {
+        "operationId": "list_notifications_api_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unread",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unread",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Notifications",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/read-all": {
+      "post": {
+        "operationId": "read_all_api_notifications_read_all_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Read All",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/summary": {
+      "get": {
+        "operationId": "summary_api_notifications_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Summary",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/{notification_id}/read": {
+      "post": {
+        "operationId": "read_one_api_notifications__notification_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Read One",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/orders": {
       "get": {
+        "description": "默认按支付时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。",
         "operationId": "list_orders_api_orders_get",
         "parameters": [
           {
@@ -7146,6 +7914,66 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "platform_status",
+                    "status",
+                    "amount_cents",
+                    "pay_time",
+                    "exp_ship_time"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "stock_up",
+                    "exp_ship",
+                    "ship_delay",
+                    "in_aftersale"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -7680,6 +8508,7 @@
     },
     "/api/reconcile/findings": {
       "get": {
+        "description": "默认最新发现的在前；sort 指定白名单字段时按该字段排序后再分页。",
         "operationId": "findings_api_reconcile_findings_get",
         "parameters": [
           {
@@ -7767,6 +8596,42 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "kind",
+                    "created_at",
+                    "status"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
             }
           }
         ],

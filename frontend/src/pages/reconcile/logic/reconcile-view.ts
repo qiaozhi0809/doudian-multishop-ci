@@ -1,9 +1,12 @@
 import type { components } from "@/lib/api-types";
+import { EMPTY_TEXT } from "@/lib/empty-text";
 
 export type Finding = components["schemas"]["ReconcileFindingRow"];
 export type ReconcileRun = components["schemas"]["ReconcileRunRow"];
 
 export const PAGE_SIZE = 50;
+/** 可排序的列，与后端 /api/reconcile/findings 的 sort 白名单一致；默认最新发现的在前。 */
+export const FINDING_SORT_KEYS = ["shop_name", "kind", "created_at", "status"] as const;
 
 export const KIND_OPTIONS = [
   { value: "all", label: "全部异常" },
@@ -35,22 +38,18 @@ export function kindTone(kind: string): Tone {
 }
 
 export function trackingPair(row: Finding): string {
-  return `${row.local_tracking_no ?? "（空）"} → ${row.platform_tracking_no ?? "（空）"}`;
+  return `${row.local_tracking_no ?? EMPTY_TEXT} → ${row.platform_tracking_no ?? EMPTY_TEXT}`;
 }
 
-export function runSummary(run: ReconcileRun | null): string {
-  if (run === null) return "还没有检查记录：点「立即检查」建立基线";
+export function runSummary(run: ReconcileRun): string {
   if (run.status === "running") return "检查进行中，结果会自动刷新";
   const head = run.status === "failed" ? "检查失败" : "检查完成";
   const tail = run.error ? `；${run.error}` : "";
   return `${head}：扫描 ${run.scanned} 单，发现 ${run.finding_count} 条异常${tail}`;
 }
 
-export function runTone(run: ReconcileRun | null): Tone {
-  if (run === null || run.status === "running") return "info";
+export function runTone(run: ReconcileRun): Tone {
+  if (run.status === "running") return "info";
   if (run.status === "failed") return "danger";
   return "success";
 }
-
-export const pageCount = (total: number): number =>
-  Math.max(1, Math.ceil(total / PAGE_SIZE));

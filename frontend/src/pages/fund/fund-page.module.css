@@ -25,11 +25,6 @@
   gap: var(--space-3);
 }
 
-.countGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
 
 /* 金额卡：和 MetricCard 一样的一行胶囊 */
 .statCard {
@@ -38,8 +33,8 @@
   justify-content: space-between;
   gap: var(--space-3);
   min-width: 0;
-  height: 56px;
-  padding: 0 18px;
+  height: var(--metric-card-height);
+  padding: 0 var(--metric-card-pad);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   background: var(--surface);
@@ -59,7 +54,7 @@
 
 .statValue {
   color: var(--foreground);
-  font-size: 20px;
+  font-size: 18px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -75,30 +70,12 @@
   font-size: var(--text-xs);
 }
 
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
-
-.tableWrap table {
-  min-width: 56rem;
-}
-
-.tableWrap :is(td, th):first-child {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: var(--surface);
-}
 
 .productCell {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .bills {
@@ -107,21 +84,10 @@
   gap: var(--space-4);
 }
 
-.billShop {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
 .billHeader {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.billShopName {
-  font-weight: 500;
-  color: var(--foreground);
 }
 
 .tabular {

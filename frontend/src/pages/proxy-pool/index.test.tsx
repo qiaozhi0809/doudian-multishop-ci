@@ -53,24 +53,24 @@ describe("代理池页", () => {
     expect(await screen.findByRole("table")).toBeInTheDocument();
   });
 
-  it("检测结果含 ip_in_use_by 时提示该 IP 已被店铺使用", async () => {
+  it("检查结果含 ip_in_use_by 时提示该 IP 已被店铺使用", async () => {
     mockFetch({
       "GET /api/proxy-pool": jsonResponse([item()]),
       "POST /api/proxy-pool/1/check": jsonResponse({ elapsed_ms: 80, ip: "9.9.9.9", ip_in_use_by: { shop_id: 4, shop_name: "店B" }, reason: null }),
     });
     renderPage();
-    await userEvent.setup().click(await screen.findByRole("button", { name: "检测" }));
+    await userEvent.setup().click(await screen.findByRole("button", { name: "检查" }));
     expect(await screen.findByText(/该 IP 已被店铺「店B」使用/)).toBeInTheDocument();
   });
 
-  it("检测失败显示原因文案", async () => {
+  it("检查失败显示原因文案", async () => {
     mockFetch({
       "GET /api/proxy-pool": jsonResponse([item()]),
       "POST /api/proxy-pool/1/check": jsonResponse({ elapsed_ms: 10000, ip: null, ip_in_use_by: null, reason: "timeout" }),
     });
     renderPage();
-    await userEvent.setup().click(await screen.findByRole("button", { name: "检测" }));
-    expect(await screen.findByText(/检测超时（10 秒）/)).toBeInTheDocument();
+    await userEvent.setup().click(await screen.findByRole("button", { name: "检查" }));
+    expect(await screen.findByText(/检查超时（10 秒）/)).toBeInTheDocument();
   });
 
   it("导入：提交前显示行数统计，提交后显示摘要与失败行号", async () => {
@@ -99,7 +99,8 @@ describe("代理池页", () => {
     });
     renderPage();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "编辑" }));
+    await user.click(await screen.findByRole("button", { name: "更多操作" }));
+    await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
     const dialog = within(await screen.findByRole("dialog"));
     expect(dialog.getAllByPlaceholderText("留空表示不改")).toHaveLength(2);
     const port = dialog.getByLabelText("端口");
@@ -118,10 +119,34 @@ describe("代理池页", () => {
     });
     renderPage();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "删除" }));
+    // 行尾只露「检查」，编辑 / 删除在「⋯」里
+    await user.click(await screen.findByRole("button", { name: "更多操作" }));
+    await user.click(await screen.findByRole("menuitem", { name: "删除" }));
     const dialog = within(await screen.findByRole("dialog"));
     expect(dialog.getByText("删除代理 1.2.3.4:8080")).toBeInTheDocument();
     await user.click(dialog.getByRole("button", { name: "确认删除" }));
     expect(await dialog.findByText("代理正被店铺「店A」使用，请先更换该店出口")).toBeInTheDocument();
+  });
+
+  it("同一代理检查多次只留最新一条提示", async () => {
+    let n = 0;
+    mockFetch({
+      "GET /api/proxy-pool": jsonResponse([item()]),
+      "POST /api/proxy-pool/1/check": () =>
+        jsonResponse(
+          n++ === 0
+            ? { elapsed_ms: 10000, ip: null, ip_in_use_by: null, reason: "timeout" }
+            : { elapsed_ms: 80, ip: "9.9.9.9", ip_in_use_by: null, reason: null },
+        ),
+    });
+    renderPage();
+    const user = userEvent.setup();
+    expect(await screen.findByRole("row", { name: /1\.2\.3\.4/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "删除" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "检查" }));
+    expect(await screen.findByText(/检查超时/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "检查" }));
+    expect(await screen.findByText(/检查通过/)).toBeInTheDocument();
+    expect(screen.queryByText(/检查超时/)).toBeNull();
   });
 });

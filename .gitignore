@@ -45,3 +45,6 @@ backend/browser/
 
 # 前端构建缓存
 *.tsbuildinfo
+
+# 子代理开发流程的工作目录（审查报告、台账）
+.superpowers/

@@ -12,10 +12,11 @@ import styles from "./dialog.module.css";
 /** Mirrors the open state so the content can stay mounted while it animates out, and retarget mid-flight if it is reopened or closed early. */
 const OpenContext = createContext<boolean | null>(null);
 
-export function Dialog({ open: openProp, defaultOpen = false, onOpenChange, ...props }: ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) {
+/** busy（本项目加的）：请求进行中不能关闭（取消、Esc、点遮罩、× 都不生效），免得失败结果在对话框关掉后被静默丢掉。 */
+export function Dialog({ open: openProp, defaultOpen = false, onOpenChange, busy = false, ...props }: ComponentPropsWithoutRef<typeof DialogPrimitive.Root> & { busy?: boolean }) {
   const [uncontrolled, setUncontrolled] = useState(defaultOpen);
   const open = openProp ?? uncontrolled;
-  const setOpen = useCallback((next: boolean) => { if (openProp === undefined) setUncontrolled(next); onOpenChange?.(next); }, [openProp, onOpenChange]);
+  const setOpen = useCallback((next: boolean) => { if (!next && busy) return; if (openProp === undefined) setUncontrolled(next); onOpenChange?.(next); }, [openProp, onOpenChange, busy]);
   return <OpenContext.Provider value={open}><DialogPrimitive.Root {...props} open={open} onOpenChange={setOpen}/></OpenContext.Provider>;
 }
 

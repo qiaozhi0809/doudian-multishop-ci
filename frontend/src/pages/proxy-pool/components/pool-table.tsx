@@ -1,9 +1,10 @@
 import { Badge } from "@/components/arc/badge/badge";
 import { Button } from "@/components/arc/button/button";
-import { SortableDataTable, type DataColumn } from "@/components/arc/sortable-data-table/sortable-data-table";
+import { DataTable, type TableColumn } from "@/components/custom/data-table/data-table";
+import { RowMenu } from "@/components/custom/row-menu/row-menu";
 import { formatBjTime } from "@/lib/time-format";
 import type { PoolItem } from "../hooks/use-proxy-pool";
-import { poolStatus, type PoolTone } from "../logic/pool-status";
+import { poolStatus, poolStatusSortValue, type PoolTone } from "../logic/pool-status";
 import styles from "../proxy-pool-page.module.css";
 
 interface PoolTableProps {
@@ -26,7 +27,7 @@ function StatusCell({ item }: { item: PoolItem }) {
 }
 
 function CheckedCell({ item }: { item: PoolItem }) {
-  if (!item.last_checked_at) return <span className={styles.muted}>未检测</span>;
+  if (!item.last_checked_at) return <span className={styles.muted}>未检查</span>;
   return (
     <span className={styles.tabular}>
       {formatBjTime(item.last_checked_at)}
@@ -35,45 +36,42 @@ function CheckedCell({ item }: { item: PoolItem }) {
   );
 }
 
-/** 代理池表格：代理 / 到期日 / 状态 / 上次检测 / 操作。 */
+/** 代理池表格（一次全量返回，前端排序）：序号 / 代理 / 到期日 / 状态 / 上次检查 / 操作（行内只露「检查」，编辑、删除收进「⋯」）。 */
 export function PoolTable({ items, pendingIds, onCheck, onEdit, onDelete }: PoolTableProps) {
-  const columns: DataColumn<PoolItem>[] = [
-    { key: "proxy_display", label: "代理", sortable: false, width: 160, render: (v) => <span className={styles.proxy}>{String(v)}</span> },
-    { key: "expires_at", label: "到期日", sortable: true, width: 110, render: (v) => <span className={styles.tabular}>{v ? String(v) : "不限"}</span> },
-    { key: "expiry_state", label: "状态", sortable: false, width: 150, render: (_, row) => <StatusCell item={row} /> },
-    { key: "last_checked_at", label: "上次检测", sortable: false, width: 200, render: (_, row) => <CheckedCell item={row} /> },
+  const columns: TableColumn<PoolItem>[] = [
+    { key: "proxy_display", label: "代理", width: 160, render: (v) => <span className={styles.proxy}>{String(v)}</span> },
+    { key: "expires_at", label: "到期日", sortable: true, width: 110, render: (v) => <span className={styles.tabular}>{v ? String(v) : "不限期"}</span> },
+    { key: "expiry_state", label: "状态", sortable: true, width: 150, sortValue: poolStatusSortValue, render: (_, row) => <StatusCell item={row} /> },
+    { key: "last_checked_at", label: "上次检查", sortable: true, width: 200, render: (_, row) => <CheckedCell item={row} /> },
     {
       key: "actions",
       label: "操作",
-      sortable: false,
-      width: 190,
+      width: 110,
       render: (_, row) => {
         const busy = pendingIds.includes(row.id);
         return (
           <div className={styles.actions}>
             <Button variant="secondary" size="sm" loading={busy} onClick={() => onCheck(row)}>
-              检测
+              检查
             </Button>
-            <Button variant="secondary" size="sm" disabled={busy} onClick={() => onEdit(row)}>
-              编辑
-            </Button>
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => onDelete(row)}>
-              删除
-            </Button>
+            <RowMenu
+              items={[
+                { label: "编辑", onSelect: () => onEdit(row), disabled: busy },
+                { label: "删除", onSelect: () => onDelete(row), disabled: busy, destructive: true, separatorBefore: true },
+              ]}
+            />
           </div>
         );
       },
     },
   ];
   return (
-    <div className={styles.tableWrap}>
-      <SortableDataTable<PoolItem>
-        rows={items}
-        columns={columns}
-        rowKey={(row) => String(row.id)}
-        caption="代理池"
-        emptyMessage="代理池是空的"
-      />
-    </div>
+    <DataTable<PoolItem>
+      rows={items}
+      columns={columns}
+      rowKey={(row) => String(row.id)}
+      caption="代理池"
+      emptyMessage="没有符合条件的代理"
+    />
   );
 }

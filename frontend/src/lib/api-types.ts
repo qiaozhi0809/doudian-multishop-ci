@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Aftersale */
+        /**
+         * List Aftersale
+         * @description 默认按申请时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。
+         */
         get: operations["list_aftersale_api_aftersale_get"];
         put?: never;
         post?: never;
@@ -87,7 +90,7 @@ export interface paths {
         };
         /**
          * List Todo
-         * @description 跨店待办队列：仍在流转（有处理截止时间）的售后单，按截止时间升序。
+         * @description 跨店待办队列：仍在流转（有处理截止时间）的售后单，默认按截止时间升序。
          */
         get: operations["list_todo_api_aftersale_todo_get"];
         put?: never;
@@ -244,7 +247,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Products */
+        /**
+         * List Products
+         * @description 默认按销量倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。
+         */
         get: operations["list_products_api_catalog_products_get"];
         put?: never;
         post?: never;
@@ -312,7 +318,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Stock */
+        /**
+         * List Stock
+         * @description 默认按总库存升序（缺货的在前）；sort 指定白名单字段时按该字段排序后再分页；
+         *     quick 为计数卡快捷筛选（alarm 预警 / sold_out 售罄）。
+         */
         get: operations["list_stock_api_catalog_stock_get"];
         put?: never;
         post?: never;
@@ -468,7 +478,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Unsettled */
+        /**
+         * List Unsettled
+         * @description 默认最近同步进来的在前；sort 指定白名单字段时按该字段排序后再分页。
+         */
         get: operations["list_unsettled_api_fund_unsettled_get"];
         put?: never;
         post?: never;
@@ -553,7 +566,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Pool */
+        /**
+         * Pool
+         * @description 默认按支付时间从早到晚；sort 指定白名单字段时按该字段排序后再分页。
+         */
         get: operations["pool_api_labels_pool_get"];
         put?: never;
         post?: never;
@@ -614,6 +630,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notifications */
+        get: operations["list_notifications_api_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read All */
+        post: operations["read_all_api_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_notifications_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read One */
+        post: operations["read_one_api_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders": {
         parameters: {
             query?: never;
@@ -621,7 +705,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Orders */
+        /**
+         * List Orders
+         * @description 默认按支付时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。
+         */
         get: operations["list_orders_api_orders_get"];
         put?: never;
         post?: never;
@@ -832,7 +919,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Findings */
+        /**
+         * Findings
+         * @description 默认最新发现的在前；sort 指定白名单字段时按该字段排序后再分页。
+         */
         get: operations["findings_api_reconcile_findings_get"];
         put?: never;
         post?: never;
@@ -1595,6 +1685,59 @@ export interface components {
             /** Withdrawable Cents */
             withdrawable_cents: number | null;
         };
+        /** NotificationItem */
+        NotificationItem: {
+            /** Body */
+            body: string | null;
+            /** Count */
+            count: number;
+            /** Created At */
+            created_at: string;
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered";
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "strong" | "medium" | "weak";
+            /** Link */
+            link: string | null;
+            /** Read At */
+            read_at: string | null;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Shop Id */
+            shop_id: number | null;
+            /** State Key */
+            state_key: string | null;
+            /** Title */
+            title: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /** NotificationPage */
+        NotificationPage: {
+            /** Items */
+            items: components["schemas"]["NotificationItem"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** NotificationSummary */
+        NotificationSummary: {
+            /** Strong Open */
+            strong_open: components["schemas"]["StrongOpenShop"][];
+            /** Unread */
+            unread: number;
+        };
         /** OrderCounts */
         OrderCounts: {
             /** Exp Ship */
@@ -2232,7 +2375,12 @@ export interface components {
             entity?: string | null;
             /** Name */
             name: string;
-            /** Shop No */
+            /** Platform Shop Id */
+            platform_shop_id?: string | null;
+            /**
+             * Shop No
+             * @description 旧字段，界面已不用；店铺ID 用 platform_shop_id
+             */
             shop_no?: string | null;
         };
         /** ShopFundSummary */
@@ -2499,6 +2647,32 @@ export interface components {
             /** Shops */
             shops: components["schemas"]["ShopStockSync"][];
         };
+        /**
+         * StrongOpenShop
+         * @description 一店一行：该店所有未解决的强状态；problems 每个问题带自己的链接。
+         */
+        StrongOpenShop: {
+            /** Kinds */
+            kinds: ("new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered")[];
+            /** Link */
+            link: string | null;
+            /** Problems */
+            problems: components["schemas"]["StrongProblem"][];
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+        };
+        /** StrongProblem */
+        StrongProblem: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "new_order" | "new_aftersale" | "login_expired" | "egress_unreachable" | "egress_changed" | "egress_duplicate" | "risk_paused" | "ship_deadline" | "batch_done" | "batch_failed" | "sync_failed" | "sync_done" | "reconcile_done" | "recovered";
+            /** Link */
+            link: string | null;
+        };
         /** SyncStarted */
         SyncStarted: {
             /** Already Running */
@@ -2699,6 +2873,9 @@ export interface operations {
                 keyword?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "type" | "status" | "refund_amount_cents" | "apply_time" | "status_deadline") | null;
+                order?: "asc" | "desc";
+                quick?: ("pending" | "audit" | "due_soon") | null;
             };
             header?: never;
             path?: never;
@@ -2825,6 +3002,9 @@ export interface operations {
                 shop_ids?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "type" | "status" | "refund_amount_cents" | "apply_time" | "status_deadline") | null;
+                order?: "asc" | "desc";
+                quick?: ("pending" | "audit" | "due_soon") | null;
             };
             header?: never;
             path?: never;
@@ -3112,6 +3292,9 @@ export interface operations {
                 keyword?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "tab" | "price" | "stock_num" | "sell_num" | "sell_num_30d") | null;
+                order?: "asc" | "desc";
+                quick?: ("onsale" | "draft" | "audit" | "sell_out_new" | "unpass" | "forbidden") | null;
             };
             header?: never;
             path?: never;
@@ -3239,6 +3422,9 @@ export interface operations {
                 alarm_only?: boolean;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "total_stock_num" | "spot_stock_num" | "future_stock_num" | "total_occupied_stock_num" | "total_unoccupied_stock_num" | "status" | "synced_at") | null;
+                order?: "asc" | "desc";
+                quick?: ("alarm" | "sold_out") | null;
             };
             header?: never;
             path?: never;
@@ -3520,6 +3706,8 @@ export interface operations {
                 shop_ids?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "income_amount_cents" | "platform_service_fee_cents" | "unsettled_amount_cents" | "ecom_order_status" | "synced_at") | null;
+                order?: "asc" | "desc";
             };
             header?: never;
             path?: never;
@@ -3682,6 +3870,8 @@ export interface operations {
                 stage?: "pending" | "labeled";
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "status" | "amount_cents" | "pay_time") | null;
+                order?: "asc" | "desc";
             };
             header?: never;
             path?: never;
@@ -3808,6 +3998,123 @@ export interface operations {
             };
         };
     };
+    list_notifications_api_notifications_get: {
+        parameters: {
+            query?: {
+                unread?: boolean;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    read_all_api_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    summary_api_notifications_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSummary"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    read_one_api_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     list_orders_api_orders_get: {
         parameters: {
             query?: {
@@ -3815,6 +4122,9 @@ export interface operations {
                 status?: ("synced" | "pending_label" | "label_obtained" | "printed" | "shipped" | "exception" | "cancelled" | "closed") | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "platform_status" | "status" | "amount_cents" | "pay_time" | "exp_ship_time") | null;
+                order?: "asc" | "desc";
+                quick?: ("stock_up" | "exp_ship" | "ship_delay" | "in_aftersale") | null;
             };
             header?: never;
             path?: never;
@@ -4225,6 +4535,8 @@ export interface operations {
                 status?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "kind" | "created_at" | "status") | null;
+                order?: "asc" | "desc";
             };
             header?: never;
             path?: never;

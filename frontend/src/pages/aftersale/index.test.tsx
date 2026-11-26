@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { makeShop } from "@/test/fixtures";
+import { makeShop, strongOpenSummary } from "@/test/fixtures";
 import { jsonResponse, mockFetch } from "@/test/mock-fetch";
 import AftersalePage from "./index";
 
@@ -65,6 +65,24 @@ describe("售后聚合页", () => {
     expect(tableRow.getByText("¥128.00")).toBeInTheDocument();
     expect(tableRow.getByText("已完结")).toBeInTheDocument();
     expect(screen.getByText("待办售后")).toBeInTheDocument();
+  });
+
+  it("未取到计数的店已在顶部横条时不再提示", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" }), makeShop({ id: 2, name: "店铺乙" })]),
+      "GET /api/aftersale/todo": page([row()]),
+      "GET /api/aftersale/counts": jsonResponse({
+        shops: [
+          { shop_id: 1, source: "upstream", pending_total: 2, error: null, counts: { all_audit: 1, approaching_deadline_audit: 1 }, fetched_at: null },
+          { shop_id: 2, source: "error", pending_total: 0, error: "出口 IP 已变化", counts: {}, fetched_at: null },
+        ],
+      }),
+      "GET /api/aftersale/statuses": jsonResponse({ items: [] }),
+      "GET /api/notifications/summary": jsonResponse(strongOpenSummary([{ shopId: 2, kinds: ["egress_changed"] }])),
+    });
+    renderPage();
+    expect(await screen.findByText("待办售后")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/家店未取到/)).not.toBeInTheDocument());
   });
 
   it("切换到全部售后：URL 带 view=all，出现状态筛选", async () => {

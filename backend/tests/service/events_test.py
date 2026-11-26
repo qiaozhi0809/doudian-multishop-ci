@@ -68,3 +68,14 @@ def test_publish_with_closed_loop_subscriber_is_ignored():
     loop.close()
     bus.publish("e", {})  # 订阅者的循环已关闭：不抛异常
     sub.close()
+
+
+def test_drop_logs_event_name(monkeypatch):
+    from app.service import events as events_mod
+    warned = []
+    monkeypatch.setattr(events_mod.log, "warning", lambda msg, **kw: warned.append((msg, kw)))
+    bus = events_mod.EventBus(queue_size=1)
+    bus.subscribe()
+    bus.publish("a", {"secret": "x"})
+    bus.publish("b", {"secret": "y"})
+    assert warned == [("events.dropped", {"dropped_event": "a"})]

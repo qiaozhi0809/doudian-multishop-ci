@@ -1,4 +1,5 @@
 import { Button } from "@/components/arc/button/button";
+import { orEmpty } from "@/lib/empty-text";
 import type { ShopRow } from "@/lib/use-shops";
 import styles from "../shop-page.module.css";
 
@@ -12,7 +13,7 @@ function Section({
   return (
     <section className={styles.section}>
       <div className={styles.sectionHeader}>
-        <h3 className={styles.sectionTitle}>{title}</h3>
+        <h3 className="section-title">{title}</h3>
         {action}
       </div>
       <ul className={styles.list}>
@@ -20,7 +21,7 @@ function Section({
           <li key={label} className={styles.listItem}>
             <span className={styles.listMain}>
               <span>{label}</span>
-              <span className={styles.muted}>{value || "—"}</span>
+              <span className={styles.muted}>{orEmpty(value)}</span>
             </span>
           </li>
         ))}
@@ -37,10 +38,9 @@ interface ShopProfileSectionsProps {
 
 /**
  * 平台侧固定信息：店铺名/负责人由登录后同步，店铺ID/主体/收款账户平台没有稳定接口，
- * 由「同步收款信息」按钮或「编辑店铺」手工维护。
+ * 由「同步收款信息」按钮（已有信息时作为刷新）或「编辑店铺」手工维护。
  */
 export function ShopProfileSections({ shop, onSyncCard, syncing = false }: ShopProfileSectionsProps) {
-  const hasCard = Boolean(shop.bank_name || shop.bank_tail);
   return (
     <>
       <Section
@@ -59,7 +59,7 @@ export function ShopProfileSections({ shop, onSyncCard, syncing = false }: ShopP
           ["卡号尾号", shop.bank_tail ? `**** ${shop.bank_tail}` : null],
         ]}
         action={
-          !hasCard && onSyncCard ? (
+          onSyncCard ? (
             <Button variant="secondary" size="sm" loading={syncing} onClick={onSyncCard}>
               同步收款信息
             </Button>

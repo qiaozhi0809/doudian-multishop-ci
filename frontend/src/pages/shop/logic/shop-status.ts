@@ -1,5 +1,6 @@
 import { daysUntil } from "@/lib/time-format";
 import type { ShopRow } from "@/lib/use-shops";
+import { EMPTY_TEXT } from "@/lib/empty-text";
 
 export type Tone = "success" | "warning" | "danger" | "neutral";
 export interface Badge {
@@ -21,9 +22,18 @@ export function shopStatusBadge(row: ShopRow, now: Date = new Date()): Badge {
   return { label: "正常", tone: "success" };
 }
 
+const STATUS_RANK: Record<string, number> = { 正常: 0, 即将过期: 1, 需重新登录: 2, 已停用: 3 };
+
+/** 「状态」列的排序值：按显示的会话状态排（正常 → 即将过期（剩天数少的在前）→ 需重新登录 → 已停用），不按原始状态码。 */
+export function shopStatusSortValue(row: ShopRow, now: Date = new Date()): string {
+  const { label } = shopStatusBadge(row, now);
+  const rank = STATUS_RANK[label.replace(/（.*$/, "")] ?? 9;
+  return `${rank} ${label}`;
+}
+
 const EGRESS_BASE: Record<ShopRow["egress_status"], (row: ShopRow) => Badge> = {
   unchecked: () => ({ label: "未检查", tone: "neutral" }),
-  ok: (row) => ({ label: `出口正常 · ${row.egress_ip ?? "暂无"}`, tone: "success" }),
+  ok: (row) => ({ label: `出口正常 · ${row.egress_ip ?? EMPTY_TEXT}`, tone: "success" }),
   unreachable: () => ({ label: "出口不通", tone: "danger" }),
   changed: (row) => ({
     label: row.egress_ip_pending ? `出口 IP 已变为 ${row.egress_ip_pending}，需确认` : "出口 IP 已变化，需确认",
@@ -97,4 +107,9 @@ export function primaryAction(row: ShopRow): PrimaryAction {
   if (row.egress_mode === null) return "set-egress";
   if (row.egress_status !== "ok") return "check-egress";
   return "login";
+}
+
+/** 已登录（会话可用）：停用这类店要先确认，未登录的直接停用。 */
+export function isLoggedIn(row: ShopRow): boolean {
+  return row.status === "active" && row.health !== "expired";
 }

@@ -13,14 +13,14 @@ function lineError(raw: string): string | null {
   const parts = raw.trim().split("|").map((p) => p.trim());
   if (parts.length !== 5 || parts.some((p) => !p)) return FORMAT_REASON;
   if (!isValidHost(parts[0])) return HOST_REASON;
-  if (!/^\d+$/.test(parts[1])) return "端口必须是数字";
+  if (!/^[0-9]+$/.test(parts[1])) return "端口必须是数字";
   if (!isValidPort(parts[1])) return PORT_RANGE_REASON;
   if (!isRealDate(parts[4])) return "到期日格式应为 YYYY-MM-DD";
   return null;
 }
 
 function isRealDate(value: string): boolean {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(value);
   if (!m) return false;
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
   const date = new Date(Date.UTC(y, mo - 1, d));

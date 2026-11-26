@@ -1,49 +1,47 @@
-import { SortableDataTable, type DataColumn } from "@/components/arc/sortable-data-table/sortable-data-table";
+import { DataTable, type TableColumn } from "@/components/custom/data-table/data-table";
+import { shopStatusSortValue } from "../logic/shop-status";
+import { orEmpty } from "@/lib/empty-text";
 import type { ShopRow } from "@/lib/use-shops";
 import styles from "../shop-page.module.css";
-import { ActionsCell, EgressCell, ExpiryCell, ReadyCell, StatusCell, type RowActions } from "./shop-cells";
+import { ActionsCell, EgressCell, ExpiryCell, NameCell, ReadyCell, StatusCell, type RowActions } from "./shop-cells";
 
 interface ShopTableProps {
   shops: ShopRow[];
   pending: string[];
   waitingShopIds: number[];
   actionsFor: (row: ShopRow) => RowActions & { onResume: () => void };
+  /** 通知跳转来的店（`?shop=<id>`）：高亮并滚动到该行 */
+  highlightId: number | null;
+  /** 该店这次高亮是否还没滚动过（每个 ?shop= 只滚一次） */
+  claimScroll: (id: number) => boolean;
 }
 
-/** Arc 表格的列默认可排序（sortable !== false），只有店铺名与到期时间有意义，其余列显式关闭。 */
-export function ShopTable({ shops, pending, waitingShopIds, actionsFor }: ShopTableProps) {
-  const columns: DataColumn<ShopRow>[] = [
-    {
-      key: "seq",
-      label: "序号",
-      sortable: false,
-      width: 60,
-      numeric: true,
-      render: (_, row) => shops.findIndex((s) => s.id === row.id) + 1,
-    },
-    { key: "name", label: "店铺", sortable: true, width: 110, render: (v) => <span className={styles.shopName}>{String(v)}</span> },
+/** 店铺列表（一次全量返回，前端排序）：序号由 DataTable 按显示顺序编号；店铺名、平台店铺名、状态、到期可排序。 */
+export function ShopTable({ shops, pending, waitingShopIds, actionsFor, highlightId, claimScroll }: ShopTableProps) {
+  const columns: TableColumn<ShopRow>[] = [
+    { key: "name", label: "店铺", sortable: true, width: 110, render: (v, row) => <NameCell name={String(v)} highlighted={row.id === highlightId} onMark={() => claimScroll(row.id)} /> },
     {
       key: "shop_name",
       label: "平台店铺名",
-      sortable: false,
+      sortable: true,
       width: 150,
-      render: (v) => (v ? String(v) : "—"),
+      render: (v) => orEmpty(v as string | null),
     },
-    { key: "admin_name", label: "负责人", sortable: false, width: 100, render: (v) => (v ? String(v) : "—") },
+    { key: "admin_name", label: "负责人", width: 100, render: (v) => orEmpty(v as string | null) },
     {
       key: "status",
       label: "状态",
-      sortable: false,
+      sortable: true,
       width: 100,
+      sortValue: (row) => shopStatusSortValue(row),
       render: (_, row) => <StatusCell row={row} waiting={waitingShopIds.includes(row.id)} onResume={actionsFor(row).onResume} />,
     },
-    { key: "egress_status", label: "出口", sortable: false, width: 240, render: (_, row) => <EgressCell row={row} /> },
+    { key: "egress_status", label: "出口", width: 240, render: (_, row) => <EgressCell row={row} /> },
     { key: "expires_at", label: "到期", sortable: true, width: 90, render: (_, row) => <ExpiryCell row={row} /> },
-    { key: "ready_for_label", label: "取号就绪", sortable: false, width: 80, render: (_, row) => <ReadyCell row={row} /> },
+    { key: "ready_for_label", label: "取号就绪", width: 80, render: (_, row) => <ReadyCell row={row} /> },
     {
       key: "actions",
       label: "操作",
-      sortable: false,
       width: 130,
       render: (_, row) => (
         <ActionsCell row={row} actions={actionsFor(row)} pending={pending} waiting={waitingShopIds.includes(row.id)} />
@@ -51,14 +49,13 @@ export function ShopTable({ shops, pending, waitingShopIds, actionsFor }: ShopTa
     },
   ];
   return (
-    <div className={styles.tableWrap}>
-      <SortableDataTable<ShopRow>
-        rows={shops}
-        columns={columns}
-        rowKey={(row) => String(row.id)}
-        caption="店铺列表"
-        emptyMessage="没有符合筛选的店铺"
-      />
-    </div>
+    <DataTable<ShopRow>
+      className={styles.tableWrap}
+      rows={shops}
+      columns={columns}
+      rowKey={(row) => String(row.id)}
+      caption="店铺列表"
+      emptyMessage="没有符合条件的店铺"
+    />
   );
 }

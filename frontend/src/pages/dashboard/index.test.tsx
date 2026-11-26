@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { makeShop } from "@/test/fixtures";
+import { makeShop, strongOpenSummary } from "@/test/fixtures";
 import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
 import DashboardPage from "./index";
 
@@ -73,7 +73,7 @@ describe("仪表盘", () => {
     const kpi = await screen.findByRole("region", { name: "关键指标" });
     const cardOf = (label: string) => {
       const node = within(kpi).getByText(label);
-      return node.closest("article") ?? node.parentElement;
+      return node.closest("a");
     };
     await waitFor(() => expect(cardOf("在营店铺")).toHaveTextContent("1 / 2"));
     await waitFor(() => expect(cardOf("待发货")).toHaveTextContent("5"));
@@ -98,6 +98,18 @@ describe("仪表盘", () => {
     expect(screen.queryByText("支付 GMV")).not.toBeInTheDocument();
   });
 
+  it("未取到数据的店已在顶部横条时不再提示", async () => {
+    mockFetch({
+      ...routes(),
+      "GET /api/notifications/summary": jsonResponse(strongOpenSummary([{ shopId: 2, kinds: ["login_expired"] }])),
+    });
+    renderPage();
+    const kpi = await screen.findByRole("region", { name: "关键指标" });
+    await waitFor(() => expect(within(kpi).getByText("待发货").closest("a")).toHaveTextContent("5"));
+    await waitFor(() => expect(screen.queryByText(/家店未取到/)).not.toBeInTheDocument());
+    expect(screen.queryByText("店铺乙：上游超时")).not.toBeInTheDocument();
+  });
+
   it("单个数据源失败时只有对应卡片显示暂无，其他指标照常", async () => {
     mockFetch({ ...routes(), "GET /api/catalog/stock/summary": errorResponse(500, "Internal", "boom") });
     renderPage();
@@ -105,12 +117,11 @@ describe("仪表盘", () => {
     const kpi = await screen.findByRole("region", { name: "关键指标" });
     const cardOf = (label: string) => {
       const node = within(kpi).getByText(label);
-      return node.closest("article") ?? node.parentElement;
+      return node.closest("a");
     };
     await waitFor(() => expect(cardOf("库存预警")).toHaveTextContent("暂无"));
     await waitFor(() => expect(cardOf("售罄")).toHaveTextContent("暂无"));
     await waitFor(() => expect(cardOf("待发货")).toHaveTextContent("5"));
-    expect(within(kpi).getAllByRole("button", { name: "重试" })).toHaveLength(2);
   });
 
   it("还没有店铺时引导去店铺页", async () => {
@@ -127,13 +138,15 @@ describe("仪表盘", () => {
     await waitFor(() => expect(linkOf("保证金余额")).toHaveAttribute("href", "/fund?tab=margin&shops=1"));
     expect(linkOf("在营店铺")).toHaveAttribute("href", "/shops?shops=1");
     expect(linkOf("待发货")).toHaveAttribute("href", "/labeling?shops=1");
-    expect(linkOf("24 小时内须发")).toHaveAttribute("href", "/orders?shops=1");
-    expect(linkOf("售后待办")).toHaveAttribute("href", "/aftersale?shops=1");
-    expect(linkOf("库存预警")).toHaveAttribute("href", "/stock?view=alarm&shops=1");
-    expect(linkOf("在售商品")).toHaveAttribute("href", "/catalog?shops=1");
+    expect(linkOf("24 小时内须发")).toHaveAttribute("href", "/orders?quick=exp_ship&shops=1");
+    expect(linkOf("超时未发")).toHaveAttribute("href", "/orders?quick=ship_delay&shops=1");
+    expect(linkOf("售后待办")).toHaveAttribute("href", "/aftersale?quick=pending&shops=1");
+    expect(linkOf("库存预警")).toHaveAttribute("href", "/stock?quick=alarm&shops=1");
+    expect(linkOf("售罄")).toHaveAttribute("href", "/stock?quick=sold_out&shops=1");
+    expect(linkOf("在售商品")).toHaveAttribute("href", "/catalog?quick=onsale&shops=1");
   });
 
-  it("指标卡按发货 / 售后与库存 / 店铺与资金分组，组内从左到右越来越急", async () => {
+  it("指标分三块卡片：发货 / 售后与库存 / 店铺与资金，卡片标题在卡片内，组内从上到下越来越急", async () => {
     mockFetch(routes());
     renderPage();
     const group = async (name: string) =>
@@ -141,5 +154,35 @@ describe("仪表盘", () => {
     expect((await group("发货")).map((t) => t.replace(/[\d,.\s/¥]+$/, ""))).toEqual(["待发货", "24 小时内须发", "超时未发"]);
     expect((await group("售后与库存")).map((t) => t.replace(/[\d,.\s/¥]+$/, ""))).toEqual(["售后待办", "库存预警", "售罄"]);
     expect(await group("店铺与资金")).toHaveLength(4);
+    const panel = await screen.findByRole("group", { name: "发货" });
+    expect(panel).toHaveClass("panel");
+    expect(within(panel).getByRole("heading", { name: "发货" })).toHaveClass("section-title");
+  });
+
+  it("图表面板没有数据时：标题在卡片上方，卡片里只有一行居中的空提示", async () => {
+    mockFetch({
+      ...routes(),
+      "GET /api/orders/counts": jsonResponse({ shops: [] }),
+      "GET /api/fund/summary": jsonResponse({ shops: [], total_unsettled_amount_cents: 0, total_unsettled_count: 0 }),
+    });
+    renderPage();
+    for (const [title, empty] of [["发货压力", "没有待发货积压"], ["待结算分布", "没有待结算金额"]]) {
+      const heading = await screen.findByRole("heading", { name: title });
+      expect(heading).toHaveClass("section-title");
+      const line = await screen.findByText(empty);
+      expect(line).toHaveClass("panel-empty");
+      expect(line.closest(".panel")).not.toBeNull();
+      expect(heading.closest(".panel")).toBeNull();
+    }
+    expect(screen.getByRole("heading", { name: "店铺排行" })).toHaveClass("section-title");
+  });
+
+  it("店铺排行初始不带排序列底色（行已按待发货降序），表头与其他表格一致不分段", async () => {
+    mockFetch(routes());
+    renderPage();
+    const table = await screen.findByRole("table", { name: "店铺排行" });
+    expect(table.querySelector("th[data-sorted]")).toBeNull();
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent("店铺甲");
   });
 });

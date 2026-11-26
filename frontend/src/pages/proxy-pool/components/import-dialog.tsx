@@ -16,7 +16,7 @@ interface ImportDialogProps {
 
 export function ImportDialog({ open, onOpenChange, pending, onSubmit }: ImportDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} busy={pending}>
       <DialogContent title="导入代理" description="每行一条，格式：IP|端口|账号|密码|到期日（YYYY-MM-DD）">
         {open && <ImportForm pending={pending} onSubmit={onSubmit} />}
       </DialogContent>
@@ -87,8 +87,8 @@ function ImportForm({ pending, onSubmit }: Pick<ImportDialogProps, "pending" | "
       {result && <Summary result={result} />}
       <div className={styles.formActions}>
         <DialogClose asChild>
-          <Button type="button" variant="ghost">
-            关闭
+          <Button type="button" variant="ghost" disabled={pending}>
+            取消
           </Button>
         </DialogClose>
         <Button type="submit" loading={pending}>

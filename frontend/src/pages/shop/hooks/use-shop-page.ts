@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filter";
 import { useShops, type ShopRow } from "@/lib/use-shops";
 import { useBackup } from "./use-backup";
@@ -5,10 +7,22 @@ import { useShopActions } from "./use-shop-actions";
 import { useShopBase } from "./use-shop-base";
 import { useShopDialogs } from "./use-shop-dialogs";
 
-/** 店铺页的全部数据与动作：列表（按全局店铺筛选）、操作、对话框状态、数据备份。 */
+/** 通知跳转高亮的店铺参数（全局店铺筛选是 `shops`）。 */
+export const HIGHLIGHT_PARAM = "shop";
+
+/** 店铺页的全部数据与动作：列表（按全局店铺筛选）、`?shop=<id>` 高亮、操作、对话框状态、数据备份。 */
 export function useShopPage() {
   const query = useShops();
   const { shopIds } = useShopFilter();
+  const [params] = useSearchParams();
+  const highlight = Number(params.get(HIGHLIGHT_PARAM));
+  // 同一个 ?shop= 只滚动一次：排序等让表格重新挂载时不再把人拉回去
+  const scrolledFor = useRef<number | null>(null);
+  const claimScroll = (id: number): boolean => {
+    if (scrolledFor.current === id) return false;
+    scrolledFor.current = id;
+    return true;
+  };
   const all = query.data ?? [];
   const shops = shopIds.length ? all.filter((s) => shopIds.includes(s.id)) : all;
   const actions = useShopActions(all);
@@ -21,6 +35,8 @@ export function useShopPage() {
     status: query.isLoading ? ("loading" as const) : query.isError ? ("error" as const) : all.length === 0 ? ("empty" as const) : ("ready" as const),
     retry: () => void query.refetch(),
     shops,
+    highlightId: Number.isInteger(highlight) && highlight > 0 ? highlight : null,
+    claimScroll,
     allShops: all,
     actions,
     dialogs,
@@ -29,6 +45,7 @@ export function useShopPage() {
     egressShop: byId(dialogs.egressShopId),
     resumeShop: byId(dialogs.resumeShopId),
     editShop: byId(dialogs.editShopId),
+    disableShop: byId(dialogs.disableShopId),
   };
 }
 

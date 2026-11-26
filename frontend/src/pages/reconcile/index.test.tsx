@@ -169,4 +169,14 @@ describe("对账页", () => {
       ).toBe(true),
     );
   });
+
+  it("还没有检查记录时不显示说明条，表格内显示空提示", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/reconcile/findings": findingsPage([], 0, null as never),
+    });
+    renderPage();
+    expect(await screen.findByRole("cell", { name: "没有符合条件的发货异常" })).toBeInTheDocument();
+    expect(screen.queryByText(/检查记录/)).not.toBeInTheDocument();
+  });
 });

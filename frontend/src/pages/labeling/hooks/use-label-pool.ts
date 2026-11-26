@@ -5,7 +5,9 @@ import { useShopFilter } from "@/components/custom/app-shell/hooks/use-shop-filt
 import { api } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
 import { queryKeys } from "@/lib/query-keys";
+import { useListSort, useSettledSort } from "@/lib/use-list-sort";
 import {
+  LABEL_SORT_KEYS,
   PAGE_SIZE,
   allSelected,
   isStage,
@@ -15,10 +17,11 @@ import {
   type Stage,
 } from "../logic/label-columns";
 
-/** 打单发货订单池：阶段与页码在 URL 里；勾选集合在刷新之间保留（失效行自动移除）。 */
+/** 打单发货订单池：阶段、排序与页码在 URL 里；勾选集合在刷新之间保留（失效行自动移除）。 */
 export function useLabelPool() {
   const { shopIds } = useShopFilter();
   const [params, setParams] = useSearchParams();
+  const sorting = useListSort(LABEL_SORT_KEYS);
 
   const stageParam = params.get("stage");
   const stage: Stage = isStage(stageParam) ? stageParam : "pending";
@@ -49,13 +52,14 @@ export function useLabelPool() {
   );
 
   const query = useQuery({
-    queryKey: queryKeys.labelPool(shopIds, { stage, page }),
+    queryKey: queryKeys.labelPool(shopIds, { stage, page, ...sorting.query }),
     queryFn: () =>
       api.get<components["schemas"]["LabelPoolPage"]>("/api/labels/pool", {
         shop_ids: shopIds,
         stage,
         page,
         page_size: PAGE_SIZE,
+        ...sorting.query,
       }),
     placeholderData: keepPreviousData,
   });
@@ -82,11 +86,14 @@ export function useLabelPool() {
     setSelected((prev) => toggleAll(pruneSelection(prev, rows), rows));
   }, [rows]);
 
+  const shownSort = useSettledSort(sorting.sort, !query.isPlaceholderData);
   return {
     query,
     rows,
     stage,
     page,
+    sort: shownSort,
+    setSort: sorting.setSort,
     setStage,
     setPage,
     selected: effective,

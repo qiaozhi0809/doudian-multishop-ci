@@ -27,8 +27,8 @@ export const row = (id: number, over: Record<string, unknown> = {}) => ({
   waybill: null,
   ...over,
 });
-export const page = (items: unknown[], total = items.length) =>
-  jsonResponse({ items, total, page: 1, page_size: 50 });
+export const page = (items: unknown[], total = items.length, current = 1) =>
+  jsonResponse({ items, total, page: current, page_size: 50 });
 
 export const printStatus = (available = true) => ({
   available,

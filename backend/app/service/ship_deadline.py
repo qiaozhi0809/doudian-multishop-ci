@@ -1,8 +1,8 @@
 """ENG-07：临近发货超时告警（只读本地订单，不请求抖店）。
 
 扫描未发货的订单：`exp_ship_time` 距现在不足 N 小时（含已超时）的，按最紧急排序，
-发布 `ship_deadline_warning` SSE 事件，界面任务中心直接展示。
-每次扫描都发布（数量为 0 时界面据此移除提醒），无需持久化。
+发布 `ship_deadline_warning` SSE 事件，由 NotificationFeed 翻译成临近超时通知（状态类）。
+每次扫描都发布（数量为 0 时通知据此恢复），无需持久化。
 """
 
 from collections.abc import Callable
@@ -49,6 +49,11 @@ class ShipDeadlineWatcher:
         warn_until = (now + timedelta(hours=self._warn_hours)).strftime(ISO_FMT)
         with self._engine.connect() as conn:
             rows = order_store.ship_deadline_due(conn, PENDING_STATUSES, warn_until, self._limit)
+            # items 截到上限；分店真实数量另算，供通知按店对账
+            shop_counts = order_store.ship_deadline_counts(conn, PENDING_STATUSES, warn_until)
+            # 已超时的分店数量：通知据此跳「已超时」筛选
+            shop_overdue = order_store.ship_deadline_counts(
+                conn, PENDING_STATUSES, now.strftime(ISO_FMT), before=True)
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}
         items = [
             {
@@ -65,6 +70,8 @@ class ShipDeadlineWatcher:
             "warn_hours": self._warn_hours,
             "checked_at": now.strftime(ISO_FMT),
             "items": items,
+            "shop_counts": shop_counts,
+            "shop_overdue": shop_overdue,
         })
         if items:
             log.info("ship_deadline.warning", count=len(items), warn_hours=self._warn_hours)

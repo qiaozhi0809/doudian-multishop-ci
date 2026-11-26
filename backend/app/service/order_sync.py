@@ -11,16 +11,18 @@ from app.adapter.doudian import endpoints as ep
 from app.adapter.doudian.client import FxgClient
 from app.adapter.doudian.parsers import parse_orders
 from app.domain.order_status import LocalOrderStatus, PlatformOrderStatus
-from app.service.events import SYNC_PROGRESS, EventBus
+from app.service.events import ORDERS_NEW, SYNC_PROGRESS, EventBus, publish_sync_result
 from app.service.session_manager import SessionManager
+from app.service.shop_fanout import user_error
 from app.service.shop_runner import ShopRunner
-from app.store import order_store
+from app.store import order_store, sync_baseline_store
 
 log = structlog.get_logger()
 
 MAX_PAGES = 100
 MAX_RECHECK_PER_RUN = 50  # 补查是一单一请求：每轮设上限，其余留到下一轮
 NOT_FOUND_REASON = "平台查不到该订单"
+BASELINE_KIND = "orders"
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -59,25 +61,57 @@ class OrderSyncService:
             if self._on_synced:  # 订单已变：该店的 tab 计数缓存作废
                 self._on_synced(shop_id)
 
+    async def sync_manual(self, shop_id: int, actor: str) -> SyncResult:
+        """手动同步：结束时发 SYNC_RESULT（定时同步走 sync_pending，不发「完成」）。"""
+        try:
+            result = await self.sync_pending(shop_id, actor)
+        except Exception as e:
+            publish_sync_result(self._events, "orders", shop_id, user_error(e))
+            raise
+        publish_sync_result(self._events, "orders", shop_id, None)
+        return result
+
     async def _sync(self, client: FxgClient, shop_id: int) -> SyncResult:
-        fetched, seen, complete = 0, set[str](), False
-        for page in range(ep.SEARCHLIST_PAGE_BASE, ep.SEARCHLIST_PAGE_BASE + self._max_pages):
-            resp = await client.call(ep.SEARCHLIST, params=ep.searchlist_pending_params(page))
-            orders = parse_orders(resp)
-            with self._engine.begin() as conn:  # 每页立即入库：后面的页失败也不丢
-                order_store.upsert_orders(conn, shop_id, orders, _now())
-            fetched += len(orders)
-            seen.update(o.order_no for o in orders)
-            self._events.publish(
-                SYNC_PROGRESS, {"shop_id": shop_id, "kind": "orders", "fetched": fetched}
-            )
-            if len(orders) < ep.SEARCHLIST_MAX_PAGE_SIZE:
-                complete = True
-                break
+        fetched, seen, complete, new = 0, set[str](), False, 0
+        try:
+            for page in range(
+                ep.SEARCHLIST_PAGE_BASE, ep.SEARCHLIST_PAGE_BASE + self._max_pages
+            ):
+                resp = await client.call(ep.SEARCHLIST, params=ep.searchlist_pending_params(page))
+                orders = parse_orders(resp)
+                nos = [o.order_no for o in orders]
+                with self._engine.begin() as conn:  # 每页立即入库：后面的页失败也不丢
+                    new += len(set(nos) - order_store.existing_order_nos(conn, shop_id, nos))
+                    order_store.upsert_orders(conn, shop_id, orders, _now())
+                fetched += len(orders)
+                seen.update(nos)
+                self._events.publish(
+                    SYNC_PROGRESS, {"shop_id": shop_id, "kind": "orders", "fetched": fetched}
+                )
+                if len(orders) < ep.SEARCHLIST_MAX_PAGE_SIZE:
+                    complete = True
+                    break
+        except BaseException:  # 中途失败也报已入库的新单（否则下一轮它们已在库里，提醒就丢了）
+            try:
+                self._report_new(shop_id, new, complete=False)
+            except Exception:  # 报告出错不能盖住原异常
+                log.exception("order_sync.report_new_failed", shop_id=shop_id)
+            raise
+        self._report_new(shop_id, new, complete)
         rechecked, cancelled = 0, 0
         if complete:  # 分页没拉全时，「没出现」不代表离开了待发货
             rechecked, cancelled = await self._recheck_vanished(client, shop_id, seen)
         return SyncResult(fetched, fetched, cancelled, rechecked, complete)
+
+    def _report_new(self, shop_id: int, new: int, complete: bool) -> None:
+        """有基线：报本轮新入库的单（部分同步也报）。无基线：不报；完整同步才建基线，0 单也建。"""
+        with self._engine.begin() as conn:
+            if not sync_baseline_store.has(conn, shop_id, BASELINE_KIND):
+                if complete:
+                    sync_baseline_store.establish(conn, shop_id, BASELINE_KIND, _now())
+                return
+        if new > 0:
+            self._events.publish(ORDERS_NEW, {"shop_id": shop_id, "count": new})
 
     async def _recheck_vanished(
         self, client: FxgClient, shop_id: int, seen: set[str]

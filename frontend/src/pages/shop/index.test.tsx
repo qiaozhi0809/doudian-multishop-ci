@@ -35,6 +35,26 @@ beforeEach(() => {
 afterEach(() => restore());
 
 describe("店铺与设置页", () => {
+  it("?shop=2 高亮第 2 店并滚动到该行；与全局筛选 shops= 互不影响", async () => {
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+    mockPageFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" }), makeShop({ id: 2, name: "店铺乙" }), makeShop({ id: 3, name: "店铺丙" })]),
+    });
+    renderPage("/shops?shops=1,2&shop=2");
+    await screen.findByRole("table");
+    expect(screen.queryByRole("row", { name: /店铺丙/ })).not.toBeInTheDocument();
+    expect(rowOf("店铺乙")).toHaveAttribute("aria-current", "true");
+    expect(rowOf("店铺甲")).not.toHaveAttribute("aria-current");
+    await waitFor(() => expect(scroll).toHaveBeenCalled());
+    expect(scroll.mock.contexts[0]).toBe(rowOf("店铺乙"));
+    // 排序会重新挂载表格：仍高亮，但不再滚动
+    await userEvent.setup().click(within(screen.getByRole("columnheader", { name: "店铺" })).getByRole("button"));
+    expect(rowOf("店铺乙")).toHaveAttribute("aria-current", "true");
+    expect(scroll).toHaveBeenCalledTimes(1);
+    scroll.mockRestore();
+  });
+
+
   it("还没有店铺：显示引导添加店铺的空状态，而不是空表格", async () => {
     mockPageFetch({ "GET /api/shops": jsonResponse([]) });
     renderPage();
@@ -71,14 +91,14 @@ describe("店铺与设置页", () => {
     expect(b.getByText("未就绪")).toBeInTheDocument();
   });
 
-  it("只有店铺名与到期可排序，操作、状态等列没有排序按钮", async () => {
+  it("首列是序号；店铺名、平台店铺名、状态、到期可排序，出口、操作等列没有排序按钮", async () => {
     mockPageFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
     renderPage();
     await screen.findByRole("table");
     const sortable = (name: string) => within(screen.getByRole("columnheader", { name })).queryByRole("button");
-    expect(sortable("店铺")).not.toBeNull();
-    expect(sortable("到期")).not.toBeNull();
-    for (const name of ["状态", "出口", "取号就绪", "操作"]) expect(sortable(name)).toBeNull();
+    expect(screen.getAllByRole("columnheader")[0]).toHaveTextContent("序号");
+    for (const name of ["店铺", "平台店铺名", "状态", "到期"]) expect(sortable(name)).not.toBeNull();
+    for (const name of ["序号", "负责人", "出口", "取号就绪", "操作"]) expect(sortable(name)).toBeNull();
   });
 
   it("全局店铺筛选只显示选中的店铺", async () => {
@@ -225,6 +245,9 @@ describe("店铺与设置页", () => {
       await waitFor(() =>
         expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain("/api/shops/1/egress/check?accept_change=true"),
       );
+      // 确认新 IP 不得顺带提交出口表单
+      expect(screen.queryByText("请选择池里的代理")).toBeNull();
+      expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === "PUT")).toBe(false);
     });
   });
 
@@ -262,7 +285,7 @@ describe("店铺与设置页", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
-    await user.click(await screen.findByRole("menuitem", { name: "查看店铺资料" }));
+    await user.click(await screen.findByRole("menuitem", { name: "店铺资料" }));
     const drawer = await screen.findByRole("dialog");
     expect(await within(drawer).findByText("仓库")).toBeInTheDocument();
     expect(within(drawer).getByText("圆通")).toBeInTheDocument();

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { PasswordField } from "@/components/arc/password-field/password-field";
 import { validatePassword } from "@/pages/auth/logic/auth-messages";
 import styles from "../app-shell.module.css";
@@ -36,7 +36,7 @@ export function ChangePasswordDialog({ open, onOpenChange, onSubmit, pending, er
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} busy={pending}>
       <DialogContent title="修改密码">
         <form onSubmit={handleSubmit} noValidate className={styles.dialogForm}>
           <PasswordField
@@ -44,8 +44,7 @@ export function ChangePasswordDialog({ open, onOpenChange, onSubmit, pending, er
             name="old_password"
             autoComplete="current-password"
             value={oldPassword}
-            aria-invalid={oldError ? true : undefined}
-            description={oldError}
+            error={oldError}
             messages={{ showPassword: "显示密码", hidePassword: "隐藏密码" }}
             onChange={(e) => {
               setOldPassword(e.target.value);
@@ -57,8 +56,7 @@ export function ChangePasswordDialog({ open, onOpenChange, onSubmit, pending, er
             name="new_password"
             autoComplete="new-password"
             value={newPassword}
-            aria-invalid={newError ? true : undefined}
-            description={newError}
+            error={newError}
             messages={{ showPassword: "显示密码", hidePassword: "隐藏密码" }}
             onChange={(e) => {
               setNewPassword(e.target.value);
@@ -67,9 +65,16 @@ export function ChangePasswordDialog({ open, onOpenChange, onSubmit, pending, er
           />
           {error && <Alert tone="danger" title={error} />}
           {succeeded && <Alert tone="success" title="密码已修改，其他设备需要重新登录" />}
-          <Button type="submit" loading={pending}>
-            修改密码
-          </Button>
+          <div className={styles.formActions}>
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" disabled={pending}>
+                取消
+              </Button>
+            </DialogClose>
+            <Button type="submit" loading={pending}>
+              修改密码
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

@@ -36,6 +36,7 @@
 
 .tabular {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .waybill {
@@ -43,69 +44,3 @@
   font-size: 13px;
 }
 
-.tableWrap {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 12px);
-  background: var(--surface);
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.table th,
-.table td {
-  padding: 0 12px;
-  height: 44px;
-  text-align: left;
-  white-space: nowrap;
-  border-bottom: 1px solid var(--border);
-}
-
-.table th {
-  height: 40px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--surface);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.opCol {
-  width: 120px;
-}
-
-.emptyCell {
-  height: 88px;
-  text-align: center;
-  color: var(--text-secondary);
-}
-
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}

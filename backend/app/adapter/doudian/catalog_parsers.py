@@ -84,14 +84,21 @@ _SUMMARY_KEYS = (
 def parse_stock(resp: dict) -> tuple[list[StockDTO], StockSummary]:
     """库存列表 + 顶层统计（附录 D.2）。"""
     data = require_data(resp)
-    if not isinstance(data, dict):
-        raise ParseError("库存列表的 data 不是对象")
-    rows = find_list(data)
-    if rows is None:
-        raise ParseError("库存列表缺少列表字段")
+    # 真实响应：data 是数组（空店为 null），统计字段在顶层；也兼容统计与列表都在 data 对象里的形态
+    if data is None and (opt_int(resp.get("total")) or 0) > 0:
+        # total>0 却没给列表：当成空店会让同步删光该店库存快照
+        raise ParseError("库存列表 data 为空但 total 大于 0")
+    if data is None or isinstance(data, list):
+        rows, stats_node = data or [], resp
+    elif isinstance(data, dict):
+        rows, stats_node = find_list(data), data
+        if rows is None:
+            raise ParseError("库存列表缺少列表字段")
+    else:
+        raise ParseError("库存列表的 data 既不是数组也不是对象")
     items = [_parse_stock(s) for s in rows if isinstance(s, dict)]
-    stats = int_fields(data)
-    total = opt_int(data.get("total"))
+    stats = int_fields(stats_node)
+    total = opt_int(stats_node.get("total"))
     return items, StockSummary(
         total=len(items) if total is None else total,
         **{k: stats.get(k, 0) for k in _SUMMARY_KEYS},

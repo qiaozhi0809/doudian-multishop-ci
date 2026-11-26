@@ -1,4 +1,4 @@
-import { aggregateProductCounts, mergeGroups, priceRange } from "./catalog-page";
+import { aggregateProductCounts, mergeGroups, priceRange, productStateLabel } from "./catalog-page";
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: 1, shop_id: 1, shop_name: "店铺甲", product_id: "p1", name: "商品", status: "1",
@@ -9,6 +9,14 @@ const row = (over: Record<string, unknown> = {}) => ({
 });
 
 describe("catalog logic", () => {
+  it("商品状态缺失显示暂无", () => {
+    expect(productStateLabel(row({ tab: null, status: null }) as never)).toBe("暂无");
+    expect(productStateLabel(row({ tab: "onSale" }) as never)).toBe("在售");
+    expect(productStateLabel(row({ tab: "unpass_new" }) as never)).toBe("未通过");
+    expect(productStateLabel(row({ tab: "newTab" }) as never)).toBe("newTab");
+    expect(productStateLabel(row({ tab: "已下架" }) as never)).toBe("已下架");
+  });
+
   it("价格区间：同价只显示一个价格，不同价显示区间，缺失显示暂无", () => {
     expect(priceRange(row() as never)).toBe("¥128.00");
     expect(priceRange(row({ price_higher_cents: 9900 }) as never)).toBe("¥99.00 – ¥128.00");

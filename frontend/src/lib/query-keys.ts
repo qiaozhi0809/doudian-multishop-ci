@@ -1,29 +1,37 @@
-export interface OrderFilters {
+/** 服务端排序参数（lib/list-sort 的 sortQuery）；不同排序是不同的查询。 */
+export interface SortFilter {
+  sort?: string;
+  order?: "asc" | "desc";
+  /** 计数卡快捷筛选（lib/use-quick-filter）。 */
+  quick?: string;
+}
+
+export interface OrderFilters extends SortFilter {
   status?: string;
   page?: number;
 }
 
-export interface LabelPoolFilters {
+export interface LabelPoolFilters extends SortFilter {
   stage: string;
   page?: number;
 }
 
-export interface AftersaleFilters {
+export interface AftersaleFilters extends SortFilter {
   view: "todo" | "all";
   status?: number;
   page: number;
 }
 
-export interface ProductFilters {
+export interface ProductFilters extends SortFilter {
   keyword?: string;
   page: number;
 }
 
-export interface PageFilter {
+export interface PageFilter extends SortFilter {
   page: number;
 }
 
-export interface ReconcileFilters {
+export interface ReconcileFilters extends SortFilter {
   kind: string;
   status: string;
   page: number;
@@ -55,14 +63,14 @@ export const queryKeys = {
   productCounts: (shopIds: number[]) => ["products", "counts", shopIds] as const,
   productGroups: (shopIds: number[]) => ["products", "groups", shopIds] as const,
   stockRoot: () => ["stock"] as const,
-  stock: (shopIds: number[], filters: PageFilter & { alarmOnly: boolean }) =>
+  stock: (shopIds: number[], filters: PageFilter) =>
     ["stock", "list", shopIds, filters] as const,
   stockSummary: (shopIds: number[]) => ["stock", "summary", shopIds] as const,
   stockWarehouses: (shopIds: number[]) => ["stock", "warehouses", shopIds] as const,
   fundRoot: () => ["fund"] as const,
   fundSummary: (shopIds: number[]) => ["fund", "summary", shopIds] as const,
-  fundUnsettled: (shopIds: number[], page: number) =>
-    ["fund", "unsettled", shopIds, page] as const,
+  fundUnsettled: (shopIds: number[], filters: PageFilter) =>
+    ["fund", "unsettled", shopIds, filters] as const,
   fundMargin: (shopIds: number[]) => ["fund", "margin", shopIds] as const,
   fundBills: (shopIds: number[], days: number) => ["fund", "bills", shopIds, days] as const,
   // ---- M3 打印 ----
@@ -77,4 +85,8 @@ export const queryKeys = {
   backupSnapshots: () => ["backup", "snapshots"] as const,
   // ---- 代理池 ----
   proxyPool: () => ["proxyPool"] as const,
+  // ---- 通知中心 ----
+  notificationsRoot: () => ["notifications"] as const,
+  notifications: (unreadOnly: boolean, page: number) => ["notifications", "list", unreadOnly, page] as const,
+  notificationSummary: () => ["notifications", "summary"] as const,
 };

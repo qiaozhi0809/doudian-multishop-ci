@@ -1,0 +1,55 @@
+import { createContext, useContext, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ensureNotificationPermission } from "../logic/alert-channel";
+import type { NotificationItem } from "../logic/notification-view";
+import { useAlertNotices } from "./use-alert-notices";
+import { useMuted } from "./use-muted";
+import { useNotifications } from "./use-notifications";
+import { useProgress, useProgressSubscriptions } from "./use-progress";
+
+/**
+ * 通知中心的全部状态，只在外壳里建一次：列表与摘要、进行中任务（SSE 订阅只挂这一处）、
+ * 提醒（见 useAlertNotices）、面板开关与跳转。
+ */
+export function useNotificationCenterState() {
+  const center = useNotifications();
+  useProgressSubscriptions();
+  const progress = useProgress();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [muted, setMutedState] = useMuted();
+
+  // 系统通知权限只在用户操作里申请：点开铃铛、打开提示音
+  const toggleOpen = (next: boolean) => {
+    if (next) void ensureNotificationPermission();
+    setOpen(next);
+  };
+  const setMuted = (value: boolean) => {
+    if (!value) void ensureNotificationPermission();
+    setMutedState(value);
+  };
+
+  useAlertNotices();
+
+  const go = (link: string | null) => {
+    setOpen(false);
+    if (link) void navigate(link);
+  };
+  const openItem = (item: NotificationItem) => {
+    if (item.read_at === null) void center.markRead(item.id);
+    go(item.link);
+  };
+
+  return { ...center, progress, open, setOpen: toggleOpen, muted, setMuted, go, openItem };
+}
+
+export type NotificationCenterState = ReturnType<typeof useNotificationCenterState>;
+
+export const NotificationCenterContext = createContext<NotificationCenterState | null>(null);
+
+/** 铃铛与横条读同一份状态；必须在 NotificationCenterProvider 里使用。 */
+export function useNotificationCenter(): NotificationCenterState {
+  const value = useContext(NotificationCenterContext);
+  if (!value) throw new Error("useNotificationCenter 需要 NotificationCenterProvider");
+  return value;
+}

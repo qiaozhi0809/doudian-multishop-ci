@@ -6,9 +6,11 @@ import { api } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
 import { metricQueries } from "@/lib/metric-queries";
 import { queryKeys } from "@/lib/query-keys";
+import { useListSort, useSettledSort } from "@/lib/use-list-sort";
 import { useShops } from "@/lib/use-shops";
 import {
   UNSETTLED_PAGE_SIZE,
+  UNSETTLED_SORT_KEYS,
   isFundTab,
   parseBillDays,
   type FundTab,
@@ -19,11 +21,12 @@ type UnsettledPage = components["schemas"]["UnsettledPage"];
 type MarginResponse = components["schemas"]["MarginResponse"];
 type BillsResponse = components["schemas"]["BillsResponse"];
 
-/** 资金页数据：标签页 / 页码 / 账单天数在 URL 里。汇总来自本地快照，账单每次从上游取。 */
+/** 资金页数据：标签页 / 待结算排序与页码 / 账单天数在 URL 里。汇总来自本地快照，账单每次从上游取。 */
 export function useFundPage() {
   const shops = useShops();
   const { shopIds } = useShopFilter();
   const [params, setParams] = useSearchParams();
+  const sorting = useListSort(UNSETTLED_SORT_KEYS);
 
   const rawTab = params.get("tab");
   const tab: FundTab = isFundTab(rawTab) ? rawTab : "unsettled";
@@ -39,6 +42,8 @@ export function useFundPage() {
           if (patch.tab === "unsettled") next.delete("tab");
           else next.set("tab", patch.tab);
           next.delete("page");
+          next.delete("sort");
+          next.delete("order");
         }
         if (patch.days !== undefined) {
           if (patch.days === 30) next.delete("days");
@@ -57,10 +62,10 @@ export function useFundPage() {
   const summary = useQuery(metricQueries.fundSummary(shopIds));
 
   const unsettled = useQuery({
-    queryKey: queryKeys.fundUnsettled(shopIds, page),
+    queryKey: queryKeys.fundUnsettled(shopIds, { page, ...sorting.query }),
     queryFn: () =>
       api.get<UnsettledPage>("/api/fund/unsettled", {
-        shop_ids: shopIds, page, page_size: UNSETTLED_PAGE_SIZE,
+        shop_ids: shopIds, page, page_size: UNSETTLED_PAGE_SIZE, ...sorting.query,
       }),
     enabled: tab === "unsettled",
     placeholderData: keepPreviousData,
@@ -85,6 +90,7 @@ export function useFundPage() {
     [shops.data],
   );
 
+  const shownSort = useSettledSort(sorting.sort, !unsettled.isPlaceholderData);
   return {
     shopsState: shops.isLoading
       ? ("loading" as const)
@@ -99,6 +105,8 @@ export function useFundPage() {
     setTab: (value: FundTab) => update({ tab: value }),
     page,
     setPage: (value: number) => update({ page: value }),
+    sort: shownSort,
+    setSort: sorting.setSort,
     days,
     setDays: (value: number) => update({ days: value }),
     summary,

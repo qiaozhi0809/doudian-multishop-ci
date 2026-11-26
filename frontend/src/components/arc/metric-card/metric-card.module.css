@@ -1,6 +1,9 @@
-/* 一行胶囊（本项目定制）：名称在左、数字在右，56 高。说明文字不显示，需要时放进名称里。 */
-.card { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; height: 56px; border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 0 18px; background: var(--surface); box-shadow: var(--shadow-resting); }
-.card > :nth-child(2) { flex: none; font-size: 20px; }
+/* 一行胶囊（本项目定制）：名称在左、数字在右，44 高（所有者要求降低，2026-11-26）。说明文字不显示，需要时放进名称里。 */
+.card { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-width: 0; height: var(--metric-card-height, 44px); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 0 var(--metric-card-pad, 14px); background: var(--surface); box-shadow: var(--shadow-resting); }
+.card > :nth-child(2) { flex: none; font-size: 18px; }
+/* 计数卡一行排满时卡片较窄：名称放不下就省略号，不和数字挤在一起 */
+.card > :first-child { min-width: 0; }
+.top .name .swapBlock { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .top { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .top span { color: var(--text-secondary); font-size: var(--text-sm); }
 .top .name { display: inline-flex; min-width: 0; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -18,3 +21,9 @@
 .top small[data-trend] { border-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
 .top small[data-trend="up"] { background: color-mix(in oklab, var(--success) 11%, transparent); color: var(--success); }
 .top small[data-trend="down"] { background: color-mix(in oklab, var(--danger) 11%, transparent); color: var(--danger); }
+/* 快捷筛选卡（本项目加的）：可点的才有悬停底色；选中时描边与名称用强调色、浅色底 */
+button.card { width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
+button.card:hover { background: var(--surface-muted); }
+button.card[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+button.card[aria-pressed="true"] .top span { color: var(--foreground); }
+button.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

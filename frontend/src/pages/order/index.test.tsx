@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { makeShop } from "@/test/fixtures";
+import { makeShop, strongOpenSummary } from "@/test/fixtures";
 import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
 import OrderPage from "./index";
 
@@ -13,7 +13,8 @@ const order = (id: number, over: Record<string, unknown> = {}) => ({
   items: [{ sku_order_id: null, product_id: null, product_name: "商品甲", sku_spec: null, quantity: 1, price_cents: null }],
   ...over,
 });
-const page = (items: unknown[], total = items.length) => jsonResponse({ items, total, page: 1, page_size: 50 });
+const page = (items: unknown[], total = items.length, current = 1) =>
+  jsonResponse({ items, total, page: current, page_size: 50 });
 
 const shops = [makeShop({ id: 1, name: "店铺甲" }), makeShop({ id: 2, name: "店铺乙" })];
 const countsOk = jsonResponse({ shops: [{ shop_id: 1, source: "upstream", counts: counts(5), fetched_at: new Date().toISOString() }] });
@@ -90,6 +91,42 @@ describe("订单列表页", () => {
     expect(screen.getByText(/店铺乙：出口不通/)).toBeInTheDocument();
   });
 
+  it("未取到的店已在顶部横条（登录 / 出口 / 风控）时不再提示；其他原因的店照常提示", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/orders": page([]),
+      "GET /api/orders/counts": jsonResponse({
+        shops: [
+          { shop_id: 1, source: "error", error: "平台接口报错" },
+          { shop_id: 2, source: "error", error: "出口不通，请检查代理是否到期或更换代理" },
+        ],
+      }),
+      "GET /api/notifications/summary": jsonResponse(strongOpenSummary([{ shopId: 2, kinds: ["egress_unreachable"] }])),
+    });
+    renderPage();
+    expect(await screen.findByText("1 家店未取到")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "查看原因" }));
+    expect(screen.getByText(/店铺甲：平台接口报错/)).toBeInTheDocument();
+    expect(screen.queryByText(/店铺乙：出口不通/)).not.toBeInTheDocument();
+  });
+
+  it("未取到的店都已在顶部横条时整条提示不显示", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/orders": page([]),
+      "GET /api/orders/counts": jsonResponse({
+        shops: [
+          { shop_id: 1, source: "upstream", counts: counts(5) },
+          { shop_id: 2, source: "error", error: "登录失效" },
+        ],
+      }),
+      "GET /api/notifications/summary": jsonResponse(strongOpenSummary([{ shopId: 2, kinds: ["login_expired"] }])),
+    });
+    renderPage();
+    expect(await screen.findByText("待发货")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/家店未取到/)).not.toBeInTheDocument());
+  });
+
   it("所有店铺计数都失败：只提示未取到，不显示任何 0", async () => {
     mockFetch({
       "GET /api/shops": jsonResponse(shops),
@@ -129,6 +166,61 @@ describe("订单列表页", () => {
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/orders?page=2"));
     await waitFor(() => expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain("/api/orders?page=2&page_size=50"));
     expect(screen.getByText("共 120 单，每页 50 单")).toBeInTheDocument();
+  });
+
+  it("计数卡是快捷筛选：点「超时未发」带 quick=ship_delay 请求并回到第 1 页，再点清除", async () => {
+    const fetchMock = mockFetch({
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/orders/counts": countsOk,
+      "GET /api/orders": page([order(1)], 120),
+    });
+    renderPage("/orders?page=3");
+    const user = userEvent.setup();
+    const card = await screen.findByRole("button", { name: /超时未发/ });
+    expect(card).toHaveAttribute("aria-pressed", "false");
+    await user.click(card);
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain("/api/orders?page=1&page_size=50&quick=ship_delay"),
+    );
+    expect(screen.getByRole("button", { name: /超时未发/ })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: /超时未发/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /超时未发/ })).toHaveAttribute("aria-pressed", "false"));
+  });
+
+  it("序号翻页连续：第 2 页第一行是 51", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/orders/counts": countsOk,
+      "GET /api/orders": page([order(1), order(2)], 120, 2),
+    });
+    renderPage("/orders?page=2");
+    const first = await screen.findByRole("row", { name: /490000001/ });
+    expect(screen.getAllByRole("columnheader")[0]).toHaveTextContent("序号");
+    expect(within(first).getAllByRole("cell")[0]).toHaveTextContent("51");
+    expect(within(screen.getByRole("row", { name: /490000002/ })).getAllByRole("cell")[0]).toHaveTextContent("52");
+  });
+
+  it("点表头排序：写入 URL、带 sort / order 请求服务端并回到第 1 页；默认排序不显示排序状态", async () => {
+    const fetchMock = mockFetch({
+      "GET /api/shops": jsonResponse(shops),
+      "GET /api/orders/counts": countsOk,
+      "GET /api/orders": page([order(1)], 120),
+    });
+    renderPage("/orders?page=3");
+    const user = userEvent.setup();
+    await screen.findByRole("row", { name: /490000001/ });
+    expect(screen.getByRole("columnheader", { name: /实付/ })).toHaveAttribute("aria-sort", "none");
+    expect(screen.queryByRole("button", { name: /商品/ })).toBeNull(); // 长文本列不排序
+    await user.click(screen.getByRole("button", { name: /实付/ }));
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/orders?sort=amount_cents&order=asc"));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain("/api/orders?page=1&page_size=50&sort=amount_cents&order=asc"),
+    );
+    expect(await screen.findByRole("columnheader", { name: /实付/ })).toHaveAttribute("aria-sort", "ascending");
+    await user.click(screen.getByRole("button", { name: /实付/ }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain("/api/orders?page=1&page_size=50&sort=amount_cents&order=desc"),
+    );
   });
 
   it("手动同步：区分已开始与正在同步", async () => {

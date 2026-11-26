@@ -13,9 +13,9 @@ function sizeText(bytes: number): string {
 export function BackupCard({ backup }: { backup: BackupState }) {
   const latest = backup.list?.items[0];
   return (
-    <section className={styles.backupCard} aria-label="数据备份">
+    <section className={`panel ${styles.backupCard}`} aria-label="数据备份">
       <div className={styles.backupHead}>
-        <strong>数据备份</strong>
+        <h2 className="section-title">数据备份</h2>
         <Button variant="secondary" onClick={backup.toggle}>
           {backup.open ? "收起" : "查看快照"}
         </Button>
@@ -28,8 +28,8 @@ export function BackupCard({ backup }: { backup: BackupState }) {
               : "暂无快照"}
           </p>
           <div>
-            <Button variant="secondary" onClick={backup.run} disabled={backup.pending}>
-              {backup.pending ? "备份中…" : "立即备份"}
+            <Button variant="secondary" onClick={backup.run} loading={backup.pending}>
+              立即备份
             </Button>
           </div>
           {backup.failed && <Alert tone="danger" title="备份失败，请查看 logs 目录下的日志" />}

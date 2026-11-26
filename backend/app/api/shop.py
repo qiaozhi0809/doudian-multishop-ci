@@ -44,7 +44,7 @@ def create_shop(
 ) -> ShopRow:
     try:
         shop_id = _state(request).shop_admin.create(
-            body.name, body.entity, body.shop_no,
+            body.name, body.entity, body.shop_no, platform_shop_id=body.platform_shop_id,
             egress=body.egress.model_dump() if body.egress else None, actor=admin,
         )
     except ValueError as e:  # 校验信息不含账号密码
@@ -56,10 +56,16 @@ def create_shop(
 def patch_shop(
     shop_id: int, body: ShopPatch, request: Request, admin: str = Depends(require_admin)
 ) -> ShopRow:
+    # 省略 = 不改；显式 null = 清空（服务层用空串表示清空）
+    cleared = {
+        k: "" for k in ("entity", "platform_shop_id", "bank_name", "bank_tail")
+        if k in body.model_fields_set and getattr(body, k) is None
+    }
+    text = {
+        k: getattr(body, k) for k in ("entity", "platform_shop_id", "bank_name", "bank_tail")
+    } | cleared
     _state(request).shop_admin.update(
-        shop_id, name=body.name, entity=body.entity, channel=body.channel, enabled=body.enabled,
-        platform_shop_id=body.platform_shop_id, bank_name=body.bank_name, bank_tail=body.bank_tail,
-        actor=admin,
+        shop_id, name=body.name, channel=body.channel, enabled=body.enabled, actor=admin, **text,
     )
     return _row(request, shop_id)
 
@@ -69,10 +75,8 @@ async def scrape_profile(
     shop_id: int, request: Request, admin: str = Depends(require_admin)
 ) -> ShopRow:
     """手动读取平台页面上可见、但没有接口的固定信息：店铺ID、主体、收款账户摘要。"""
-    try:
-        await _state(request).shop_profile.scrape_card(shop_id)
-    except Exception as e:  # noqa: BLE001 - 浏览器或页面失败都归为可重试的读取失败
-        raise InvalidRequest("读取平台信息失败，可稍后重试或手工填写") from e
+    # 出口未就绪 / 暂停 / 会话失效照常返回 409 等原因，浏览器失败在 service 里转成 422
+    await _state(request).shop_profile.scrape_card(shop_id, actor=admin)
     return _row(request, shop_id)
 
 

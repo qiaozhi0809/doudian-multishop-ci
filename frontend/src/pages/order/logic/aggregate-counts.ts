@@ -5,7 +5,7 @@ type OrderCountsResponse = components["schemas"]["OrderCountsResponse"];
 type OrderCounts = components["schemas"]["OrderCounts"];
 export type CountKey = keyof OrderCounts;
 
-/** 平台口径的四项计数（api/order-page.md C.1）。只展示计数，不用于筛选列表。 */
+/** 平台口径的四项计数（api/order-page.md C.1）；键名也是列表的快捷筛选值（quick）。 */
 export const COUNT_ITEMS: { key: CountKey; label: string; tone: KpiTone }[] = [
   { key: "stock_up", label: "待发货", tone: "info" },
   { key: "exp_ship", label: "24 小时内须发", tone: "warning" },

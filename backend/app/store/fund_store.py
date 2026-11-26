@@ -11,6 +11,7 @@ import sqlalchemy as sa
 
 from app.domain.aggregate_models import FundUnsettledDTO, MarginDTO
 from app.store.aggregate_schema import fund_unsettled, margin_account
+from app.store.sorting import SortOrder, order_by, shop_name_of
 
 
 def replace_unsettled(
@@ -35,9 +36,21 @@ def replace_unsettled(
     return len(items)
 
 
+UNSETTLED_SORTS: dict[str, Any] = {
+    "shop_name": shop_name_of(fund_unsettled.c.shop_id),
+    "income_amount_cents": fund_unsettled.c.income_amount_cents,
+    "platform_service_fee_cents": fund_unsettled.c.platform_service_fee_cents,
+    "unsettled_amount_cents": fund_unsettled.c.unsettled_amount_cents,
+    "ecom_order_status": fund_unsettled.c.ecom_order_status,
+    "synced_at": fund_unsettled.c.synced_at,
+}
+
+
 def list_unsettled(
     conn: sa.Connection, shop_ids: Sequence[int], page: int = 1, page_size: int = 50,
+    sort: str | None = None, order: SortOrder = "asc",
 ) -> tuple[list[dict[str, Any]], int]:
+    """默认按入库顺序倒序（最近同步进来的在前）。"""
     if not shop_ids:
         return [], 0
     conds = [fund_unsettled.c.shop_id.in_(list(shop_ids))]
@@ -46,7 +59,8 @@ def list_unsettled(
     ).scalar_one()
     rows = conn.execute(
         sa.select(fund_unsettled).where(*conds)
-        .order_by(fund_unsettled.c.id.desc())
+        .order_by(*order_by(UNSETTLED_SORTS, sort, order, (fund_unsettled.c.id.desc(),),
+                            fund_unsettled.c.id))
         .limit(page_size).offset((page - 1) * page_size)
     ).mappings().all()
     return [dict(r) for r in rows], int(total)

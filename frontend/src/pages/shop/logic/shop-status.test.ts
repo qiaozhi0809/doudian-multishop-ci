@@ -3,13 +3,16 @@ import {
   canScan,
   egressBadge,
   egressModeLabel,
+  isLoggedIn,
   pausedBadge,
   primaryAction,
   readyBadge,
   scanBlockedReason,
   scanDisabledReason,
   shopStatusBadge,
+  shopStatusSortValue,
 } from "./shop-status";
+import { sortRows } from "@/lib/list-sort";
 
 const NOW = new Date("2026-11-25T00:00:00Z");
 const daysFromNow = (d: number) => new Date(NOW.getTime() + d * 86_400_000).toISOString();
@@ -169,5 +172,30 @@ describe("primaryAction（行内直接显示的主操作）", () => {
   it("已停用或风控暂停但出口正常：仍显示扫码登录（禁用并说明原因）", () => {
     expect(primaryAction(makeShop({ status: "disabled" }))).toBe("login");
     expect(primaryAction(makeShop({ paused_reason: "risk_blocked:1" }))).toBe("login");
+  });
+});
+
+describe("isLoggedIn", () => {
+  it("启用且会话未过期才算已登录", () => {
+    expect(isLoggedIn(makeShop({ status: "active", health: "healthy" }))).toBe(true);
+    expect(isLoggedIn(makeShop({ status: "active", health: "expired" }))).toBe(false);
+    expect(isLoggedIn(makeShop({ status: "needs_login" }))).toBe(false);
+    expect(isLoggedIn(makeShop({ status: "disabled" }))).toBe(false);
+  });
+});
+
+describe("shopStatusSortValue", () => {
+  it("状态列按显示顺序排：正常 → 即将过期（剩天数少的在前）→ 需重新登录 → 已停用", () => {
+    const rows = [
+      makeShop({ id: 1, status: "disabled" }),
+      makeShop({ id: 2, status: "needs_login" }),
+      makeShop({ id: 3, health: "expiring", expires_at: daysFromNow(12) }),
+      makeShop({ id: 4 }),
+      makeShop({ id: 5, health: "expiring", expires_at: daysFromNow(3) }),
+    ];
+    const sorted = sortRows(rows, { key: "status", direction: "asc" }, (row) => shopStatusSortValue(row, NOW));
+    expect(sorted.map((r) => shopStatusBadge(r, NOW).label)).toEqual([
+      "正常", "即将过期（剩 3 天）", "即将过期（剩 12 天）", "需重新登录", "已停用",
+    ]);
   });
 });

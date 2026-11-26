@@ -226,75 +226,16 @@
   background: var(--warning);
 }
 
-.popoverTrigger {
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.badgeLink {
-  text-decoration: none;
-}
-
-.attentionPanel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.attentionLink {
-  color: var(--accent-strong);
-  font-size: var(--text-sm);
-  text-decoration: none;
-}
-
-.attentionLink:hover {
-  text-decoration: underline;
-}
-
-.attentionList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 15rem;
-  max-width: 22rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.attentionItem {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.attentionRow {
-  display: flex;
-  flex: 1 0 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  color: var(--foreground);
-  font-size: var(--text-sm);
-}
-
-.attentionError {
-  flex: 1 0 100%;
-  margin: 0;
-  color: var(--danger);
-  font-size: var(--text-xs);
-  line-height: var(--leading-body);
-}
-
-.healthSkeleton {
-  width: 7rem;
-}
-
 .dialogForm {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+/* 对话框底部：ghost「取消」在左、主按钮在右，整组靠右（与店铺、代理池对话框一致） */
+.formActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }

@@ -6,7 +6,9 @@ import { api, ApiError } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
 import { queryKeys } from "@/lib/query-keys";
 import { useEventSubscription } from "@/lib/use-events";
+import { useListSort, useSettledSort } from "@/lib/use-list-sort";
 import {
+  FINDING_SORT_KEYS,
   PAGE_SIZE,
   isKind,
   isStatus,
@@ -21,11 +23,12 @@ function message(error: unknown): string {
   return error instanceof ApiError ? error.message : "操作失败，请重试";
 }
 
-/** 对账页：筛选在 URL 里；触发后靠 SSE + 轮询刷新同一个查询。 */
+/** 对账页：筛选与排序在 URL 里；触发后靠 SSE + 轮询刷新同一个查询。 */
 export function useReconcile() {
   const { shopIds } = useShopFilter();
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
+  const sorting = useListSort(FINDING_SORT_KEYS);
   const [error, setError] = useState<string | null>(null);
 
   const kindParam = params.get("kind");
@@ -57,7 +60,7 @@ export function useReconcile() {
     update({ page: value > 1 ? String(value) : null });
 
   const query = useQuery({
-    queryKey: queryKeys.reconcileFindings(shopIds, { kind, status, page }),
+    queryKey: queryKeys.reconcileFindings(shopIds, { kind, status, page, ...sorting.query }),
     queryFn: () =>
       api.get<FindingsPage>("/api/reconcile/findings", {
         shop_ids: shopIds,
@@ -65,6 +68,7 @@ export function useReconcile() {
         status: status === "all" ? undefined : status,
         page,
         page_size: PAGE_SIZE,
+        ...sorting.query,
       }),
     placeholderData: keepPreviousData,
     refetchInterval: (q) =>
@@ -97,6 +101,7 @@ export function useReconcile() {
     void client.invalidateQueries({ queryKey: queryKeys.reconcileRoot() });
   });
 
+  const shownSort = useSettledSort(sorting.sort, !query.isPlaceholderData);
   return {
     query,
     rows: query.data?.items ?? [],
@@ -104,6 +109,8 @@ export function useReconcile() {
     kind,
     status,
     page,
+    sort: shownSort,
+    setSort: sorting.setSort,
     setKind,
     setStatus,
     setPage,

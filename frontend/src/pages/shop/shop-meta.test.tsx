@@ -59,12 +59,12 @@ describe("店铺字段展示与编辑", () => {
     const a = within(await screen.findByRole("row", { name: /店铺甲/ }));
     expect(a.getByText("平台甲店")).toBeInTheDocument();
     expect(a.getByText("李四")).toBeInTheDocument();
-    expect(within(rowOf("店铺乙")).getAllByText("—")).toHaveLength(2);
+    expect(within(rowOf("店铺乙")).getAllByText("暂无").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("编辑店铺：保存时 PATCH 本地别名", async () => {
+  it("编辑店铺：只 PATCH 改动的字段，旧的不合规卡尾号不改就不挡保存", async () => {
     const fetchMock = mockPageFetch({
-      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲", bank_tail: "**** 1234" })]),
       "PATCH /api/shops/1": jsonResponse(makeShop({ id: 1, name: "新名" })),
     });
     renderPage();
@@ -79,13 +79,7 @@ describe("店铺字段展示与编辑", () => {
     await user.click(within(dialog).getByRole("button", { name: "保存" }));
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
-      expect(JSON.parse(String(call![1]!.body))).toEqual({
-        name: "新名",
-        entity: null,
-        platform_shop_id: null,
-        bank_name: null,
-        bank_tail: null,
-      });
+      expect(JSON.parse(String(call![1]!.body))).toEqual({ name: "新名" });
     });
   });
 
@@ -105,7 +99,7 @@ describe("店铺字段展示与编辑", () => {
     await user.click(
       within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }),
     );
-    await user.click(await screen.findByRole("menuitem", { name: "查看店铺资料" }));
+    await user.click(await screen.findByRole("menuitem", { name: "店铺资料" }));
     await user.click(await screen.findByRole("button", { name: "同步收款信息" }));
     await waitFor(() => {
       expect(
@@ -117,7 +111,7 @@ describe("店铺字段展示与编辑", () => {
     });
   });
 
-  it("已有收款账户时不显示同步按钮", async () => {
+  it("已有收款账户时同步按钮仍可点（作为刷新）", async () => {
     mockPageFetch({
       "GET /api/shops": jsonResponse([
         makeShop({ id: 1, name: "店铺甲", bank_name: "示例银行", bank_tail: "4567" }),
@@ -131,14 +125,35 @@ describe("店铺字段展示与编辑", () => {
     await user.click(
       within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }),
     );
-    await user.click(await screen.findByRole("menuitem", { name: "查看店铺资料" }));
+    await user.click(await screen.findByRole("menuitem", { name: "店铺资料" }));
     await screen.findByText("**** 4567");
-    expect(screen.queryByRole("button", { name: "同步收款信息" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "同步收款信息" })).toBeEnabled();
   });
 
-  it("停用店铺：PATCH enabled=false", async () => {
+  it("停用已登录的店：先确认，确认后 PATCH enabled=false", async () => {
     const fetchMock = mockPageFetch({
-      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲", status: "active" })]),
+      "PATCH /api/shops/1": jsonResponse(makeShop({ id: 1, status: "disabled" })),
+    });
+    renderPage();
+    const user = userEvent.setup();
+    await user.click(
+      within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "停用店铺" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("停用店铺 店铺甲")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
+    await user.click(dialog.getByRole("button", { name: "确认停用" }));
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+      expect(JSON.parse(String(call![1]!.body))).toEqual({ enabled: false });
+    });
+  });
+
+  it("停用未登录的店：不弹确认，直接 PATCH", async () => {
+    const fetchMock = mockPageFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲", status: "needs_login" })]),
       "PATCH /api/shops/1": jsonResponse(makeShop({ id: 1, status: "disabled" })),
     });
     renderPage();
@@ -151,5 +166,30 @@ describe("店铺字段展示与编辑", () => {
       const call = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
       expect(JSON.parse(String(call![1]!.body))).toEqual({ enabled: false });
     });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("编辑店铺：标题下写店铺名，卡号尾号与店铺ID不合规时就地报错、不发请求", async () => {
+    const fetchMock = mockPageFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+    });
+    renderPage();
+    const user = userEvent.setup();
+    await user.click(
+      within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "编辑店铺" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getAllByText("店铺甲").length).toBeGreaterThan(0);
+    expect(dialog.getByRole("button", { name: "取消" })).toBeInTheDocument();
+    const tail = dialog.getByLabelText(/卡号尾号/);
+    expect(tail).toHaveAttribute("maxLength", "4");
+    await user.type(tail, "1a2");
+    expect(tail).toHaveValue("12");
+    await user.type(dialog.getByLabelText(/店铺ID/), "x1");
+    await user.click(dialog.getByRole("button", { name: "保存" }));
+    expect(await dialog.findByText("卡号尾号是 4 位数字")).toBeInTheDocument();
+    expect(dialog.getByText("店铺ID是 1 到 20 位数字")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
   });
 });

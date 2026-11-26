@@ -1,16 +1,16 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { jsonResponse, mockFetch } from "@/test/mock-fetch";
+import { errorResponse, jsonResponse, mockFetch } from "@/test/mock-fetch";
 import { PoolSelect } from "./pool-select";
 
 const base = { expires_at: "2026-12-31", expiry_state: "ok", in_use_by: null, last_checked_at: null, last_check_ip: null };
 
-function renderSelect(onChange = vi.fn()) {
+function renderSelect(onChange = vi.fn(), error?: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <PoolSelect value={null} onChange={onChange} />
+      <PoolSelect value={null} onChange={onChange} error={error} />
     </QueryClientProvider>,
   );
   return onChange;
@@ -39,5 +39,17 @@ describe("PoolSelect", () => {
     mockFetch({ "GET /api/proxy-pool": jsonResponse([]) });
     renderSelect();
     expect(await screen.findByText("池里没有可用代理")).toBeInTheDocument();
+  });
+
+  it("字段错误以红字报错（role=alert），不是灰色说明", async () => {
+    mockFetch({ "GET /api/proxy-pool": jsonResponse([{ ...base, id: 1, proxy_display: "1.1.1.1:80" }]) });
+    renderSelect(vi.fn(), "请选择池里的代理");
+    expect(await screen.findByRole("alert")).toHaveTextContent("请选择池里的代理");
+  });
+
+  it("读取失败用提示条", async () => {
+    mockFetch({ "GET /api/proxy-pool": errorResponse(500, "Internal", "boom") });
+    renderSelect();
+    expect(await screen.findByText("读取代理池失败，请稍后重试")).toBeInTheDocument();
   });
 });

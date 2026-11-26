@@ -18,6 +18,7 @@ from app.api.catalog_schemas import (
     WarehousesResponse,
 )
 from app.api.deps import require_admin
+from app.api.list_sort import ProductQuick, ProductSort, SortOrder, StockQuick, StockSort
 from app.api.params import parse_shop_ids
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
@@ -40,11 +41,15 @@ def list_products(
     request: Request, shop_ids: str | None = None, tab: str | None = None,
     keyword: str | None = None, page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    sort: ProductSort | None = None, order: SortOrder = "asc",
+    quick: ProductQuick | None = None,
 ) -> ProductPage:
+    """默认按销量倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。"""
     state = request.app.state
     ids = state.shop_admin.target_ids(parse_shop_ids(shop_ids))
     rows, total = state.catalog.list_products(
-        ids, tab=tab, keyword=keyword, page=page, page_size=page_size
+        ids, tab=tab, keyword=keyword, page=page, page_size=page_size, sort=sort, order=order,
+        quick=quick,
     )
     return ProductPage(items=rows, total=total, page=page, page_size=page_size)
 
@@ -100,11 +105,16 @@ async def sync_products(
 def list_stock(
     request: Request, shop_ids: str | None = None, alarm_only: bool = False,
     page: int = Query(1, ge=1), page_size: int = Query(50, ge=1, le=200),
+    sort: StockSort | None = None, order: SortOrder = "asc",
+    quick: StockQuick | None = None,
 ) -> StockPage:
+    """默认按总库存升序（缺货的在前）；sort 指定白名单字段时按该字段排序后再分页；
+    quick 为计数卡快捷筛选（alarm 预警 / sold_out 售罄）。"""
     state = request.app.state
     ids = state.shop_admin.target_ids(parse_shop_ids(shop_ids))
     rows, total = state.catalog.list_stock(
-        ids, alarm_only=alarm_only, page=page, page_size=page_size
+        ids, alarm_only=alarm_only, page=page, page_size=page_size, sort=sort, order=order,
+        quick=quick,
     )
     return StockPage(items=rows, total=total, page=page, page_size=page_size)
 
