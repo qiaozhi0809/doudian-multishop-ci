@@ -446,6 +446,21 @@ class Signer(Protocol):
 **数据去向**：配置代理的店铺，请求经代理商隧道转发（HTTPS CONNECT，代理商看不到内容，只看到目标域名）；
 cookie、订单数据等仍只存本机。
 
+**浏览器进程管理**（`adapter/browser/browser_registry.py`、`adapter/browser/browser_process.py`）：
+后端被杀或崩溃时浏览器会变成孤儿进程，继续占住 `profiles/<shop_id>/`，下次启动报「资料目录正被占用」。所以本后端启动的每个浏览器都登记、限时、可回收。
+
+| 项 | 规则 |
+|---|---|
+| 登记 | 扫码（`login`）、同步收款信息（`scrape`）、飞鸽只读（`im`，预留）都经 `BrowserRegistry.open()` / `open_cloak()` 启动（含非 CloakBrowser 的系统浏览器扫码分支）。**先登记后启动**，按店铺目录登记用途、浏览器主进程 pid、启动时间、最长存活时间；退出 `async with` 即关闭并注销。同一店铺目录已登记时直接报「资料目录正被占用」，不再起第二个 |
+| 最长存活 | `login` 10 分钟、`scrape` 2 分钟、`im` 24 小时（常驻，到期由巡检关闭，持有方重新打开，即每天重启一次） |
+| 关闭 | `ctx.close()` 限时 15 秒；超时、或关完主进程仍在 → 结束整棵进程树（psutil 先杀子进程再杀主进程，Windows 仍有存活再 `taskkill /T /F`） |
+| 启动清理 | `lifespan` 启动后：结束 `--user-data-dir` 位于 `profiles/` 之下且未登记的浏览器进程；删除所有未登记店铺目录里残留的 `SingletonLock` / `SingletonSocket` / `SingletonCookie` |
+| 定时巡检 | 每 5 分钟（`run_every`，首轮等满一个间隔）：关闭超过最长存活时间的、注销进程已不在的、结束未登记的孤儿并清其锁文件。启动中的浏览器已登记，不会被误杀 |
+| 退出 | `lifespan` 退出时关闭全部已登记浏览器 |
+| 边界 | 只按命令行 `--user-data-dir` 判定归属，只动 `profiles/` 目录下的进程，**绝不碰用户自己的 Chrome** |
+| 日志 | `browser.opened` / `browser.closed`（含 `reason`：`done` / `expired` / `process_gone` / `shutdown` 等，`killed` 是否强杀）/ `browser.orphan_killed` / `browser.locks_removed`，只记 `shop_id`、用途、原因，不记路径、命令行与代理地址 |
+| 依赖 | `psutil`（跨平台进程枚举与结束进程树） |
+
 **平台规则风险**：每店独立出口的作用之一是降低店铺被平台关联判定的概率。是否符合平台规则由所有者判断并承担（gaps DEC-11）。
 
 ### 5.18 通知中心（`service/notifications.py`、`service/notification_feed.py`、`api/notification.py`）

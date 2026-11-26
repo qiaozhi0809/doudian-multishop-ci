@@ -15,6 +15,7 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.adapter.browser.browser_registry import SWEEP_INTERVAL_S, BrowserRegistry
 from app.adapter.print.component import PrintComponent
 from app.api import aftersale as aftersale_api
 from app.api import auth as auth_api
@@ -68,9 +69,11 @@ def create_app(
     hasher: PasswordHasher | None = None, client_factory: ClientFactory | None = None,
     fetch_ip: FetchIp | None = None, scan: ScanFn | None = None,
     print_component: PrintComponent | None = None, probe: Probe | None = None,
+    browsers: BrowserRegistry | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
-    overrides = Overrides(clock, hasher, client_factory, fetch_ip, scan, print_component, probe)
+    overrides = Overrides(
+        clock, hasher, client_factory, fetch_ip, scan, print_component, probe, browsers)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -110,6 +113,8 @@ def create_app(
             asyncio.create_task(run_every(ORDER_SYNC_INTERVAL_S, aftersale_all, stop)),
             asyncio.create_task(run_every(
                 settings.ship_deadline_scan_interval_s, _deadline_scan(app), stop)),
+            # 浏览器进程：启动先清孤儿与残留锁，之后每 5 分钟巡检（design/backend 5.17）
+            asyncio.create_task(_browser_upkeep(app.state.browsers, settings.profiles_dir, stop)),
         ]
         if settings.reconcile_daily:
             tasks.append(asyncio.create_task(run_daily_at(
@@ -124,6 +129,7 @@ def create_app(
             stop.set()
             await asyncio.gather(*tasks, return_exceptions=True)
             await app.state.tasks.shutdown()
+            await app.state.browsers.close_all("shutdown")
             engine.dispose()
 
     app = FastAPI(
@@ -147,6 +153,17 @@ def create_app(
         app.include_router(module.router)
     _mount_frontend(app, settings)
     return app
+
+
+async def _browser_upkeep(
+    browsers: BrowserRegistry, profiles_dir: Path, stop: asyncio.Event
+) -> None:
+    try:
+        await browsers.startup_cleanup(profiles_dir)
+    except Exception:
+        log.exception("browser.startup_cleanup_failed")
+    await run_every(
+        SWEEP_INTERVAL_S, partial(browsers.sweep, profiles_dir), stop, delay_first=True)
 
 
 async def _startup_reconcile(app: FastAPI) -> None:

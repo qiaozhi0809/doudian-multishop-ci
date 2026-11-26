@@ -8,6 +8,7 @@ from typing import Any
 from argon2 import PasswordHasher
 from sqlalchemy import Engine
 
+from app.adapter.browser.browser_registry import REGISTRY, BrowserRegistry
 from app.adapter.print.component import PrintComponent
 from app.config import Settings
 from app.service.aftersale import AftersaleService
@@ -44,7 +45,8 @@ from app.shared.secret_box import make_secret_box
 
 @dataclass
 class Overrides:
-    """测试用：替换时钟、哈希器、抖店客户端工厂、出口探测（fetch_ip / probe）、扫码、打印组件。"""
+    """测试用：替换时钟、哈希器、抖店客户端工厂、出口探测（fetch_ip / probe）、扫码、打印组件、
+    浏览器登记表。"""
 
     clock: Callable[[], datetime] | None = None
     hasher: PasswordHasher | None = None
@@ -53,6 +55,7 @@ class Overrides:
     scan: ScanFn | None = None
     print_component: PrintComponent | None = None
     probe: Probe | None = None  # 放在末尾：测试按位置传参
+    browsers: BrowserRegistry | None = None  # 浏览器登记表（默认进程唯一的 REGISTRY）
 
 
 def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[str, Any]:
@@ -78,6 +81,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
     notifications = NotificationService(engine, events, **clock_kw)
     return {
         "engine": engine, "events": events, "sessions": sessions, "egress": egress,
+        "browsers": ov.browsers or REGISTRY,
         "proxy_pool": ProxyPoolService(
             engine, box, events, ov.probe or make_probe(settings.egress_echo_url), **clock_kw),
         "runner": runner, "base_data": base_data, "shop_profile": shop_profile, "tasks": tasks,

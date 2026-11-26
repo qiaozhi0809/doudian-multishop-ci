@@ -83,3 +83,19 @@ async def test_run_every_stops_promptly():
     await asyncio.sleep(0.02)
     stop.set()
     await asyncio.wait_for(task, 1)
+
+
+async def test_run_every_delay_first_waits_one_interval():
+    stop = asyncio.Event()
+    calls = 0
+
+    async def count():
+        nonlocal calls
+        calls += 1
+
+    task = asyncio.ensure_future(run_every(3600, count, stop, delay_first=True))
+    await asyncio.sleep(0.02)
+    assert calls == 0
+    stop.set()
+    await asyncio.wait_for(task, 1)
+    assert calls == 0

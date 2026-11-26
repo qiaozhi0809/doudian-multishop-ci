@@ -15,10 +15,11 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from playwright.async_api import async_playwright
 
+from app.adapter.browser import browser_registry
+from app.adapter.browser.browser_registry import BrowserRegistry, Purpose
 from app.adapter.browser.cloak_launch import (  # noqa: F401 - build_cloak_kwargs 供测试与调用方复用
     CloakUnavailable,
     build_cloak_kwargs,
-    launch_cloak,
 )
 from app.adapter.doudian.endpoints import BASE_URL
 
@@ -125,39 +126,35 @@ async def await_login(
 
 async def scan_login(
     profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = 300,
-    use_cloak: bool = False,
+    use_cloak: bool = False, *, registry: BrowserRegistry | None = None,
 ) -> LoginResult:
     """打开订单页等待人工扫码。超时抛 TimeoutError，关窗抛 LoginCancelled。
 
     use_cloak 为真时走 CloakBrowser 定制 Chromium（每店固定指纹）；
-    否则用系统浏览器（channel 指定）。
+    否则用系统浏览器（channel 指定）。两种都在浏览器登记表里登记（用途 login），
+    关闭超时会强杀进程树。
     """
+    reg = registry or browser_registry.REGISTRY
     playwright_proxy_value = playwright_proxy(proxy)
     if use_cloak:
-        ctx = await launch_cloak(profile_dir, playwright_proxy_value)
-        try:
-            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
-            token, headers, cookies = await await_login(ctx, page, timeout_s)
-        finally:
-            try:
-                await ctx.close()
-            except Exception:  # noqa: BLE001 - 用户已关窗时 close 会报错
-                pass
+        async with reg.open_cloak(profile_dir, Purpose.LOGIN, playwright_proxy_value) as ctx:
+            token, headers, cookies = await _login_in(ctx, timeout_s)
         return LoginResult(cookies, token, session_expiry(cookies, datetime.now(UTC)), headers)
 
     async with async_playwright() as p:
-        ctx = await p.chromium.launch_persistent_context(
-            str(profile_dir), channel=channel, headless=False, proxy=playwright_proxy_value,
-        )
-        try:
-            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
-            token, headers, cookies = await await_login(ctx, page, timeout_s)
-        finally:
-            try:
-                await ctx.close()
-            except Exception:  # noqa: BLE001 - 用户已关窗时 close 会报错
-                pass
+        def launch() -> Any:
+            return p.chromium.launch_persistent_context(
+                str(profile_dir), channel=channel, headless=False, proxy=playwright_proxy_value,
+            )
+
+        async with reg.open(profile_dir, Purpose.LOGIN, launch) as ctx:
+            token, headers, cookies = await _login_in(ctx, timeout_s)
     return LoginResult(cookies, token, session_expiry(cookies, datetime.now(UTC)), headers)
+
+
+async def _login_in(ctx: Any, timeout_s: float) -> tuple[str, dict[str, str], list[dict]]:
+    page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+    return await await_login(ctx, page, timeout_s)
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
