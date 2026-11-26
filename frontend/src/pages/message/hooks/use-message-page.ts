@@ -66,13 +66,12 @@ export function useMessagePage() {
   const [params, setParams] = useSearchParams();
   const quick = useQuickFilter(IM_QUICK);
   const sorting = useListSort(IM_SORT_KEYS);
-  const unreadOnly = params.get("unread") === "1";
   const rawPage = Number(params.get("page"));
   const page = Number.isInteger(rawPage) && rawPage >= 1 ? rawPage : 1;
   const selected = selectionParam.read(params);
   const selection = selected && inShopScope(selected.shopId, shopIds) ? selected : null;
 
-  const filters = { unread: unreadOnly || undefined, page, ...sorting.query, ...quick.query };
+  const filters = { page, ...sorting.query, ...quick.query };
   const list = useQuery({
     queryKey: queryKeys.imConversations(shopIds, filters),
     queryFn: () =>
@@ -106,14 +105,6 @@ export function useMessagePage() {
       ),
     [setParams],
   );
-  const setUnreadOnly = (value: boolean) =>
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value) next.set("unread", "1");
-      else next.delete("unread");
-      next.delete("page");
-      return next;
-    });
   const select = (value: Selection) => setParams((prev) => selectionParam.write(prev, value));
 
   const total = list.isPlaceholderData ? undefined : list.data?.total;
@@ -128,8 +119,6 @@ export function useMessagePage() {
   return {
     now,
     quick,
-    unreadOnly,
-    setUnreadOnly,
     page,
     setPage,
     selection,
