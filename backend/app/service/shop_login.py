@@ -34,6 +34,9 @@ class ScanFn(Protocol):
     ) -> Awaitable[LoginResult]: ...
 
 
+# 让出该店资料目录（关掉常驻页）；返回是否真的关了一个
+YieldProfile = Callable[[int], Awaitable[bool]]
+
 SCAN_TIMEOUT_S = SCAN_WAIT_S  # 扫码浏览器最长存活由它推导（browser_timing.login_max_age）
 _USER_FACING = (DoudianError, EgressNotReady, EgressConflict, ShopPaused, NotFound,
                 LoginCancelled, CloakUnavailable)
@@ -45,9 +48,10 @@ class ShopLoginFlow:
         events: EventBus, profiles_dir: Path, channel: str,
         scan: ScanFn = scan_login, timeout_s: int = SCAN_TIMEOUT_S,
         use_cloak: bool = False, profile: "ShopProfileService | None" = None,
-        browsers: BrowserRegistry | None = None,
+        browsers: BrowserRegistry | None = None, yield_profile: YieldProfile | None = None,
     ) -> None:
         self._browsers = browsers
+        self._yield_profile = yield_profile
         self._runner = runner
         self._sessions = sessions
         self._base_data = base_data
@@ -82,6 +86,8 @@ class ShopLoginFlow:
 
     def _scan_job(self, shop_id: int) -> Callable[[FxgClient], Awaitable[None]]:
         async def job(_client: FxgClient) -> None:
+            if self._yield_profile is not None:  # 已在该店队列里，让出后不会被别的任务插队
+                await self._yield_profile(shop_id)
             profile = self._profiles_dir / str(shop_id)
             profile.mkdir(parents=True, exist_ok=True)
             proxy = self._runner.proxy_for(shop_id)  # 扫码浏览器必须走该店出口

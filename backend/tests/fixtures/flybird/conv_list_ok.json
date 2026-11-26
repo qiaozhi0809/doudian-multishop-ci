@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "data": [
+    {
+      "subConversationId": "conv-test-1",
+      "parentConShortId": "1001",
+      "unreadCount": 0,
+      "coreInfo": { "versionTime": 1795658400000 },
+      "msgList": []
+    }
+  ],
+  "total": 1
+}
