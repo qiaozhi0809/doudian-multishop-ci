@@ -112,7 +112,7 @@
 | 库存管理 | `sortable-data-table` + `usage-meter` + `range-histogram-slider` | [附录 D](../api/catalog.md) |
 | 资金看板 | `billing-overview`（Pro）+ `revenue-explorer`（Pro）+ `wallet-card` | [附录 F](../api/fund.md) |
 | 跨店对账 | `sortable-data-table` + `empty-states`（Free block） | [附录 G](../api/reconcile.md) |
-| 店铺 / 设置 | `settings-page`（Pro）+ `sortable-data-table`；每店显示出口方式、出口 IP 与出口状态，扫码按钮在出口检查通过前禁用 | backend 5.1 / 5.17 |
+| 店铺 / 设置 | `settings-page`（Pro）+ `sortable-data-table`；每店显示店铺名、主体、店铺号、负责人、出口方式、出口 IP 与出口状态，扫码按钮在出口检查通过前禁用；操作菜单提供「编辑店铺」（名称 / 主体）与「停用 / 启用」。**不提供删除**（DEC-12） | backend 5.1 / 5.17 |
 | 通知 / 异常 | `notification-center` + `toast-stack` | flows 第 8 节 |
 
 **Arc 使用约定**：Arc 优先于自建；Free 优先于 Pro；同一控件不混用两套库；

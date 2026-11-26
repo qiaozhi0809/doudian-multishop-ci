@@ -4070,6 +4070,17 @@
       },
       "ShopRow": {
         "properties": {
+          "admin_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admin Name"
+          },
           "egress_ip": {
             "anyOf": [
               {
@@ -4117,6 +4128,17 @@
             ],
             "title": "Egress Status",
             "type": "string"
+          },
+          "entity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity"
           },
           "expires_at": {
             "anyOf": [
@@ -4197,6 +4219,17 @@
             "title": "Ready For Label",
             "type": "boolean"
           },
+          "shop_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop No"
+          },
           "status": {
             "enum": [
               "active",
@@ -4210,6 +4243,8 @@
         "required": [
           "id",
           "name",
+          "entity",
+          "shop_no",
           "status",
           "health",
           "expires_at",
@@ -4221,7 +4256,8 @@
           "egress_status",
           "proxy_expires_at",
           "ready_for_label",
-          "not_ready_reasons"
+          "not_ready_reasons",
+          "admin_name"
         ],
         "title": "ShopRow",
         "type": "object"

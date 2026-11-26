@@ -6,6 +6,8 @@ export function makeShop(overrides: Partial<ShopRow> = {}): ShopRow {
   return {
     id: 1,
     name: "店铺甲",
+    entity: null,
+    shop_no: null,
     status: "active",
     health: "healthy",
     expires_at: null,
@@ -18,6 +20,7 @@ export function makeShop(overrides: Partial<ShopRow> = {}): ShopRow {
     proxy_expires_at: null,
     ready_for_label: true,
     not_ready_reasons: [],
+    admin_name: null,
     ...overrides,
   };
 }

@@ -2327,6 +2327,8 @@ export interface components {
         };
         /** ShopRow */
         ShopRow: {
+            /** Admin Name */
+            admin_name: string | null;
             /** Egress Ip */
             egress_ip: string | null;
             /** Egress Ip Pending */
@@ -2338,6 +2340,8 @@ export interface components {
              * @enum {string}
              */
             egress_status: "unchecked" | "ok" | "unreachable" | "changed" | "duplicate";
+            /** Entity */
+            entity: string | null;
             /** Expires At */
             expires_at: string | null;
             /** Health */
@@ -2356,6 +2360,8 @@ export interface components {
             proxy_expires_at: string | null;
             /** Ready For Label */
             ready_for_label: boolean;
+            /** Shop No */
+            shop_no: string | null;
             /**
              * Status
              * @enum {string}

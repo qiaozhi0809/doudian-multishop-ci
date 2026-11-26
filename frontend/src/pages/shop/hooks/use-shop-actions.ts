@@ -168,5 +168,37 @@ export function useShopActions(shops: ShopRow[]) {
       }
     });
 
-  return { notices, dismissNotice, pending, waitingShopIds, login, probe, syncBase, checkEgress, resume, setEgress, addShop };
+  /** 改名 / 改主体：PATCH /api/shops/{id}。 */
+  const updateShop = async (
+    id: number, patch: { name?: string; entity?: string | null },
+  ): Promise<{ ok: true; error: null } | { ok: false; error: string }> =>
+    track(`edit:${id}`, async () => {
+      try {
+        await api.patch<ShopRow>(`/api/shops/${id}`, patch);
+        notify(`edit:${id}`, "success", `${nameOf(id)}：已保存`);
+        await refreshShops();
+        return { ok: true as const, error: null };
+      } catch (e) {
+        return { ok: false as const, error: errorText(e) };
+      }
+    });
+
+  /** 停用 / 启用：后端用 enabled 表达，重新启用时若出口被占用会被拒绝。 */
+  const toggleEnabled = async (shop: ShopRow): Promise<void> => {
+    const disable = shop.status !== "disabled";
+    await track(`toggle:${shop.id}`, async () => {
+      try {
+        await api.patch<ShopRow>(`/api/shops/${shop.id}`, { enabled: !disable });
+        notify(`toggle:${shop.id}`, "success", `${shop.name}：已${disable ? "停用" : "启用"}`);
+        await refreshShops();
+      } catch (e) {
+        notify(`toggle:${shop.id}`, "danger", `${shop.name}：${errorText(e)}`);
+      }
+    });
+  };
+
+  return {
+    notices, dismissNotice, pending, waitingShopIds, login, probe, syncBase, checkEgress,
+    resume, setEgress, addShop, updateShop, toggleEnabled,
+  };
 }

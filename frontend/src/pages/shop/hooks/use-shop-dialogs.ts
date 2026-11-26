@@ -6,5 +6,9 @@ export function useShopDialogs() {
   const [egressShopId, setEgressShopId] = useState<number | null>(null);
   const [baseShopId, setBaseShopId] = useState<number | null>(null);
   const [resumeShopId, setResumeShopId] = useState<number | null>(null);
-  return { addOpen, setAddOpen, egressShopId, setEgressShopId, baseShopId, setBaseShopId, resumeShopId, setResumeShopId };
+  const [editShopId, setEditShopId] = useState<number | null>(null);
+  return {
+    addOpen, setAddOpen, egressShopId, setEgressShopId, baseShopId, setBaseShopId,
+    resumeShopId, setResumeShopId, editShopId, setEditShopId,
+  };
 }

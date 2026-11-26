@@ -1,11 +1,13 @@
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import type { ShopRow } from "@/lib/use-shops";
 import type { ShopPage } from "../hooks/use-shop-page";
 import styles from "../shop-page.module.css";
 import { AddShopDialog } from "./add-shop-dialog";
 import { BackupCard } from "./backup-card";
 import { BaseDataDrawer } from "./base-data-drawer";
+import { EditShopDialog } from "./edit-shop-dialog";
 import { EgressDialog } from "./egress-dialog";
 import { EmptyShops } from "./empty-shops";
 import { NoticeList } from "./notice-list";
@@ -15,7 +17,7 @@ import { ShopTable } from "./shop-table";
 /** 店铺管理页：加载中 / 出错 / 空 / 列表四种状态，以及各个对话框。 */
 export function ShopPageView({ page }: { page: ShopPage }) {
   const { actions, dialogs } = page;
-  const rowActions = (shop: { id: number }) => ({
+  const rowActions = (shop: ShopRow) => ({
     onLogin: () => void actions.login(shop.id),
     onEgress: () => dialogs.setEgressShopId(shop.id),
     onCheckEgress: () => void actions.checkEgress(shop.id),
@@ -23,6 +25,8 @@ export function ShopPageView({ page }: { page: ShopPage }) {
     onSyncBase: () => void actions.syncBase(shop.id),
     onViewBase: () => dialogs.setBaseShopId(shop.id),
     onResume: () => dialogs.setResumeShopId(shop.id),
+    onEdit: () => dialogs.setEditShopId(shop.id),
+    onToggle: () => void actions.toggleEnabled(shop),
   });
 
   return (
@@ -77,6 +81,12 @@ export function ShopPageView({ page }: { page: ShopPage }) {
           await actions.resume(page.resumeShop.id);
           dialogs.setResumeShopId(null);
         }}
+      />
+      <EditShopDialog
+        shop={page.editShop}
+        pending={page.editShop ? actions.pending.includes(`edit:${page.editShop.id}`) : false}
+        onOpenChange={(open) => !open && dialogs.setEditShopId(null)}
+        onSubmit={(patch) => actions.updateShop(page.editShop!.id, patch)}
       />
       <BaseDataDrawer
         shop={page.base.shop}

@@ -28,6 +28,7 @@ export function useShopPage() {
     base: { query: base, shop: byId(dialogs.baseShopId) },
     egressShop: byId(dialogs.egressShopId),
     resumeShop: byId(dialogs.resumeShopId),
+    editShop: byId(dialogs.editShopId),
   };
 }
 
