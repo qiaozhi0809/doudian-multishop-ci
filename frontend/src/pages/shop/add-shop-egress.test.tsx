@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -93,10 +93,13 @@ describe("添加店铺的出口区", () => {
     await screen.findByRole("table");
     await user.click(screen.getByRole("button", { name: "添加店铺" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("button", { name: "直连" })).toBeDisabled();
-    // 原因放在悬停提示里，不再单独占一条提示条
-    expect(within(dialog).getByTitle("已有店铺「直连店」使用直连，最多一家店可直连")).toBeInTheDocument();
+    const direct = within(dialog).getByRole("button", { name: "直连" });
+    expect(direct).toBeDisabled();
+    // 原因放在提示气泡里（键盘聚焦外层也能看到），不单独占一条提示条，也不用 title
     expect(within(dialog).queryByText("已有店铺「直连店」使用直连，最多一家店可直连")).toBeNull();
+    expect(within(dialog).queryByTitle(/使用直连/)).toBeNull();
+    act(() => direct.closest<HTMLElement>("span[tabindex='0']")!.focus());
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("已有店铺「直连店」使用直连，最多一家店可直连");
   });
 
   it("直连店已停用时直连可选", async () => {

@@ -25,6 +25,11 @@ export function ShopPageView({ page }: { page: ShopPage }) {
     else if (isLoggedIn(shop)) dialogs.setDisableShopId(shop.id);
     else void actions.setEnabled(shop.id, false);
   };
+  /** 飞鸽消息：开启先确认；关闭直接生效。 */
+  const toggleIm = (shop: ShopRow) => {
+    if (shop.im_enabled) void actions.setIm(shop.id, false);
+    else dialogs.setImShopId(shop.id);
+  };
   const rowActions = (shop: ShopRow) => ({
     onLogin: () => void actions.login(shop.id),
     onEgress: () => dialogs.setEgressShopId(shop.id),
@@ -34,6 +39,7 @@ export function ShopPageView({ page }: { page: ShopPage }) {
     onViewBase: () => dialogs.setBaseShopId(shop.id),
     onResume: () => dialogs.setResumeShopId(shop.id),
     onEdit: () => dialogs.setEditShopId(shop.id),
+    onToggleIm: () => toggleIm(shop),
     onToggle: () => toggle(shop),
   });
 
@@ -84,7 +90,7 @@ export function ShopPageView({ page }: { page: ShopPage }) {
       <ConfirmDialog
         shop={page.resumeShop}
         action="恢复店铺"
-        confirmLabel="确认恢复"
+        confirmLabel="恢复店铺"
         pending={pendingFor("resume", page.resumeShop)}
         onOpenChange={(open) => !open && dialogs.setResumeShopId(null)}
         onConfirm={() => actions.resume(page.resumeShop!.id)}
@@ -92,7 +98,8 @@ export function ShopPageView({ page }: { page: ShopPage }) {
       <ConfirmDialog
         shop={page.disableShop}
         action="停用店铺"
-        confirmLabel="确认停用"
+        confirmLabel="停用店铺"
+        danger
         pending={pendingFor("toggle", page.disableShop)}
         onOpenChange={(open) => !open && dialogs.setDisableShopId(null)}
         onConfirm={() => actions.setEnabled(page.disableShop!.id, false, true)}
@@ -102,17 +109,15 @@ export function ShopPageView({ page }: { page: ShopPage }) {
         pending={pendingFor("edit", page.editShop)}
         onOpenChange={(open) => !open && dialogs.setEditShopId(null)}
         onSubmit={(patch) => actions.updateShop(page.editShop!.id, patch)}
-        onEnableIm={() => dialogs.setImShopId(page.editShop!.id)}
       />
       <ConfirmDialog
         shop={page.imShop}
-        action="接收飞鸽消息"
-        shopInTitle={false}
+        action="开启飞鸽消息"
         description="开启后会在后台常驻该店飞鸽页面，有多个客服账号的店铺尚未验证"
         confirmLabel="开启"
-        pending={pendingFor("edit", page.imShop)}
+        pending={pendingFor("im", page.imShop)}
         onOpenChange={(open) => !open && dialogs.setImShopId(null)}
-        onConfirm={() => actions.updateShop(page.imShop!.id, { im_enabled: true })}
+        onConfirm={() => actions.setIm(page.imShop!.id, true, true)}
       />
       <BaseDataDrawer
         shop={page.base.shop}

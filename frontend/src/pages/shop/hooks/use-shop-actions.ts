@@ -169,6 +169,16 @@ export function useShopActions(shops: ShopRow[]) {
   const setEnabled = (id: number, enabled: boolean, inline = false) =>
     run("toggle", id, () => api.patch<ShopRow>(`/api/shops/${id}`, { enabled }), done(enabled ? "已启用" : "已停用"), inline);
 
+  /** 开关接收飞鸽消息：开启从确认对话框发起（inline），关闭从菜单直接发起。 */
+  const setIm = (id: number, enabled: boolean, inline = false) =>
+    run(
+      "im",
+      id,
+      () => api.patch<ShopRow>(`/api/shops/${id}`, { im_enabled: enabled }),
+      done(enabled ? "已开启飞鸽消息" : "已关闭飞鸽消息"),
+      inline,
+    );
+
   /** 手动读取收款信息：平台只把它渲染在页面里，没有接口，失败可手填。 */
   const scrapeCard = (id: number) =>
     run("scrape", id, () => api.post<ShopRow>(`/api/shops/${id}/profile/scrape`), done("收款信息已同步"));
@@ -188,7 +198,7 @@ export function useShopActions(shops: ShopRow[]) {
     });
 
   return {
-    notices, dismissNotice, pending, waitingShopIds, login, probe, syncBase, checkEgress,
-    resume, setEgress, addShop, updateShop, setEnabled, scrapeCard,
+    notices, notify, dismissNotice, pending, waitingShopIds, login, probe, syncBase, checkEgress,
+    resume, setEgress, addShop, updateShop, setEnabled, setIm, scrapeCard,
   };
 }
