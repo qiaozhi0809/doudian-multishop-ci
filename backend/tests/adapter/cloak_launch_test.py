@@ -264,3 +264,61 @@ def test_unwritable_profile_dir_is_cloak_unavailable(monkeypatch, tmp_path, run)
         run(tmp_path, PROXY)
     assert str(ei.value) == cloak_launch.PROFILE_UNWRITABLE
     assert captured == {}
+
+
+class _Cdp:
+    def __init__(self, calls: list, fail: bool = False) -> None:
+        self.calls, self.fail = calls, fail
+
+    async def send(self, method, params=None):
+        if self.fail:
+            raise RuntimeError("cdp gone")
+        self.calls.append((method, params))
+        return {"windowId": 7} if method == "Browser.getWindowForTarget" else {}
+
+    async def detach(self):
+        self.calls.append(("detach", None))
+
+
+class _CdpCtx(_Ctx):
+    def __init__(self, calls: list, fail: bool = False) -> None:
+        super().__init__()
+        self._cdp = _Cdp(calls, fail)
+
+    async def new_cdp_session(self, _page):
+        return self._cdp
+
+
+def _launch_with(monkeypatch, tmp_path, ctx, platform, *, offscreen):
+    async def fake_launch(**_kwargs):
+        return ctx
+
+    mod = types.ModuleType("cloakbrowser")
+    mod.launch_persistent_context_async = fake_launch
+    monkeypatch.setitem(sys.modules, "cloakbrowser", mod)
+    monkeypatch.setattr(cloak_launch, "binary_ready", lambda: True)
+    monkeypatch.setattr(cloak_launch, "_platform", lambda: platform)
+    return asyncio.run(cloak_launch.launch_cloak(tmp_path, None, offscreen=offscreen))
+
+
+def test_offscreen_on_macos_minimizes_window(monkeypatch, tmp_path):
+    calls: list = []
+    ctx = _CdpCtx(calls)
+    assert _launch_with(monkeypatch, tmp_path, ctx, "darwin", offscreen=True) is ctx
+    assert calls == [
+        ("Browser.getWindowForTarget", None),
+        ("Browser.setWindowBounds", {"windowId": 7, "bounds": {"windowState": "minimized"}}),
+        ("detach", None),
+    ]
+
+
+@pytest.mark.parametrize(("platform", "offscreen"), [("win32", True), ("darwin", False)])
+def test_no_minimize_on_windows_or_visible_window(monkeypatch, tmp_path, platform, offscreen):
+    calls: list = []
+    _launch_with(monkeypatch, tmp_path, _CdpCtx(calls), platform, offscreen=offscreen)
+    assert calls == []
+
+
+def test_minimize_failure_still_returns_context(monkeypatch, tmp_path):
+    ctx = _CdpCtx([], fail=True)
+    assert _launch_with(monkeypatch, tmp_path, ctx, "darwin", offscreen=True) is ctx

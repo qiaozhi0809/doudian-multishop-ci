@@ -10,6 +10,7 @@ import CatalogPage from "@/pages/catalog";
 import DashboardPage from "@/pages/dashboard";
 import FundPage from "@/pages/fund";
 import LabelingPage from "@/pages/labeling";
+import MessagePage from "@/pages/message";
 import OrderPage from "@/pages/order";
 import ProxyPoolPage from "@/pages/proxy-pool";
 import ReconcilePage from "@/pages/reconcile";
@@ -43,6 +44,7 @@ function AppRoutes() {
           <Route path="/shipping" element={<ShippingRedirect />} />
           <Route path="/reconcile" element={<ReconcilePage />} />
           <Route path="/aftersale" element={<AftersalePage />} />
+          <Route path="/messages" element={<MessagePage />} />
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/stock" element={<StockPage />} />
           <Route path="/fund" element={<FundPage />} />

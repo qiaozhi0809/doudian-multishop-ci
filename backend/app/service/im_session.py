@@ -1,7 +1,7 @@
 """飞鸽单店只读循环：收消息、去重、存库、算待回复与买家等待、发事件、按限额刷新页面。
 
 页面的生命周期（打开、关闭、重试）归调用方。消息正文只进内存与 save_messages，
-不进日志与事件（事件只带数量）。
+买家昵称只进内存；两者都不进日志与事件（事件只带数量）。
 """
 
 import asyncio
@@ -43,6 +43,7 @@ class ConvView:
     last_at: str
     pending: int
     waiting_since: str | None
+    buyer_name: str | None = field(default=None, repr=False)  # 个人信息，不进日志
 
 
 class ImSession:
@@ -65,6 +66,8 @@ class ImSession:
         self._save = save_messages
         self._convs: dict[str, list[Message]] = {}
         self._keys: dict[str, str] = {}
+        # 会话 → (发送时间, 昵称)：单独记，不随消息尾部裁剪丢失
+        self._buyers: dict[str, tuple[str, str]] = {}
         self._seen: set[str] = set()
         self._unsaved: list[Message] = []
         self._new = 0  # 还没发出去的新买家消息数
@@ -106,6 +109,7 @@ class ImSession:
             ConvView(
                 conv, self._keys.get(conv), tail[-1].text, tail[-1].sender_role,
                 tail[-1].sent_at, pending[conv], waiting_since(tail),
+                self._buyers[conv][1] if conv in self._buyers else None,
             )
             for conv, tail in self._convs.items()
         ]
@@ -189,6 +193,7 @@ class ImSession:
         """按 message_id 去重并追加到各会话尾部，返回新的那些。"""
         fresh: list[Message] = []
         for message in msgs:
+            self._remember_buyer(message)  # 去重之前：重启后重新拉到的旧消息也能补上昵称
             if message.message_id not in self._seen:
                 self._seen.add(message.message_id)
                 self._convs.setdefault(message.conversation_id, []).append(message)
@@ -197,6 +202,14 @@ class ImSession:
             self._convs[conv].sort(key=lambda m: m.sent_at)  # 稳定排序：同一秒按到达先后
             del self._convs[conv][:-CONV_TAIL]
         return fresh
+
+    def _remember_buyer(self, message: Message) -> None:
+        """按发送时间保留最近一次昵称；晚到的旧消息不覆盖新的。"""
+        if not message.buyer_name:
+            return
+        known = self._buyers.get(message.conversation_id)
+        if known is None or message.sent_at >= known[0]:
+            self._buyers[message.conversation_id] = (message.sent_at, message.buyer_name)
 
     async def _save_unsaved(self) -> None:
         while self._unsaved:

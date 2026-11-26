@@ -103,10 +103,14 @@ def get_or_create_seed(profile_dir: Path) -> int:
 WEBRTC_PROXY_ONLY = "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"
 OFFSCREEN_WINDOW = "--window-position=-32000,-32000"
 # 屏幕外窗口在 Windows 上会被判为「被遮挡」，页面转为 hidden、定时器被节流，
-# 懒挂载的微应用读不到。这两项是渲染策略参数，不是指纹参数。
+# 懒挂载的微应用读不到。macOS 会把屏幕外坐标挪回屏幕内，改为启动后最小化
+# （cloak_launch），后两项保证最小化后渲染与定时器不降速（飞鸽常驻页实测
+# 最小化 14 分钟仍可见、心跳与消息照常，2026-11-26）。都是渲染策略参数，不是指纹参数。
 OFFSCREEN_RENDER = (
     "--disable-features=CalculateNativeWinOcclusion",
     "--disable-backgrounding-occluded-windows",
+    "--disable-renderer-backgrounding",
+    "--disable-background-timer-throttling",
 )
 
 

@@ -35,6 +35,10 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     ],
   },
   {
+    name: "客服",
+    items: [{ name: "消息", text: "跨店飞鸽会话汇总与超时提醒" }],
+  },
+  {
     name: "商品",
     items: [
       { name: "商品列表", text: "跨店商品汇总，按状态与分组筛选" },

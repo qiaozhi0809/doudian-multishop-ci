@@ -73,9 +73,14 @@ describe("bannerView", () => {
   });
 
   it("飞鸽等待超时显示「超 3 分钟未回复」，跳后端给的链接", () => {
-    const view = bannerView([shop(1, [{ kind: "im_waiting", link: "/shops?shop=1" }])]);
+    const view = bannerView([shop(1, [{ kind: "im_waiting", link: "/messages?shops=1&quick=overdue" }])]);
     expect(view.kind === "rows" && view.rows[0].text).toBe("店1：超 3 分钟未回复");
-    expect(view.kind === "rows" && view.rows[0].problems[0].link).toBe("/shops?shop=1");
+    expect(view.kind === "rows" && view.rows[0].problems[0].link).toBe("/messages?shops=1&quick=overdue");
+  });
+
+  it("飞鸽等待超时没有链接时去消息页的超时筛选", () => {
+    const view = bannerView([shop(2, [{ kind: "im_waiting", link: null }])]);
+    expect(view.kind === "rows" && view.rows[0].problems[0].link).toBe("/messages?shops=2&quick=overdue");
   });
 
   it("超过 3 家合并为一行", () => {

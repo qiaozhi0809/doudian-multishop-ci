@@ -1109,6 +1109,192 @@
         "title": "Health",
         "type": "object"
       },
+      "ImConversation": {
+        "properties": {
+          "buyer": {
+            "title": "Buyer",
+            "type": "string"
+          },
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "last_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last At"
+          },
+          "preview": {
+            "title": "Preview",
+            "type": "string"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          },
+          "shop_name": {
+            "title": "Shop Name",
+            "type": "string"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          },
+          "wait_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait Seconds"
+          },
+          "waiting_since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Since"
+          }
+        },
+        "required": [
+          "shop_id",
+          "shop_name",
+          "conversation_id",
+          "buyer",
+          "preview",
+          "unread",
+          "last_at",
+          "waiting_since",
+          "wait_seconds"
+        ],
+        "title": "ImConversation",
+        "type": "object"
+      },
+      "ImConversationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImConversation"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "ImConversationPage",
+        "type": "object"
+      },
+      "ImCounts": {
+        "description": "计数卡：字段名与 quick 参数的取值一一对应。",
+        "properties": {
+          "overdue": {
+            "title": "Overdue",
+            "type": "integer"
+          },
+          "today": {
+            "title": "Today",
+            "type": "integer"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          },
+          "waiting": {
+            "title": "Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread",
+          "waiting",
+          "overdue",
+          "today"
+        ],
+        "title": "ImCounts",
+        "type": "object"
+      },
+      "ImFocusResult": {
+        "description": "「在飞鸽中回复」的结果；not_found = 飞鸽会话列表里没定位到唯一的会话。",
+        "properties": {
+          "result": {
+            "enum": [
+              "opened",
+              "not_found"
+            ],
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "ImFocusResult",
+        "type": "object"
+      },
+      "ImMessage": {
+        "properties": {
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "sender_role": {
+            "enum": [
+              "buyer",
+              "agent",
+              "robot",
+              "platform"
+            ],
+            "title": "Sender Role",
+            "type": "string"
+          },
+          "sent_at": {
+            "title": "Sent At",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id",
+          "sender_role",
+          "text",
+          "sent_at"
+        ],
+        "title": "ImMessage",
+        "type": "object"
+      },
       "ImShopStatus": {
         "properties": {
           "last_error": {
@@ -1173,6 +1359,32 @@
           "last_error"
         ],
         "title": "ImShopStatus",
+        "type": "object"
+      },
+      "ImThread": {
+        "properties": {
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImMessage"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "shop_id": {
+            "title": "Shop Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "shop_id",
+          "conversation_id",
+          "items"
+        ],
+        "title": "ImThread",
         "type": "object"
       },
       "LabelOrderRow": {
@@ -7422,6 +7634,301 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/im/conversations": {
+      "get": {
+        "description": "默认按买家等待时间倒序。只含正在接收的店在内存里的会话。",
+        "operationId": "list_conversations_api_im_conversations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unread",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unread",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "unread",
+                    "waiting",
+                    "overdue",
+                    "today"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "waiting",
+                    "last_at",
+                    "unread",
+                    "shop_name"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImConversationPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Conversations",
+        "tags": [
+          "im"
+        ]
+      }
+    },
+    "/api/im/conversations/counts": {
+      "get": {
+        "operationId": "count_conversations_api_im_conversations_counts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shop_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImCounts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Count Conversations",
+        "tags": [
+          "im"
+        ]
+      }
+    },
+    "/api/im/conversations/{shop_id}/{conversation_id}/messages": {
+      "get": {
+        "operationId": "list_messages_api_im_conversations__shop_id___conversation_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_:.\\-]{1,128}$",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImThread"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "List Messages",
+        "tags": [
+          "im"
+        ]
+      }
+    },
+    "/api/im/conversations/{shop_id}/{conversation_id}/open-in-flybird": {
+      "post": {
+        "description": "排在该店队列里执行；该店没在接收时拒绝。",
+        "operationId": "open_in_flybird_api_im_conversations__shop_id___conversation_id__open_in_flybird_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop_id",
+            "required": true,
+            "schema": {
+              "title": "Shop Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_:.\\-]{1,128}$",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImFocusResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "错误信封"
+          }
+        },
+        "summary": "Open In Flybird",
+        "tags": [
+          "im"
+        ]
       }
     },
     "/api/im/shops/{shop_id}/restart": {

@@ -409,6 +409,7 @@ class Signer(Protocol):
 | 浏览器 profile | 每店一个持久化用户目录 `data/profiles/<shop_id>/`（5.1），cookie 与登录态互不串号 |
 | 出口方式 | `direct`（商家自有宽带直连）或 `proxy`（独享静态 IP）；**不使用轮换代理池** |
 | 飞鸽常驻页 | 经浏览器登记表（`Purpose.IM`，24 小时到期即每日重启）、`launch_cloak` 与该店出口打开；启动经 `ShopRunner`；扫码与抓取前经 `close_shop` 让出资料目录。只读，见 [flybird.md](../api/flybird.md) |
+| 飞鸽页面点击 | `adapter/flybird/focus.py` 是唯一的页面点击，只在所有者点「在飞鸽中回复」时执行（经该店队列把常驻页窗口置前并点开该会话，不输入、不按键、不发送） |
 | 浏览器 | 统一使用 CloakBrowser 定制 Chromium（`cloakbrowser==0.3.30`，Chromium 146）；二进制随程序目录（`backend/browser/`，**不放 `%LOCALAPPDATA%`**——Windows 会拒绝执行该目录下的 exe）；每店固定指纹种子存 `profiles/<shop_id>/.cloak-seed` |
 | 代理协议 | 一律按 `http://账号:密码@主机:端口` 配置。CloakBrowser（Chromium 内核）不支持带账号密码的 SOCKS5，扫码浏览器无法使用；带凭证的 `socks5://` 在配置时即拒绝 |
 | 粘贴导入 | 出口设置可直接粘贴代理商格式 `IP\|端口\|账号\|密码\|到期日`，解析为 `http://` URL 与到期日 |

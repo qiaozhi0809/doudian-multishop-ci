@@ -4,6 +4,7 @@ export type NavIcon =
   | "labeling"
   | "reconcile"
   | "aftersale"
+  | "messages"
   | "products"
   | "stock"
   | "fund"
@@ -37,6 +38,13 @@ export const NAV_SECTIONS: NavSection[] = [
       { path: "/aftersale", label: "售后处理", icon: "aftersale" },
       { path: "/reconcile", label: "发货异常", icon: "reconcile" },
     ],
+  },
+  {
+    kind: "group",
+    id: "service",
+    label: "客服",
+    icon: "messages",
+    items: [{ path: "/messages", label: "消息", icon: "messages" }],
   },
   {
     kind: "group",

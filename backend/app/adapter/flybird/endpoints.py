@@ -60,12 +60,20 @@ PULL_EXTRA_MESSAGES = 1
 # 发送方：扩展键 sender_role；没有该键是平台消息
 ROLE_EXT_KEY = "sender_role"
 ROLE_BY_VALUE = {"1": "buyer", "2": "agent", "4": "robot"}
+# 买家昵称：买家消息的扩展键（推送与拉取都有）。个人信息，只留在内存
+BUYER_NAME_EXT_KEY = "uname"
 
 # 平台等待提醒（§3）：只记录结构，不作为计时来源
 ATTENTION_SERVICE = 1
 ATTENTION_METHOD = 5
 ATTENTION_PAYLOAD_TYPE = PAYLOAD_TYPE_JSON
 ATTENTION_TIME_FIELD = "attention_time"  # 位于 data 下，单位秒
+
+# 「在飞鸽中回复」，只给 focus.py 用（2026-11-26 实测）。常驻页窗口先恢复再移回屏幕
+FOCUS_RESTORE = {"windowState": "normal"}
+FOCUS_BOUNDS = {"left": 0, "top": 0, "width": 1400, "height": 900}
+# 会话列表里的会话元素；元素上没有会话编号属性，按买家昵称文本定位
+CONVERSATION_SELECTOR = '[data-kora="conversation"]'
 
 # 拦截（§4），只给 read_guard.py 用：标记已读、输入状态
 DROP_CMDS = frozenset({2002, 2031})
