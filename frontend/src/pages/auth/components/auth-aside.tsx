@@ -8,7 +8,7 @@ import {
 } from "../logic/auth-aside-content";
 import styles from "../auth-aside.module.css";
 
-/** 登录页右侧内容区：一句话介绍、登录后的概览示意、按侧栏分组的功能、上手三步。 */
+/** 登录页右侧内容区：一句话介绍、经营概览示意、按侧栏分组的功能、快速开始。 */
 export function AuthAside() {
   return (
     <div className={styles.aside}>
@@ -18,7 +18,7 @@ export function AuthAside() {
       </div>
 
       <div className={styles.preview} aria-hidden="true">
-        <p className={styles.previewLabel}>登录后的概览</p>
+        <p className={styles.previewLabel}>经营概览</p>
         <div className={styles.previewRow}>
           {PREVIEW_TILES.map((tile) => (
             <div key={tile.name} className={styles.previewCell}>
@@ -49,7 +49,7 @@ export function AuthAside() {
       </div>
 
       <div className={styles.steps}>
-        <h3 className={styles.stepsTitle}>上手三步</h3>
+        <h3 className={styles.stepsTitle}>快速开始</h3>
         <ol className={styles.stepList}>
           {START_STEPS.map((step, index) => (
             <li key={step.name} className={styles.step}>

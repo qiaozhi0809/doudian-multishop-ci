@@ -28,7 +28,7 @@
 }
 .lead { margin: 0; max-width: 34em; color: var(--aside-secondary); font-size: 15px; line-height: 1.7; }
 
-/* 登录后的概览示意 */
+/* 经营概览示意 */
 .preview {
   display: grid;
   gap: 10px;
@@ -80,7 +80,7 @@
 .featureName { font-size: var(--text-sm); font-weight: 500; }
 .featureText { color: var(--aside-secondary); font-size: var(--text-xs); line-height: 1.6; }
 
-/* 上手三步 */
+/* 快速开始 */
 .steps { display: grid; gap: var(--space-3); padding-top: 20px; border-top: 1px solid var(--aside-line); }
 .stepsTitle { margin: 0; color: var(--aside-muted); font-size: var(--text-xs); font-weight: 500; }
 .stepList {
