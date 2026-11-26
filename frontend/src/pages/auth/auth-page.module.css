@@ -29,12 +29,12 @@
   color: var(--background);
 }
 
-/* 表单从固定高度往下排，不做垂直居中：视图高度不同，居中的话一换视图标题就会上下跳 */
+/* 表单在左栏内水平、垂直居中，与右侧面板视觉平衡；底部让出顶栏的高度，使表单落在整个窗口的中线上 */
 .stage {
   display: grid;
   min-width: 0;
-  place-items: start center;
-  padding: clamp(40px, 15vh, 150px) var(--space-8) var(--space-6);
+  place-items: center;
+  padding: var(--space-6) var(--space-8) calc(64px + var(--space-6));
 }
 
 /* 视口只在高度过渡时裁切离场的视图；向外让出 4px，键盘焦点框不被裁掉 */
