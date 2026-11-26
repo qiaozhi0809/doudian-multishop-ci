@@ -19,6 +19,7 @@ export function NotificationBell() {
       <Panel
         progress={c.progress}
         items={c.items}
+        strongOpen={c.strongOpen}
         total={c.total}
         pageSize={c.pageSize}
         page={c.page}
@@ -32,6 +33,7 @@ export function NotificationBell() {
         error={c.error}
         onRetry={c.retry}
         onOpenItem={c.openItem}
+        onNavigate={c.go}
         onMarkAllRead={() => void c.markAllRead()}
       />
     </Bell>

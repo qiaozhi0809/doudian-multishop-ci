@@ -1,4 +1,4 @@
-import { alertNotice, bannerView, groupForPanel, lastPage, levelTone, shouldAlert, type NotificationItem, type StrongOpenShop } from "./notification-view";
+import { alertNotice, bannerView, isStillOpen, openRows, groupForPanel, lastPage, levelTone, shouldAlert, type NotificationItem, type StrongOpenShop } from "./notification-view";
 
 const item = (over: Partial<NotificationItem> = {}): NotificationItem => ({
   id: 1, kind: "new_order", level: "medium", shop_id: 1, state_key: null, title: "示例店 新增 1 单",
@@ -85,5 +85,21 @@ describe("alertNotice", () => {
       text: "示例店 订单同步失败，出口不通", tone: "warning", key: "notification:6", persistent: false, holdMs: 5000,
     });
     expect(alertNotice(item({ level: "weak" }))).toBeNull();
+  });
+});
+
+describe("openRows", () => {
+  it("待处理列出全部未解决的店，不合并", () => {
+    const shops = [1, 2, 3, 4].map((id): StrongOpenShop => ({ shop_id: id, shop_name: `店${id}`, kinds: ["login_expired"], link: null }));
+    expect(openRows(shops).map((r) => r.text)).toEqual(["店1：登录失效", "店2：登录失效", "店3：登录失效", "店4：登录失效"]);
+  });
+});
+
+describe("isStillOpen", () => {
+  it("摘要里该店仍有该问题才算未解决", () => {
+    const shops: StrongOpenShop[] = [{ shop_id: 2, shop_name: "店2", kinds: ["login_expired", "egress_unreachable"], link: null }];
+    expect(isStillOpen(shops, 2, "egress_unreachable")).toBe(true);
+    expect(isStillOpen(shops, 2, "risk_paused")).toBe(false);
+    expect(isStillOpen(shops, 3, "login_expired")).toBe(false);
   });
 });

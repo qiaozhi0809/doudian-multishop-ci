@@ -1,14 +1,16 @@
 import { useEffect } from "react";
 import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
-import { NoticeProvider, useNotice, type Notify } from "./notice";
+import { NoticeProvider, useNotice, useNoticeDismiss, type Notify } from "./notice";
 
-const ref: { notify: Notify | null } = { notify: null };
+const ref: { notify: Notify | null; dismiss: ((key: string) => void) | null } = { notify: null, dismiss: null };
 function Grab() {
   const n = useNotice();
+  const d = useNoticeDismiss();
   useEffect(() => {
     ref.notify = n;
-  }, [n]);
+    ref.dismiss = d;
+  }, [n, d]);
   return null;
 }
 const notify = (...args: Parameters<Notify>) => ref.notify?.(...args);
@@ -81,6 +83,13 @@ describe("右下角浮动提示", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("示例店 登录失效");
     act(() => screen.getByRole("button", { name: "关闭提示" }).click());
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("按 key 收起提示（含常驻的）", () => {
+    renderProvider();
+    act(() => notify("示例店 登录失效", "danger", { key: "notification:5", persistent: true }));
+    act(() => ref.dismiss?.("notification:5"));
+    expect(screen.queryByText("示例店 登录失效")).not.toBeInTheDocument();
   });
 
   it("不在 Provider 里时 useNotice 返回 null（调用方退回页面内提示）", () => {

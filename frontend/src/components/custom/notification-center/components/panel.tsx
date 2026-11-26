@@ -5,12 +5,14 @@ import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import { countsText, type ProgressItem } from "../logic/progress";
-import { groupForPanel, lastPage, levelTone, type NotificationItem } from "../logic/notification-view";
+import { groupForPanel, lastPage, levelTone, openRows, type NotificationItem, type StrongOpenShop } from "../logic/notification-view";
 import styles from "../notification-center.module.css";
 
 export interface PanelProps {
   progress: ProgressItem[];
   items: NotificationItem[];
+  /** 全部未解决的强提醒（来自摘要，与顶部横条一致） */
+  strongOpen: StrongOpenShop[];
   total: number;
   pageSize: number;
   page: number;
@@ -24,6 +26,7 @@ export interface PanelProps {
   error: boolean;
   onRetry: () => void;
   onOpenItem: (item: NotificationItem) => void;
+  onNavigate: (link: string) => void;
   onMarkAllRead: () => void;
 }
 
@@ -50,9 +53,11 @@ function ItemList({ items, onOpenItem }: { items: NotificationItem[]; onOpenItem
   );
 }
 
-/** 通知面板：进行中 → 待处理（未解决的状态类）→ 最近的通知 → 全部已读。 */
+/** 通知面板：进行中 → 待处理（全部未解决的强提醒，一店一行）→ 最近的通知（分页）→ 全部已读。 */
 export function Panel(props: PanelProps) {
-  const { open, recent } = groupForPanel(props.items);
+  const open = openRows(props.strongOpen);
+  // 未解决的状态类已在「待处理」里，最近列表不再重复
+  const { recent } = groupForPanel(props.items);
   const pages = lastPage(props.total, props.pageSize);
   return (
     <div className={styles.panelBody}>
@@ -79,7 +84,16 @@ export function Panel(props: PanelProps) {
       {open.length > 0 && (
         <section className={styles.section} aria-labelledby="notify-open">
           <h3 id="notify-open" className={styles.sectionTitle}>待处理</h3>
-          <ItemList items={open} onOpenItem={props.onOpenItem} />
+          <ul className={styles.list}>
+            {open.map((row) => (
+              <li key={row.shopId}>
+                <button type="button" className={styles.item} data-unread onClick={() => props.onNavigate(row.link)}>
+                  <span className={styles.dot} data-tone="danger" aria-hidden="true" />
+                  <span className={styles.itemTitle}>{row.text}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
       <section className={styles.section} aria-labelledby="notify-recent">

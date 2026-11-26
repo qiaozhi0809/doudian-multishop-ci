@@ -30,10 +30,13 @@ interface Setup {
   unread?: number;
 }
 
+const live: { strongOpen: StrongOpenShop[] } = { strongOpen: [] };
+
 function setup({ items = [], strongOpen = [], unread = items.filter((i) => !i.read_at).length }: Setup = {}) {
+  live.strongOpen = strongOpen;
   const fetch = mockFetch({
     "GET /api/notifications": jsonResponse({ items, total: items.length, page: 1, page_size: 20 }),
-    "GET /api/notifications/summary": jsonResponse({ unread, strong_open: strongOpen }),
+    "GET /api/notifications/summary": () => jsonResponse({ unread, strong_open: live.strongOpen }),
     "POST /api/notifications/1/read": new Response(null, { status: 204 }),
     "POST /api/notifications/read-all": new Response(null, { status: 204 }),
   });
@@ -125,6 +128,7 @@ describe("通知面板", () => {
   it("依次为进行中、待处理、通知列表；未读加粗", async () => {
     progressStore.publish({ type: "ship_progress", batchId: "b1", orderId: 1, result: "success" });
     setup({
+      strongOpen: [shop(1, ["login_expired"], "/shops?shop=1")],
       items: [
         item({ id: 2, kind: "login_expired", level: "strong", state_key: "login:1", title: "示例店1 登录失效" }),
         item({ id: 1 }),
@@ -137,10 +141,21 @@ describe("通知面板", () => {
     const ongoing = within(panel).getByRole("region", { name: "进行中" });
     expect(ongoing).toHaveTextContent("发货");
     expect(ongoing).toHaveTextContent("成功 1");
-    expect(within(within(panel).getByRole("region", { name: "待处理" })).getByText("示例店1 登录失效")).toBeInTheDocument();
+    expect(within(within(panel).getByRole("region", { name: "待处理" })).getByText("示例店1：登录失效")).toBeInTheDocument();
     const recent = within(panel).getByRole("region", { name: "最近" });
+    expect(within(recent).queryByText("示例店1 登录失效")).not.toBeInTheDocument();
     expect(within(recent).getByText("示例店 新增 2 单待发货").closest("button")).toHaveAttribute("data-unread", "true");
     expect(within(recent).getByText("示例店1 订单同步完成").closest("button")).not.toHaveAttribute("data-unread");
+  });
+
+  it("待处理列出摘要里全部未解决的店（不受列表分页影响），点击跳转", async () => {
+    setup({ items: [item()], strongOpen: [1, 2, 3, 4].map((id) => shop(id, ["risk_paused"], `/shops?shop=${id}`)) });
+    const { user, panel } = await openPanel();
+    const open = within(panel).getByRole("region", { name: "待处理" });
+    expect(within(open).getAllByRole("button")).toHaveLength(4);
+    await user.click(within(open).getByRole("button", { name: "示例店3：风控暂停" }));
+    expect(screen.getByTestId("where")).toHaveTextContent("/shops?shop=3");
+    expect(screen.queryByRole("dialog", { name: "通知" })).not.toBeInTheDocument();
   });
 
   it("点击通知标为已读并跳转", async () => {
@@ -179,6 +194,36 @@ describe("通知面板", () => {
 });
 
 describe("右下角弹窗", () => {
+  const strongItem = item({ id: 12, level: "strong", kind: "login_expired", shop_id: 1, state_key: "login:1", title: "示例店 登录失效" });
+
+  it("问题恢复（resolved 事件）后强提醒弹窗自动收起", async () => {
+    setup();
+    await screen.findByRole("button", { name: "通知" });
+    act(() => FakeEventSource.latest().emit("notification", { action: "created", item: strongItem, alert: true }));
+    const toasts = screen.getByLabelText("操作提示");
+    expect(within(toasts).getByText("示例店 登录失效")).toBeInTheDocument();
+    act(() =>
+      FakeEventSource.latest().emit("notification", { action: "resolved", item: { ...strongItem, resolved_at: "2026-11-25T09:00:00" }, alert: false }),
+    );
+    expect(within(toasts).queryByText("示例店 登录失效")).not.toBeInTheDocument();
+  });
+
+  it("摘要里不再有该问题后强提醒弹窗自动收起；还没进摘要时不收", async () => {
+    setup();
+    await screen.findByRole("button", { name: "通知" });
+    act(() => FakeEventSource.latest().emit("notification", { action: "created", item: strongItem, alert: true }));
+    const toasts = screen.getByLabelText("操作提示");
+    // 事件触发重新拉摘要，但摘要还没包含它：不收
+    await waitFor(() => expect(within(toasts).getByText("示例店 登录失效")).toBeInTheDocument());
+    live.strongOpen = [shop(1, ["login_expired"])];
+    act(() => FakeEventSource.latest().emit("open"));
+    expect(await screen.findByRole("region", { name: "需要处理的店铺" })).toBeInTheDocument();
+    expect(within(toasts).getByText("示例店 登录失效")).toBeInTheDocument();
+    live.strongOpen = [];
+    act(() => FakeEventSource.latest().emit("open"));
+    await waitFor(() => expect(within(toasts).queryByText("示例店 登录失效")).not.toBeInTheDocument());
+  });
+
   it("中档 5 秒后消失，强档不消失，弱档不弹", async () => {
     setup();
     await screen.findByRole("button", { name: "通知" });

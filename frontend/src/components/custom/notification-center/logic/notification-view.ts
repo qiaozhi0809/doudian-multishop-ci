@@ -57,19 +57,25 @@ function fallbackLink(shop: StrongOpenShop): string {
   return shop.kinds[0] === "ship_deadline" ? `/orders?quick=exp_ship&shops=${shop.shop_id}` : `/shops?shop=${shop.shop_id}`;
 }
 
-/** 顶部横条：一店一行「店A：登录失效、出口不通」；超过 3 家合并为「N 家店需要处理」。 */
+/** 未解决的强提醒，一店一行「店A：登录失效、出口不通」（面板「待处理」全部列出）。 */
+export function openRows(shops: StrongOpenShop[]): BannerRow[] {
+  return shops.map((shop) => ({
+    shopId: shop.shop_id,
+    text: `${shop.shop_name}：${shop.kinds.map((k) => PROBLEM_LABELS[k] ?? "需要处理").join("、")}`,
+    link: shop.link ?? fallbackLink(shop),
+  }));
+}
+
+/** 顶部横条：同 openRows；超过 3 家合并为「N 家店需要处理」。 */
 export function bannerView(shops: StrongOpenShop[]): BannerView {
   if (shops.length === 0) return { kind: "none" };
   if (shops.length > BANNER_MAX_ROWS) return { kind: "merged", text: `${shops.length} 家店需要处理` };
-  return {
-    kind: "rows",
-    rows: shops.map((shop) => ({
-      shopId: shop.shop_id,
-      text: `${shop.shop_name}：${shop.kinds.map((k) => PROBLEM_LABELS[k] ?? "需要处理").join("、")}`,
-      link: shop.link ?? fallbackLink(shop),
-    })),
-  };
+  return { kind: "rows", rows: openRows(shops) };
 }
+
+/** 摘要里该店是否仍有该问题。 */
+export const isStillOpen = (shops: StrongOpenShop[], shopId: number, kind: NotificationItem["kind"]): boolean =>
+  shops.some((shop) => shop.shop_id === shopId && shop.kinds.includes(kind));
 
 /** 分页的最后一页（至少为 1）。 */
 export const lastPage = (total: number, pageSize: number): number =>
@@ -86,11 +92,14 @@ export interface AlertNotice {
   holdMs?: number;
 }
 
+/** 通知在右下角弹窗里的 key（同一条通知只留一个弹窗，恢复时据此收起）。 */
+export const noticeKey = (id: number): string => `notification:${id}`;
+
 /** 右下角弹窗：强档常驻、中档 5 秒、弱档不弹。 */
 export function alertNotice(item: NotificationItem): AlertNotice | null {
   if (item.level === "weak") return null;
   const text = item.body ? `${item.title}，${item.body}` : item.title;
-  const key = `notification:${item.id}`;
+  const key = noticeKey(item.id);
   return item.level === "strong"
     ? { text, tone: "danger", key, persistent: true }
     : { text, tone: "warning", key, persistent: false, holdMs: MEDIUM_HOLD_MS };
