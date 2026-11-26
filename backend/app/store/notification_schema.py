@@ -18,6 +18,7 @@ notification = sa.Table(
     sa.Column("state_key", sa.Text),
     sa.Column("resolved_at", _NOW),
     sa.Column("read_at", _NOW),
+    sa.Column("recovered_notified_at", _NOW),  # 强状态已写过「已恢复」（重开后不再写）
     sa.Column("created_at", _NOW, nullable=False),
     sa.Column("updated_at", _NOW, nullable=False),
 )

@@ -31,7 +31,7 @@ def test_update_whitelist(engine):
         row = ns.get(conn, nid)
         assert row["title"] == "新" and row["count"] == 3 and row["updated_at"] == LATER
         with pytest.raises(ValueError):
-            ns.update(conn, nid, LATER, kind="x")
+            ns.update(conn, nid, LATER, state_key="x")
 
 
 def test_open_state_unique(engine):
@@ -127,14 +127,19 @@ def test_sync_baseline_establish_idempotent(engine):
         assert got == NOW
 
 
-def test_events_since_filters_shop_kind_time_and_state(engine):
+
+def test_latest_unread_event_filters_by_link(engine):
     with engine.begin() as conn:
         sid = shop_store.create(conn, "测试店", NOW)
-        other = shop_store.create(conn, "测试店二", NOW)
-        _ins(conn, shop_id=sid, kind="recovered", at=T1)
-        keep = _ins(conn, shop_id=sid, kind="recovered", at=T2)
-        _ins(conn, shop_id=other, kind="recovered", at=T3)
-        _ins(conn, shop_id=sid, kind="new_order", at=T3)
-        _ins(conn, shop_id=sid, kind="recovered", at=T3, state_key="s", resolved_at=T3)
-        rows = ns.events_since(conn, shop_id=sid, kind="recovered", since=T2)
-        assert [r["id"] for r in rows] == [keep]
+        a = _ins(conn, shop_id=sid, kind="sync_failed", link="/orders", at=T1)
+        _ins(conn, shop_id=sid, kind="sync_failed", link="/aftersale", at=T2)
+        assert ns.latest_unread_event(conn, sid, "sync_failed", link="/orders")["id"] == a
+        assert ns.latest_unread_event(conn, sid, "sync_failed", link="/stock") is None
+
+
+def test_update_kind_and_recovered_marker(engine):
+    with engine.begin() as conn:
+        nid = _ins(conn, state_key="s")
+        ns.update(conn, nid, LATER, kind="k2", recovered_notified_at=LATER)
+        row = ns.get(conn, nid)
+        assert row["kind"] == "k2" and row["recovered_notified_at"] == LATER

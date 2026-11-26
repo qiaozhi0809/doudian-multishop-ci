@@ -1,8 +1,7 @@
 """通知中心统一入口：事件合并、强状态去重 / 静默重开 / 恢复，写库后发 `notification` 事件。
 
-静默重开的判定（无需新列）：一条强状态记录在它整个生命周期里只写一次「已恢复」。
-恢复时查该店自这条记录 created_at 起、链接相同且标题指向同一问题的「已恢复」事件；
-已有则说明这次是 30 分钟内重开出来的，不再写。「已恢复」事件因此不参与合并。
+静默重开：强状态记录第一次写「已恢复」时，在同一事务里置 `recovered_notified_at`；
+之后 30 分钟内重开再恢复，看到该列非空就不再写「已恢复」。
 """
 
 from collections.abc import Callable
@@ -27,6 +26,8 @@ from app.store import notification_store, shop_store
 ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 READ_RETENTION = timedelta(days=30)
 _NO_MERGE: frozenset[str] = frozenset({"recovered"})  # 每条对应一个具体问题与链接
+_MERGE_BY_LINK: frozenset[str] = frozenset({"sync_done", "sync_failed"})  # 链接区分同步类型
+MAX_PAGE_SIZE = 200
 _DEADLINE_LABEL = "临近发货超时"
 
 
@@ -79,33 +80,38 @@ class NotificationService:
 
     def _emit(
         self, kind: Kind, *, shop_id: int | None, count: int, detail: str | None,
-        link: str | None = None,
     ) -> int:
-        now = self._now()
         with self._engine.begin() as conn:
-            name = _shop_name(conn, shop_id)
-            prev = None
-            if shop_id is not None and kind not in _NO_MERGE:
-                prev = notification_store.latest_unread_event(conn, shop_id, kind)
-            if prev is not None:
-                total = prev["count"] + count
-                notification_store.update(
-                    conn, prev["id"], now, count=total,
-                    title=title_for(kind, shop_name=name, count=total, detail=detail),
-                    link=link or link_for(kind, shop_id, sync_type=detail),
-                )
-                nid, action, alert = prev["id"], "updated", False
-            else:
-                nid = notification_store.insert(
-                    conn, kind=kind, level=LEVEL_BY_KIND[kind], shop_id=shop_id,
-                    title=title_for(kind, shop_name=name, count=count, detail=detail),
-                    link=link or link_for(kind, shop_id, sync_type=detail),
-                    count=count, created_at=now, updated_at=now,
-                )
-                action, alert = "created", True
+            nid, action, alert = self._write_event(
+                conn, kind, shop_id=shop_id, count=count, detail=detail)
             item = notification_store.get(conn, nid)
         self._publish(action, item, alert=alert)
         return nid
+
+    def _write_event(
+        self, conn: sa.Connection, kind: Kind, *, shop_id: int | None, count: int,
+        detail: str | None, link: str | None = None,
+    ) -> tuple[int, str, bool]:
+        now = self._now()
+        name = _shop_name(conn, shop_id)
+        link = link or link_for(kind, shop_id, sync_type=detail)
+        prev = None
+        if shop_id is not None and kind not in _NO_MERGE:
+            prev = notification_store.latest_unread_event(
+                conn, shop_id, kind, link=link if kind in _MERGE_BY_LINK else None)
+        if prev is not None:
+            total = prev["count"] + count
+            notification_store.update(
+                conn, prev["id"], now, count=total,
+                title=title_for(kind, shop_name=name, count=total, detail=detail),
+            )
+            return prev["id"], "updated", False
+        nid = notification_store.insert(
+            conn, kind=kind, level=LEVEL_BY_KIND[kind], shop_id=shop_id,
+            title=title_for(kind, shop_name=name, count=count, detail=detail),
+            link=link, count=count, created_at=now, updated_at=now,
+        )
+        return nid, "created", True
 
     # ---- 状态类 ----
 
@@ -126,8 +132,10 @@ class NotificationService:
                 ):
                     row, fields["resolved_at"] = last, None
             if row is not None:
-                fields["title"] = title_for(
-                    row["kind"], shop_name=name, count=count, detail=detail)
+                fields.update(
+                    kind=kind, level=LEVEL_BY_KIND[kind], link=link_for(kind, shop_id),
+                    title=title_for(kind, shop_name=name, count=count, detail=detail),
+                )
                 notification_store.update(conn, row["id"], now, **fields)
                 nid, action, alert = row["id"], "updated", False
             else:
@@ -144,21 +152,24 @@ class NotificationService:
     def resolve_state(self, family: KindFamily, *, shop_id: int) -> None:
         key = state_key(family, shop_id)
         now = self._now()
+        recovered = None
         with self._engine.begin() as conn:
             row = notification_store.open_state(conn, key)
             if row is None:
                 return
-            notification_store.update(conn, row["id"], now, resolved_at=now)
+            fields: dict[str, Any] = {"resolved_at": now}
+            if row["recovered_notified_at"] is None:
+                rid, action, alert = self._write_event(
+                    conn, "recovered", shop_id=shop_id, count=1,
+                    detail=_problem_label(row), link=row["link"])
+                fields["recovered_notified_at"] = now
+                recovered = (action, notification_store.get(conn, rid), alert)
+            notification_store.update(conn, row["id"], now, **fields)
             item = notification_store.get(conn, row["id"])
-            label = _problem_label(row)
-            reopened = any(
-                r["link"] == row["link"] and r["title"].endswith(f"已恢复：{label}")
-                for r in notification_store.events_since(
-                    conn, shop_id=shop_id, kind="recovered", since=row["created_at"])
-            )
         self._publish("resolved", item, alert=False)
-        if not reopened:
-            self._emit("recovered", shop_id=shop_id, count=1, detail=label, link=row["link"])
+        if recovered is not None:
+            action, rec_item, alert = recovered
+            self._publish(action, rec_item, alert=alert)
 
     # ---- 查询与已读 ----
 
@@ -200,6 +211,7 @@ class NotificationService:
 
     def list(self, *, unread_only: bool, page: int, page_size: int = 50) -> dict[str, Any]:  # noqa: A003
         page = max(page, 1)
+        page_size = min(max(page_size, 1), MAX_PAGE_SIZE)
         with self._engine.connect() as conn:
             items, total = notification_store.list_page(
                 conn, unread_only=unread_only, offset=(page - 1) * page_size, limit=page_size)

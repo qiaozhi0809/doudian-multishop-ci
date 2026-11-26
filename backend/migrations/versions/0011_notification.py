@@ -5,6 +5,7 @@ Revises: 0010
 
 notification 同时承载「事件」（state_key 为空，一次性）与「强状态」（state_key 非空，
 解决前同一 state_key 只能有一条未解决记录，由部分唯一索引保证）。
+recovered_notified_at：该强状态已写过「已恢复」；30 分钟内重开后再恢复不再写。
 sync_baseline 记录某店铺某类数据已完成首次同步，之后的新增才算新事件。
 """
 
@@ -31,6 +32,7 @@ def upgrade() -> None:
         sa.Column("state_key", sa.Text),
         sa.Column("resolved_at", sa.Text),
         sa.Column("read_at", sa.Text),
+        sa.Column("recovered_notified_at", sa.Text),  # 强状态：已写过「已恢复」的时间
         sa.Column("created_at", sa.Text, nullable=False),
         sa.Column("updated_at", sa.Text, nullable=False),
     )

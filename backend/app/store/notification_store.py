@@ -7,7 +7,10 @@ import sqlalchemy as sa
 
 from app.store.notification_schema import notification as n
 
-_UPDATABLE = frozenset({"title", "body", "link", "count", "level", "resolved_at", "read_at"})
+_UPDATABLE = frozenset({
+    "kind", "title", "body", "link", "count", "level", "resolved_at", "read_at",
+    "recovered_notified_at",
+})
 
 
 def _open_strong():
@@ -54,29 +57,17 @@ def last_resolved_state(conn: sa.Connection, state_key: str) -> Mapping[str, Any
 
 
 def latest_unread_event(
-    conn: sa.Connection, shop_id: int, kind: str
+    conn: sa.Connection, shop_id: int, kind: str, *, link: str | None = None
 ) -> Mapping[str, Any] | None:
-    """该店铺该类型最近一条未读事件（state_key 为空）。"""
+    """该店铺该类型最近一条未读事件（state_key 为空）；给 link 时只找链接相同的。"""
+    cond = [n.c.shop_id == shop_id, n.c.kind == kind,
+            n.c.state_key.is_(None), n.c.read_at.is_(None)]
+    if link is not None:
+        cond.append(n.c.link == link)
     return _one(
         conn,
-        sa.select(n).where(
-            n.c.shop_id == shop_id, n.c.kind == kind,
-            n.c.state_key.is_(None), n.c.read_at.is_(None),
-        ).order_by(n.c.created_at.desc(), n.c.id.desc()).limit(1),
+        sa.select(n).where(*cond).order_by(n.c.created_at.desc(), n.c.id.desc()).limit(1),
     )
-
-
-def events_since(
-    conn: sa.Connection, *, shop_id: int, kind: str, since: str
-) -> list[dict[str, Any]]:
-    """该店铺该类型、created_at 不早于 since 的事件（state_key 为空），新的在前。"""
-    rows = conn.execute(
-        sa.select(n).where(
-            n.c.shop_id == shop_id, n.c.kind == kind,
-            n.c.state_key.is_(None), n.c.created_at >= since,
-        ).order_by(n.c.created_at.desc(), n.c.id.desc())
-    ).mappings().all()
-    return [dict(r) for r in rows]
 
 
 def list_page(

@@ -225,3 +225,55 @@ def test_purge_removes_read_events_older_than_30_days(svc, shop_a, clock):
     assert svc.purge(clock.now) == 1
     remaining = {r["kind"] for r in _rows(svc)}
     assert remaining == {"login_expired", "sync_done"}
+
+
+def test_sync_failed_merges_only_same_sync_type(svc, shop_a):
+    svc.emit("sync_failed", shop_id=shop_a, detail="orders")
+    svc.emit("sync_failed", shop_id=shop_a, detail="aftersales")
+    svc.emit("sync_failed", shop_id=shop_a, detail="orders")
+    rows = {r["title"]: r for r in _rows(svc, "sync_failed")}
+    assert set(rows) == {"店A 订单同步失败", "店A 售后同步失败"}
+    assert rows["店A 订单同步失败"]["count"] == 2
+    assert rows["店A 订单同步失败"]["link"] == f"/orders?shops={shop_a}"
+    assert rows["店A 售后同步失败"]["count"] == 1
+
+
+def test_recovered_marker_set_with_first_recovered(svc, shop_a):
+    svc.raise_state("login", "login_expired", shop_id=shop_a)
+    assert _rows(svc, "login_expired")[0]["recovered_notified_at"] is None
+    svc.resolve_state("login", shop_id=shop_a)
+    state = _rows(svc, "login_expired")[0]
+    recovered = _rows(svc, "recovered")[0]
+    assert state["recovered_notified_at"] == recovered["created_at"]
+
+
+def test_reopen_suppression_survives_title_change(svc, shop_a, clock):
+    """重开时问题换了说法（标题变了），再恢复仍不写第二条「已恢复」。"""
+    svc.raise_state("egress", "egress_unreachable", shop_id=shop_a)
+    svc.resolve_state("egress", shop_id=shop_a)
+    clock.now += timedelta(minutes=10)
+    svc.raise_state("egress", "egress_duplicate", shop_id=shop_a)
+    assert _rows(svc, "egress_duplicate")[0]["title"] == "店A 出口 IP 与其他店重复"
+    svc.resolve_state("egress", shop_id=shop_a)
+    assert len(_rows(svc, "recovered")) == 1
+
+
+def test_kind_change_within_family_updates_row(svc, shop_a, published):
+    svc.raise_state("egress", "egress_unreachable", shop_id=shop_a, detail="连接超时")
+    svc.raise_state("egress", "egress_changed", shop_id=shop_a, detail="IP 变了")
+    rows = _rows(svc)
+    assert len(rows) == 1
+    assert rows[0]["kind"] == "egress_changed" and rows[0]["level"] == "strong"
+    assert rows[0]["title"] == "店A 出口 IP 已变化" and rows[0]["body"] == "IP 变了"
+    assert published[-1]["alert"] is False
+    svc.resolve_state("egress", shop_id=shop_a)
+    assert _rows(svc, "recovered")[0]["title"] == "店A 已恢复：出口 IP 已变化"
+
+
+def test_list_clamps_page_and_size(svc, engine):
+    for i in range(3):
+        svc.emit("new_order", shop_id=add_shop(engine, name=f"店{i}"))
+    assert svc.list(unread_only=False, page=0, page_size=0)["page"] == 1
+    small = svc.list(unread_only=False, page=-3, page_size=0)
+    assert small["page_size"] == 1 and len(small["items"]) == 1
+    assert svc.list(unread_only=False, page=1, page_size=10_000)["page_size"] == 200
