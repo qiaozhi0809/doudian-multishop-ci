@@ -36,7 +36,7 @@ class FakeRunner:
 def scraped(monkeypatch):
     calls: list = []
 
-    async def fake_scrape(profile_dir, proxy):
+    async def fake_scrape(profile_dir, proxy, registry=None):
         calls.append(proxy)
         return dict(SCRAPED)
 
@@ -106,7 +106,7 @@ async def _audit_rows(engine):
 
 
 async def test_scrape_drops_invalid_fields_and_audits_names(engine, tmp_path, monkeypatch):
-    async def fake_scrape(profile_dir, proxy):
+    async def fake_scrape(profile_dir, proxy, registry=None):
         return {"bank_name": "示" * 51, "bank_tail": "１２３４",
                 "platform_shop_id": "1" * 21, "entity": "某某贸易有限公司"}
 
@@ -130,7 +130,7 @@ async def test_scrape_audit_skips_entity_not_written(engine, tmp_path, scraped):
 
 
 async def test_scrape_failure_writes_error_audit_without_values(engine, tmp_path, monkeypatch):
-    async def fake_scrape(profile_dir, proxy):
+    async def fake_scrape(profile_dir, proxy, registry=None):
         raise RuntimeError("secret http://u:p@203.0.113.5:1")
 
     monkeypatch.setattr(shop_profile_mod, "scrape_platform_info", fake_scrape)
@@ -146,7 +146,7 @@ async def test_scrape_failure_writes_error_audit_without_values(engine, tmp_path
 async def test_scrape_unsupported_proxy_message_is_shown(engine, tmp_path, monkeypatch):
     from app.domain.errors import InvalidRequest
 
-    async def fake_scrape(profile_dir, proxy):
+    async def fake_scrape(profile_dir, proxy, registry=None):
         raise ValueError("socks5 代理不支持账号密码")
 
     monkeypatch.setattr(shop_profile_mod, "scrape_platform_info", fake_scrape)

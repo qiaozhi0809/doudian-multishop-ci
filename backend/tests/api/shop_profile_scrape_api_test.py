@@ -6,7 +6,7 @@ from app.service import shop_profile as shop_profile_mod
 def _fake_scrape(monkeypatch, result=None, error=None):
     calls: list = []
 
-    async def fake(profile_dir, proxy):
+    async def fake(profile_dir, proxy, registry=None):
         calls.append(proxy)
         if error:
             raise error

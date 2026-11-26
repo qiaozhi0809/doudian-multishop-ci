@@ -3,8 +3,9 @@
 - 登记：经 ``open()`` / ``open_cloak()`` 启动，按店铺目录登记用途、主进程 pid、启动时间、
   最长存活时间；退出时关闭并注销。关闭有超时，超时或关完进程仍在就强杀整棵进程树。
 - 巡检 ``sweep()``：关闭超过最长存活时间的；注销进程已不在的；结束未登记但
-  ``--user-data-dir`` 位于 profiles 目录下的孤儿浏览器并清理其锁文件。
-- 启动清理 ``startup_cleanup()``：巡检一次，再清掉所有未登记店铺目录里残留的锁文件。
+  ``--user-data-dir`` 位于 profiles 目录下的孤儿浏览器并清理其锁文件（browser_sweep）。
+- 启动清理 ``startup_cleanup()``：清孤儿，再清掉所有未登记店铺目录里残留的锁文件。
+- 进程身份按 (pid, 创建时间, 目录) 核对，pid 被复用时按「已不在」处理，绝不误杀。
 
 只动 profiles 目录下的进程，绝不碰用户自己的 Chrome。日志只记店铺、用途、原因，
 不记路径、命令行（里面有代理账号密码）。
@@ -18,18 +19,18 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 
 import structlog
 
-from app.adapter.browser import cloak_launch
+from app.adapter.browser import browser_sweep, browser_timing, cloak_launch
 from app.adapter.browser.browser_process import (
     BrowserProc,
+    ProcessOps,
     PsutilProcesses,
-    owned_profile,
-    remove_singleton_files,
     same_dir,
 )
+from app.adapter.browser.browser_sweep import shop_id_of
 
 log = structlog.get_logger()
 
@@ -54,16 +55,10 @@ class CloseReason(StrEnum):
 
 
 MAX_AGE_S: dict[Purpose, float] = {
-    Purpose.LOGIN: 10 * 60,
-    Purpose.SCRAPE: 2 * 60,
-    Purpose.IM: 24 * 3600,
+    Purpose.LOGIN: browser_timing.login_max_age(),
+    Purpose.SCRAPE: browser_timing.SCRAPE_MAX_S,
+    Purpose.IM: browser_timing.IM_MAX_S,
 }
-
-
-class ProcessOps(Protocol):
-    def list_browsers(self) -> list[BrowserProc]: ...
-    def alive(self, pid: int) -> bool: ...
-    def kill_tree(self, pid: int) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -84,18 +79,18 @@ class _Entry:
     max_age_s: float
     started_at: datetime
     t0: float
-    pid: int | None = None
+    proc: BrowserProc | None = None
     ctx: Any = None
     on_close: Callable[[str], None] | None = None
     closing: asyncio.Task | None = field(default=None, repr=False)
 
     @property
     def shop_id(self) -> int | None:
-        name = self.profile_dir.name
-        return int(name) if name.isdigit() else None
+        return shop_id_of(self.profile_dir)
 
     def info(self) -> BrowserInfo:
-        return BrowserInfo(self.shop_id, self.purpose, self.pid, self.started_at, self.max_age_s)
+        pid = self.proc.pid if self.proc else None
+        return BrowserInfo(self.shop_id, self.purpose, pid, self.started_at, self.max_age_s)
 
 
 class BrowserRegistry:
@@ -134,10 +129,10 @@ class BrowserRegistry:
         except BaseException:
             self._entries.remove(entry)
             raise
-        entry.pid = await self._find_pid(profile_dir)
-        log.info("browser.opened", shop_id=entry.shop_id, purpose=purpose.value,
-                 found_pid=entry.pid is not None)
-        try:
+        try:  # 从这里起任何取消或异常都要关浏览器、注销
+            entry.proc = await self._find_proc(profile_dir)
+            log.info("browser.opened", shop_id=entry.shop_id, purpose=purpose.value,
+                     found_pid=entry.proc is not None)
             yield entry.ctx
         finally:
             await self._close(entry, CloseReason.DONE)
@@ -155,15 +150,19 @@ class BrowserRegistry:
         )
 
     async def close_shop(self, shop_id: int, reason: str = CloseReason.PREEMPTED) -> bool:
-        """关闭该店已登记的浏览器（如扫码前让出常驻的飞鸽浏览器）；没有则返回 False。"""
+        """关闭该店已登记的浏览器（如扫码前让出常驻的飞鸽浏览器）；没有则返回 False。
+
+        正在启动（launch 还没返回）的不关、也不算：此时返回 False，调用方随后 open
+        会收到「资料目录正被占用」，需自行稍后重试。
+        """
         hits = [e for e in self._entries if e.shop_id == shop_id and e.ctx is not None]
-        for e in hits:
-            await self._close(e, reason)
+        await asyncio.gather(*(self._close(e, reason) for e in hits))
         return bool(hits)
 
     async def close_all(self, reason: str = CloseReason.SHUTDOWN) -> None:
-        for e in [e for e in self._entries if e.ctx is not None]:
-            await self._close(e, reason)
+        """并行关闭：店铺多时逐个关会拖到被服务管理器强杀。"""
+        hits = [e for e in self._entries if e.ctx is not None]
+        await asyncio.gather(*(self._close(e, reason) for e in hits))
 
     async def sweep(self, profiles_dir: Path) -> None:
         now = self._clock()
@@ -172,48 +171,28 @@ class BrowserRegistry:
                 continue  # 还在启动 / 已在关闭
             if now - e.t0 > e.max_age_s:
                 await self._close(e, CloseReason.EXPIRED)
-            elif e.pid is not None and not await asyncio.to_thread(self._procs.alive, e.pid):
+            elif e.proc is not None and not await asyncio.to_thread(self._procs.alive, e.proc):
                 await self._close(e, CloseReason.PROCESS_GONE)
         await self._kill_orphans(profiles_dir)
 
     async def startup_cleanup(self, profiles_dir: Path) -> None:
         await self._kill_orphans(profiles_dir)
-        if not profiles_dir.is_dir():
-            return
-        for child in profiles_dir.iterdir():
-            if child.is_dir() and not self._registered(child):
-                self._remove_locks(child, "startup")
+        dirs = [e.profile_dir for e in self._entries]
+        await asyncio.to_thread(browser_sweep.clear_stale_locks, profiles_dir, dirs)
 
     # ---- 内部 ----
 
-    def _registered(self, profile_dir: Path) -> bool:
-        return any(same_dir(e.profile_dir, profile_dir) for e in self._entries)
-
-    async def _find_pid(self, profile_dir: Path) -> int | None:
+    async def _find_proc(self, profile_dir: Path) -> BrowserProc | None:
         try:
             procs = await asyncio.to_thread(self._procs.list_browsers)
-        except Exception:  # noqa: BLE001 - 取不到 pid 只是少一个强杀依据，仍按目录登记
+        except Exception:  # noqa: BLE001 - 取不到进程只是少一个强杀依据，仍按目录登记
             return None
-        return next((p.pid for p in procs if same_dir(p.user_data_dir, profile_dir)), None)
+        return next((p for p in procs if same_dir(p.user_data_dir, profile_dir)), None)
 
     async def _kill_orphans(self, profiles_dir: Path) -> None:
-        procs = await asyncio.to_thread(self._procs.list_browsers)
-        pids = {e.pid for e in self._entries if e.pid is not None}
-        for p in procs:
-            profile = owned_profile(p.user_data_dir, profiles_dir)
-            if profile is None or p.pid in pids or self._registered(profile):
-                continue
-            await asyncio.to_thread(self._procs.kill_tree, p.pid)
-            shop_id = int(profile.name) if profile.name.isdigit() else None
-            log.warning("browser.orphan_killed", shop_id=shop_id, reason="orphan")
-            self._remove_locks(profile, "orphan")
-
-    def _remove_locks(self, profile_dir: Path, reason: str) -> None:
-        removed = remove_singleton_files(profile_dir)
-        if removed:
-            name = profile_dir.name
-            log.info("browser.locks_removed", shop_id=int(name) if name.isdigit() else None,
-                     reason=reason, count=len(removed))
+        dirs = [e.profile_dir for e in self._entries]
+        procs = {e.proc for e in self._entries if e.proc is not None}
+        await asyncio.to_thread(browser_sweep.kill_orphans, self._procs, profiles_dir, dirs, procs)
 
     async def _close(self, entry: _Entry, reason: str) -> None:
         """关闭只做一次：巡检与持有方同时关时，后到的等同一个结果。"""
@@ -222,31 +201,35 @@ class BrowserRegistry:
         await asyncio.shield(entry.closing)
 
     async def _do_close(self, entry: _Entry, reason: str) -> None:
-        timed_out = False
-        try:
-            await asyncio.wait_for(entry.ctx.close(), self._close_timeout_s)
-        except TimeoutError:
-            timed_out = True
-        except Exception:  # noqa: BLE001 - 用户已关窗或浏览器已崩溃时 close 会报错
-            pass
         killed = False
-        pid = entry.pid if entry.pid is not None else await self._find_pid(entry.profile_dir)
-        if pid is not None and await asyncio.to_thread(self._procs.alive, pid):
-            await asyncio.to_thread(self._procs.kill_tree, pid)
-            killed = True
-        if timed_out:  # 浏览器已结束，再关一次让 Playwright 驱动进程退出
-            with suppress(Exception):
-                await asyncio.wait_for(entry.ctx.close(), self._close_timeout_s)
-        if entry in self._entries:
-            self._entries.remove(entry)
-        log.info("browser.closed", shop_id=entry.shop_id, purpose=entry.purpose.value,
-                 reason=str(reason), killed=killed)
-        if entry.on_close is not None:
+        try:
+            timed_out = False
             try:
-                entry.on_close(str(reason))
-            except Exception:  # noqa: BLE001 - 持有方回调出错不影响注销
-                log.exception("browser.on_close_failed", shop_id=entry.shop_id,
-                              purpose=entry.purpose.value)
+                await asyncio.wait_for(entry.ctx.close(), self._close_timeout_s)
+            except TimeoutError:
+                timed_out = True
+            except Exception:  # noqa: BLE001 - 用户已关窗或浏览器已崩溃时 close 会报错
+                pass
+            proc = entry.proc or await self._find_proc(entry.profile_dir)
+            if proc is not None:
+                killed = await asyncio.to_thread(self._procs.kill_tree, proc)
+            if timed_out:  # 浏览器已结束，再关一次让 Playwright 驱动进程退出
+                with suppress(Exception):
+                    await asyncio.wait_for(entry.ctx.close(), self._close_timeout_s)
+        except Exception:  # noqa: BLE001 - 强杀失败也要注销并通知持有方
+            log.exception("browser.close_failed", shop_id=entry.shop_id,
+                          purpose=entry.purpose.value)
+        finally:
+            if entry in self._entries:
+                self._entries.remove(entry)
+            log.info("browser.closed", shop_id=entry.shop_id, purpose=entry.purpose.value,
+                     reason=str(reason), killed=killed)
+            if entry.on_close is not None:
+                try:
+                    entry.on_close(str(reason))
+                except Exception:  # noqa: BLE001 - 持有方回调出错不影响注销
+                    log.exception("browser.on_close_failed", shop_id=entry.shop_id,
+                                  purpose=entry.purpose.value)
 
 
 REGISTRY = BrowserRegistry()

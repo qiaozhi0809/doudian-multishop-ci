@@ -15,25 +15,34 @@ from app.adapter.browser.browser_registry import (
     BrowserRegistry,
     Purpose,
 )
+from app.adapter.browser.browser_timing import SCRAPE_MAX_S
 from app.adapter.browser.cloak_launch import PROFILE_IN_USE, CloakUnavailable
 
 
 class FakeProcs:
-    """进程表：pid → --user-data-dir。kill_tree 直接从表里移除。"""
+    """进程表：pid → (--user-data-dir, 创建时间)。与真实实现一样按身份核对后才杀。"""
 
     def __init__(self) -> None:
         self.browsers: dict[int, str] = {}
+        self.ctimes: dict[int, float] = {}
         self.killed: list[int] = []
 
+    def ct(self, pid: int) -> float:
+        return self.ctimes.get(pid, float(pid))
+
     def list_browsers(self) -> list[BrowserProc]:
-        return [BrowserProc(pid, d) for pid, d in self.browsers.items()]
+        return [BrowserProc(pid, d, self.ct(pid)) for pid, d in self.browsers.items()]
 
-    def alive(self, pid: int) -> bool:
-        return pid in self.browsers
+    def alive(self, proc: BrowserProc) -> bool:
+        return (self.browsers.get(proc.pid) == proc.user_data_dir
+                and self.ct(proc.pid) == proc.create_time)
 
-    def kill_tree(self, pid: int) -> None:
-        self.killed.append(pid)
-        self.browsers.pop(pid, None)
+    def kill_tree(self, proc: BrowserProc) -> bool:
+        if not self.alive(proc):
+            return False
+        self.killed.append(proc.pid)
+        self.browsers.pop(proc.pid, None)
+        return True
 
 
 class FakeCtx:
@@ -111,7 +120,7 @@ async def test_open_registers_and_close_unregisters(reg, procs, profiles):
 
 
 def test_max_ages():
-    assert MAX_AGE_S[Purpose.SCRAPE] == 120
+    assert MAX_AGE_S[Purpose.SCRAPE] == SCRAPE_MAX_S
     assert MAX_AGE_S[Purpose.IM] == 24 * 3600
 
 
@@ -156,9 +165,9 @@ async def test_sweep_closes_expired_and_keeps_fresh(reg, procs, profiles, clock)
     old = launcher(procs, profiles / "1", 100)
     fresh = launcher(procs, profiles / "2", 200)
     async with reg.open(profiles / "1", Purpose.SCRAPE, old) as c1:
-        clock.t += 100
+        clock.t += SCRAPE_MAX_S - 10
         async with reg.open(profiles / "2", Purpose.LOGIN, fresh) as c2:
-            clock.t += 30  # scrape 已 130 秒 > 120；login 才 30 秒
+            clock.t += 30  # scrape 已超过最长存活；login 才 30 秒
             with capture_logs() as logs:
                 await reg.sweep(profiles)
             assert [i.shop_id for i in reg.list()] == [2]
@@ -260,3 +269,69 @@ async def test_logs_never_carry_paths_or_args(reg, procs, profiles):
             pass
     text = repr(logs)
     assert str(profiles) not in text and "--" not in text
+
+
+async def test_reused_pid_is_treated_as_gone_and_never_killed(reg, procs, profiles, tmp_path):
+    """浏览器崩溃后 pid 被别的进程复用：巡检按 process_gone 注销，不杀那个新进程。"""
+    launch = launcher(procs, profiles / "1", 100, leave_running=True)
+    async with reg.open(profiles / "1", Purpose.IM, launch) as ctx:
+        procs.ctimes[100] = 9999.0  # 同一个 pid 被用户的 Edge 复用
+        procs.browsers[100] = str(tmp_path / "edge-user")
+        with capture_logs() as logs:
+            await reg.sweep(profiles)
+        assert reg.list() == []
+        assert any(e.get("reason") == "process_gone" for e in logs)
+    assert procs.killed == [] and 100 in procs.browsers and ctx.close_calls == 1
+
+
+async def test_cancel_while_finding_pid_closes_and_unregisters(reg, procs, profiles):
+    gate = __import__("threading").Event()
+    real_list = procs.list_browsers
+
+    def blocking_list():
+        gate.wait(5)
+        return real_list()
+
+    procs.list_browsers = blocking_list
+    launch = launcher(procs, profiles / "1", 100)
+
+    async def hold():
+        async with reg.open(profiles / "1", Purpose.LOGIN, launch):
+            pass
+
+    task = asyncio.create_task(hold())
+    for _ in range(50):
+        await asyncio.sleep(0.01)
+        if launch.ctxs:
+            break
+    task.cancel()
+    gate.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert reg.list() == [] and launch.ctxs[0].close_calls == 1
+
+
+async def test_close_errors_still_unregister_and_notify(reg, procs, profiles):
+    reasons: list[str] = []
+    launch = launcher(procs, profiles / "1", 100, leave_running=True)
+
+    def broken_kill(_proc):
+        raise RuntimeError("thread pool gone")
+
+    procs.kill_tree = broken_kill
+    async with reg.open(profiles / "1", Purpose.IM, launch, on_close=reasons.append):
+        pass
+    assert reg.list() == [] and reasons == ["done"]
+    # 再关一次不会重新抛出
+    await reg.close_all()
+
+
+async def test_close_all_runs_in_parallel(procs, profiles, clock):
+    reg = BrowserRegistry(procs, clock=clock, close_timeout_s=0.2)
+    a = launcher(procs, profiles / "1", 100, hang=True)
+    b = launcher(procs, profiles / "2", 200, hang=True)
+    async with reg.open(profiles / "1", Purpose.IM, a), reg.open(profiles / "2", Purpose.IM, b):
+        loop = asyncio.get_running_loop()
+        t0 = loop.time()
+        await reg.close_all()
+        assert loop.time() - t0 < 0.35  # 两个各超时 0.2 秒，并行而非串行

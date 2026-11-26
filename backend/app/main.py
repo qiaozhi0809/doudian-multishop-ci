@@ -53,6 +53,7 @@ from app.service.periodic import (
 )
 from app.service.shop_login import ScanFn
 from app.service.shop_runner import ClientFactory
+from app.shared import instance_lock
 from app.shared.cloak import apply_env
 from app.shared.version import APP_VERSION
 from app.store import task_store
@@ -62,6 +63,7 @@ from app.wiring import Overrides, build_services
 
 log = structlog.get_logger()
 ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
+ALREADY_RUNNING = "该数据目录已有后端在运行，本次启动已退出"
 
 
 def _utc_now() -> datetime:
@@ -81,7 +83,19 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        settings.data_dir.mkdir(parents=True, exist_ok=True)
+        # 第一件事：单实例锁。拿不到就在迁移、任务复位、浏览器清理之前退出
+        lock = instance_lock.acquire(settings.data_dir)
+        if lock is None:
+            log.error("app.already_running")
+            raise RuntimeError(ALREADY_RUNNING)
+        try:
+            async with serve(app):
+                yield
+        finally:
+            lock.release()
+
+    @asynccontextmanager
+    async def serve(app: FastAPI) -> AsyncIterator[None]:
         apply_env(settings.cloak_cache_dir)
         db_path = settings.data_dir / DB_FILE_NAME
         backup = backup_before_upgrade(

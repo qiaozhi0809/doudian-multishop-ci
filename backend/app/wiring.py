@@ -71,8 +71,9 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         ov.client_factory or default_client_factory, **clock_kw,
     )
     base_data = BaseDataService(engine, runner, events)
+    browsers = ov.browsers or REGISTRY  # 扫码、读页面、巡检共用同一个登记表
     shop_profile = ShopProfileService(
-        engine, runner, profiles_dir=settings.profiles_dir, **clock_kw)
+        engine, runner, profiles_dir=settings.profiles_dir, browsers=browsers, **clock_kw)
     order_query = OrderQueryService(engine, runner, **clock_kw)
     login_kw = {"scan": ov.scan} if ov.scan else {}
     tasks = TaskRegistry()
@@ -81,7 +82,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
     notifications = NotificationService(engine, events, **clock_kw)
     return {
         "engine": engine, "events": events, "sessions": sessions, "egress": egress,
-        "browsers": ov.browsers or REGISTRY,
+        "browsers": browsers,
         "proxy_pool": ProxyPoolService(
             engine, box, events, ov.probe or make_probe(settings.egress_echo_url), **clock_kw),
         "runner": runner, "base_data": base_data, "shop_profile": shop_profile, "tasks": tasks,
@@ -125,7 +126,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,
             settings.browser_channel, use_cloak=settings.use_cloak,
-            profile=shop_profile, **login_kw,
+            profile=shop_profile, browsers=browsers, **login_kw,
         ),
         "auth": AuthService(
             engine, **clock_kw, **({"hasher": ov.hasher} if ov.hasher else {})

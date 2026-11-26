@@ -446,19 +446,22 @@ class Signer(Protocol):
 **数据去向**：配置代理的店铺，请求经代理商隧道转发（HTTPS CONNECT，代理商看不到内容，只看到目标域名）；
 cookie、订单数据等仍只存本机。
 
-**浏览器进程管理**（`adapter/browser/browser_registry.py`、`adapter/browser/browser_process.py`）：
+**浏览器进程管理**（`adapter/browser/browser_registry.py`、`browser_sweep.py`、`browser_process.py`、`browser_timing.py`）：
 后端被杀或崩溃时浏览器会变成孤儿进程，继续占住 `profiles/<shop_id>/`，下次启动报「资料目录正被占用」。所以本后端启动的每个浏览器都登记、限时、可回收。
 
 | 项 | 规则 |
 |---|---|
 | 登记 | 扫码（`login`）、同步收款信息（`scrape`）、飞鸽只读（`im`，预留）都经 `BrowserRegistry.open()` / `open_cloak()` 启动（含非 CloakBrowser 的系统浏览器扫码分支）。**先登记后启动**，按店铺目录登记用途、浏览器主进程 pid、启动时间、最长存活时间；退出 `async with` 即关闭并注销。同一店铺目录已登记时直接报「资料目录正被占用」，不再起第二个 |
-| 最长存活 | `login` 10 分钟、`scrape` 2 分钟、`im` 24 小时（常驻，到期由巡检关闭，持有方重新打开，即每天重启一次） |
-| 关闭 | `ctx.close()` 限时 15 秒；超时、或关完主进程仍在 → 结束整棵进程树（psutil 先杀子进程再杀主进程，Windows 仍有存活再 `taskkill /T /F`） |
-| 启动清理 | `lifespan` 启动后：结束 `--user-data-dir` 位于 `profiles/` 之下且未登记的浏览器进程；删除所有未登记店铺目录里残留的 `SingletonLock` / `SingletonSocket` / `SingletonCookie` |
+| 最长存活 | 由最坏耗时推导（`browser_timing.py`），不会各改各的：`login` = max(10 分钟, 导航 30 秒 + 扫码等待 + 加载 10 秒 + 余量 120 秒)，按本次扫码超时计算；`scrape` = max(2 分钟, 3×(45+8)+4 = 163 秒 + 余量 120 秒) = 283 秒；`im` 24 小时（常驻，到期由巡检关闭，持有方重新打开，即每天重启一次）。扫码窗口被系统关闭时按关闭原因提示（超时、被让出、后台退出），而不是「浏览器已关闭」 |
+| 进程身份 | 登记 (pid, 创建时间, `--user-data-dir`)。查活与强杀前都重新核对，pid 被复用给别的进程（含用户自己的 Edge/Chrome）时按「已不在」处理，**绝不去杀** |
+| 关闭 | `ctx.close()` 限时 15 秒；超时、或关完主进程仍在 → 结束整棵进程树：先挂起主进程（防止重新拉起子进程），按快照逐个结束，仍存活的逐个兜底（Windows 用不带 `/T` 的 `taskkill /PID <它> /F`），最后再清晚于主进程创建、父进程已被结束的漏网子进程。关闭中途出错也一定注销并回调 `on_close`；`close_all` 并行关闭 |
+| 启动清理 | `lifespan` 启动后：结束 `--user-data-dir` 位于 `profiles/` 之下且未登记的浏览器进程；删除所有未登记店铺目录里残留的 `SingletonLock` / `SingletonSocket` / `SingletonCookie`；macOS/Linux 上 `SingletonLock` 指向的本机 pid 仍在时不删（进程表读不到 cmdline 的浏览器） |
+| 单实例锁 | `lifespan` 第一件事是取 `data_dir/app.lock` 的排他文件锁（POSIX `fcntl.flock`、Windows `msvcrt.locking`，进程退出自动释放）；拿不到记 `app.already_running` 并退出，不做迁移、任务复位与浏览器清理——否则第二个实例会把第一个实例的浏览器当孤儿杀掉 |
 | 定时巡检 | 每 5 分钟（`run_every`，首轮等满一个间隔）：关闭超过最长存活时间的、注销进程已不在的、结束未登记的孤儿并清其锁文件。启动中的浏览器已登记，不会被误杀 |
 | 退出 | `lifespan` 退出时关闭全部已登记浏览器 |
 | 关闭原因 | `open()` / `open_cloak()` 可传 `on_close(reason)`，浏览器关闭并注销后调用一次：`done`（持有方退出）/ `expired`（超时，im 即每日重启）/ `process_gone`（关窗或崩溃）/ `preempted`（`close_shop` 让出目录）/ `shutdown`（后端退出）；回调时目录已空出，可直接重新打开 |
-| 边界 | 只按命令行 `--user-data-dir` 判定归属，只动 `profiles/` 目录下的进程，**绝不碰用户自己的 Chrome** |
+| 边界 | 只按命令行 `--user-data-dir`（必须是绝对路径）判定归属，只动 `profiles/` 目录下的进程，**绝不碰用户自己的 Chrome**；整轮「枚举 → 判定 → 强杀 → 删锁」在线程里执行，不卡事件循环。`close_shop` 不关正在启动的浏览器（返回 False，调用方随后 open 会收到「资料目录正被占用」，需稍后重试） |
+| 注入 | `wiring` 把同一个登记表交给 `ShopLoginFlow`、`ShopProfileService` 与 `app.state.browsers`；测试默认注入空进程表，不枚举本机真实进程 |
 | 日志 | `browser.opened` / `browser.closed`（含 `reason`：`done` / `expired` / `process_gone` / `shutdown` 等，`killed` 是否强杀）/ `browser.orphan_killed` / `browser.locks_removed`，只记 `shop_id`、用途、原因，不记路径、命令行与代理地址 |
 | 依赖 | `psutil`（跨平台进程枚举与结束进程树） |
 

@@ -17,12 +17,17 @@ from pathlib import Path
 
 from app.adapter.browser import browser_registry
 from app.adapter.browser.browser_registry import BrowserRegistry, Purpose
+from app.adapter.browser.browser_timing import (
+    SCRAPE_GOTO_TIMEOUT_S,
+    SCRAPE_RENDER_WAIT_S,
+    SCRAPE_TAB_WAIT_S,
+)
 from app.adapter.browser.login import playwright_proxy
 
 PAYMENT_URL = "https://fxg.jinritemai.com/ffa/ecom/merchant/payment-settings"
 SHOP_URL = "https://fxg.jinritemai.com/ffa/grs-new/qualification/common-tools"
 QUALIFICATION_URL = "https://fxg.jinritemai.com/ffa/mshop/shop/qualification"
-RENDER_WAIT_S = 8
+RENDER_WAIT_S = SCRAPE_RENDER_WAIT_S  # 耗时常量统一在 browser_timing，最长存活由它推导
 _DIGITS = re.compile(r"\D")
 _SHOP_ID = re.compile(r"店铺ID[:：]?\s*(\d+)")
 
@@ -95,11 +100,12 @@ async def scrape_platform_info(
             (QUALIFICATION_URL, parse_entity),
         ):
             try:
-                await page.goto(url, wait_until="domcontentloaded", timeout=45_000)
+                await page.goto(
+                    url, wait_until="domcontentloaded", timeout=SCRAPE_GOTO_TIMEOUT_S * 1000)
                 await asyncio.sleep(RENDER_WAIT_S)
                 if url == QUALIFICATION_URL:
                     await page.evaluate(_CLICK_ENTITY_TAB)
-                    await asyncio.sleep(4)
+                    await asyncio.sleep(SCRAPE_TAB_WAIT_S)
                 text = await page.evaluate("document.body.innerText")
                 info.update(parse(text or ""))
             except Exception:  # noqa: BLE001 - 单页失败不影响其它项
