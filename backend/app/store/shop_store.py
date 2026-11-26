@@ -66,8 +66,8 @@ def set_paused(conn: sa.Connection, shop_id: int, reason: str | None, now: str) 
 
 
 def update_fields(conn: sa.Connection, shop_id: int, now: str, **fields: Any) -> None:
-    """改名 / 主体 / 通道等普通字段。只允许白名单列。"""
-    unknown = set(fields) - {"name", "entity", "shop_no", "channel"}
+    """改名 / 主体 / 通道 / 飞鸽开关等普通字段。只允许白名单列。"""
+    unknown = set(fields) - {"name", "entity", "shop_no", "channel", "im_enabled"}
     if unknown:
         raise ValueError(f"不可修改的列: {sorted(unknown)}")
     if fields:

@@ -33,6 +33,17 @@ def test_set_status_and_paused(engine):
         assert row["paused_reason"] is None and row["paused_at"] is None
 
 
+def test_update_fields_im_enabled(engine):
+    with engine.begin() as conn:
+        sid = _shop(conn)
+        assert shop_store.get(conn, sid)["im_enabled"] == 0
+        shop_store.update_fields(conn, sid, LATER, im_enabled=1)
+        row = shop_store.get(conn, sid)
+        assert row["im_enabled"] == 1 and row["updated_at"] == LATER
+        shop_store.update_fields(conn, sid, LATER, im_enabled=0)
+        assert shop_store.get(conn, sid)["im_enabled"] == 0
+
+
 def test_set_egress_rejects_unknown_column(engine):
     with engine.begin() as conn:
         sid = _shop(conn)
