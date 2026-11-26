@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { notifyStrong } from "./alert-channel";
+import { ensureNotificationPermission, notifyStrong } from "./alert-channel";
 
 const item = { id: 7, title: "店A 登录失效", body: "请重新登录" } as Parameters<typeof notifyStrong>[0];
 
@@ -83,19 +83,41 @@ describe("notifyStrong", () => {
     expect(shown).toEqual([{ title: "店A 登录失效", options: { body: "请重新登录", tag: "7" } }]);
   });
 
-  it("后台且未决定：第一次请求权限，授权后显示", async () => {
+  it("后台且未决定：不请求权限，不显示", async () => {
     const { shown, requestPermission } = stubNotification("default", "granted");
     const result = await notifyStrong(item, { muted: false, documentHidden: true });
-    expect(requestPermission).toHaveBeenCalledTimes(1);
-    expect(result.shown).toBe(true);
-    expect(shown).toHaveLength(1);
+    expect(requestPermission).not.toHaveBeenCalled();
+    expect(result.shown).toBe(false);
+    expect(shown).toHaveLength(0);
+  });
+});
+
+describe("ensureNotificationPermission", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("不支持 Notification：unsupported", async () => {
+    vi.stubGlobal("Notification", undefined);
+    await expect(ensureNotificationPermission()).resolves.toBe("unsupported");
   });
 
-  it("请求权限被拒或抛错：不显示，不抛", async () => {
-    stubNotification("default", "denied");
-    expect((await notifyStrong(item, { muted: false, documentHidden: true })).shown).toBe(false);
+  it("default：请求一次并返回结果", async () => {
+    const { requestPermission } = stubNotification("default", "granted");
+    await expect(ensureNotificationPermission()).resolves.toBe("granted");
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+  });
+
+  it("已授权或已拒绝：不请求", async () => {
+    const granted = stubNotification("granted");
+    await expect(ensureNotificationPermission()).resolves.toBe("granted");
+    expect(granted.requestPermission).not.toHaveBeenCalled();
+    const denied = stubNotification("denied");
+    await expect(ensureNotificationPermission()).resolves.toBe("denied");
+    expect(denied.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it("请求抛错：不抛", async () => {
     const { requestPermission } = stubNotification("default");
     requestPermission.mockRejectedValue(new Error("boom"));
-    await expect(notifyStrong(item, { muted: false, documentHidden: true })).resolves.toMatchObject({ shown: false });
+    await expect(ensureNotificationPermission()).resolves.toBe("default");
   });
 });

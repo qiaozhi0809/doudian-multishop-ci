@@ -23,13 +23,24 @@ async function playSound(): Promise<boolean> {
   }
 }
 
-async function showSystemNotification(item: NotificationItem): Promise<boolean> {
+/**
+ * 申请系统通知权限。只能在用户操作（点铃铛、打开提示音开关）里调用：
+ * 页面在后台、没有用户手势时浏览器不会弹窗。已决定或不支持时不再请求。
+ */
+export async function ensureNotificationPermission(): Promise<NotificationPermission | "unsupported"> {
+  if (typeof Notification === "undefined") return "unsupported";
   try {
-    if (typeof Notification === "undefined") return false;
-    let permission = Notification.permission;
-    // 第一次真正需要系统通知时才请求权限，不在页面加载时请求
-    if (permission === "default") permission = await Notification.requestPermission();
-    if (permission !== "granted") return false;
+    if (Notification.permission !== "default") return Notification.permission;
+    return await Notification.requestPermission();
+  } catch {
+    return Notification.permission;
+  }
+}
+
+/** 只读取权限，从不请求。 */
+function showSystemNotification(item: NotificationItem): boolean {
+  try {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return false;
     new Notification(item.title, { body: item.body ?? undefined, tag: String(item.id) });
     return true;
   } catch {
@@ -43,8 +54,8 @@ export async function notifyStrong(
   { muted, documentHidden }: AlertChannelOptions,
 ): Promise<AlertChannelResult> {
   const [played, shown] = await Promise.all([
-    muted ? Promise.resolve(false) : playSound(),
-    documentHidden ? showSystemNotification(item) : Promise.resolve(false),
+    muted ? false : playSound(),
+    documentHidden && showSystemNotification(item),
   ]);
   return { played, shown };
 }

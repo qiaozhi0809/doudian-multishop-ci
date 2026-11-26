@@ -111,6 +111,20 @@ describe("铃铛", () => {
     expect(bell).toHaveAccessibleDescription("3 条未读，有店铺需要处理");
   });
 
+  it("点铃铛时（权限未决定）申请一次系统通知权限", async () => {
+    const requestPermission = vi.fn().mockResolvedValue("granted");
+    vi.stubGlobal("Notification", { permission: "default", requestPermission });
+    try {
+      setup({ items: [item()] });
+      const user = userEvent.setup();
+      expect(requestPermission).not.toHaveBeenCalled();
+      await user.click(await screen.findByRole("button", { name: "通知" }));
+      expect(requestPermission).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("没有未读时不显示数字", async () => {
     setup({ items: [item({ read_at: "2026-11-25T09:00:00" })], unread: 0 });
     await screen.findByRole("button", { name: "通知" });

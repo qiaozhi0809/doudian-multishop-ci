@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ensureNotificationPermission } from "../logic/alert-channel";
 import type { NotificationItem } from "../logic/notification-view";
 import { useAlertNotices } from "./use-alert-notices";
 import { useMuted } from "./use-muted";
@@ -16,7 +17,17 @@ export function useNotificationCenterState() {
   const progress = useProgress();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [muted, setMuted] = useMuted();
+  const [muted, setMutedState] = useMuted();
+
+  // 系统通知权限只在用户操作里申请：点开铃铛、打开提示音
+  const toggleOpen = (next: boolean) => {
+    if (next) void ensureNotificationPermission();
+    setOpen(next);
+  };
+  const setMuted = (value: boolean) => {
+    if (!value) void ensureNotificationPermission();
+    setMutedState(value);
+  };
 
   useAlertNotices(center.strongOpen);
 
@@ -29,7 +40,7 @@ export function useNotificationCenterState() {
     go(item.link);
   };
 
-  return { ...center, progress, open, setOpen, muted, setMuted, go, openItem };
+  return { ...center, progress, open, setOpen: toggleOpen, muted, setMuted, go, openItem };
 }
 
 export type NotificationCenterState = ReturnType<typeof useNotificationCenterState>;
