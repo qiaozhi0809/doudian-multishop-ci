@@ -58,6 +58,15 @@ EBILL_ACCOUNTS = Endpoint(
     "ebill_accounts", "GET", "/shopuser/power/getEbillAccountListByExpress", bid.ORDER
 )
 
+# ---- 店铺画像（read.md A.1；2026-11-26 实测）----
+# shop_info 必须带 version=0：缺参数时平台返回 1000004「参数解析错误」（从真实页面请求抄的）。
+# 两个接口都用 _bid=fxg_admin，且免签名。
+SHOP_INFO = Endpoint(
+    "shop_info", "GET", "/center/qualification/shop/info", bid.FXG_ADMIN,
+    fixed_params={"version": "0"},
+)
+SHOP_ADMIN = Endpoint("shop_admin", "GET", "/byteshop/shopuser/getAdminV2", bid.FXG_ADMIN)
+
 # ---- M2 取号 / 作废 / 解密（docs/api/write.md A.2.2 / A.2.5 / A.2.6、read.md A.1）----
 # 写接口 write=True：客户端不自动重试；结果不明时由 service 走「待核实 → 查回」。
 LABEL_FETCH = Endpoint(

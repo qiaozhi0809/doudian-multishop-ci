@@ -35,6 +35,7 @@ from app.service.ship_deadline import ShipDeadlineWatcher
 from app.service.shipping import ShippingService
 from app.service.shop_admin import ShopAdminService
 from app.service.shop_login import ScanFn, ShopLoginFlow
+from app.service.shop_profile import ShopProfileService
 from app.service.shop_runner import ClientFactory, ShopRunner, default_client_factory
 from app.shared.secret_box import make_secret_box
 
@@ -65,6 +66,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         ov.client_factory or default_client_factory, **clock_kw,
     )
     base_data = BaseDataService(engine, runner, events)
+    shop_profile = ShopProfileService(engine, runner, **clock_kw)
     order_query = OrderQueryService(engine, runner, **clock_kw)
     login_kw = {"scan": ov.scan} if ov.scan else {}
     tasks = TaskRegistry()
@@ -74,7 +76,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         "engine": engine, "events": events, "sessions": sessions, "egress": egress,
         "proxy_pool": ProxyPoolService(
             engine, box, events, ov.probe or make_probe(settings.egress_echo_url), **clock_kw),
-        "runner": runner, "base_data": base_data, "tasks": tasks,
+        "runner": runner, "base_data": base_data, "shop_profile": shop_profile, "tasks": tasks,
         "order_sync": OrderSyncService(
             engine, runner, sessions, events, on_synced=order_query.invalidate),
         "order_query": order_query,
@@ -111,7 +113,8 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
         "shop_admin": ShopAdminService(engine, events, egress, **clock_kw),
         "login_flow": ShopLoginFlow(
             runner, sessions, base_data, events, settings.profiles_dir,
-            settings.browser_channel, use_cloak=settings.use_cloak, **login_kw,
+            settings.browser_channel, use_cloak=settings.use_cloak,
+            profile=shop_profile, **login_kw,
         ),
         "auth": AuthService(
             engine, **clock_kw, **({"hasher": ov.hasher} if ov.hasher else {})

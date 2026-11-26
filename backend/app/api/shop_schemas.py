@@ -13,6 +13,8 @@ EgressState = Literal["unchecked", "ok", "unreachable", "changed", "duplicate"]
 class ShopRow(BaseModel):
     id: int
     name: str
+    entity: str | None
+    shop_no: str | None
     status: ShopStatus
     health: Health | None
     expires_at: str | None
@@ -25,6 +27,7 @@ class ShopRow(BaseModel):
     proxy_expires_at: str | None
     ready_for_label: bool
     not_ready_reasons: list[str]
+    admin_name: str | None
 
 
 class ShopCreate(BaseModel):

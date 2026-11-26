@@ -73,6 +73,22 @@ proxy_pool = sa.Table(
     sa.Column("updated_at", _NOW, nullable=False),
 )
 
+shop_profile = sa.Table(
+    "shop_profile",
+    metadata,
+    sa.Column("shop_id", sa.Integer, sa.ForeignKey("shop.id"), primary_key=True),
+    sa.Column("qual_id", sa.Text),
+    sa.Column("shop_name", sa.Text),
+    sa.Column("shop_type", sa.Integer),
+    sa.Column("operate_status_str", sa.Text),
+    sa.Column("open_time", sa.Text),
+    sa.Column("settle_delay", sa.Text),
+    sa.Column("admin_name", sa.Text),
+    sa.Column("admin_mobile", sa.Text),  # 平台只返回脱敏值
+    sa.Column("raw_json", sa.Text),
+    sa.Column("synced_at", _NOW, nullable=False),
+)
+
 session = sa.Table(
     "session",
     metadata,

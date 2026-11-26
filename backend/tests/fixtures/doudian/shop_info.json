@@ -1,0 +1,35 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "qual_id": "7000000000000000001",
+    "shop_type": 9,
+    "shop_name": "示例小铺",
+    "shop_logo": {"file_id": "", "url": "", "uri": ""},
+    "brand_src": 0,
+    "shop_name_section": {"not_allow_update": false},
+    "is_auto_generated_shop_logo": false,
+    "qual_status_info": {
+      "task_id": "7000000000000000002",
+      "status": 1,
+      "audit_status": 3,
+      "reject_reasons": [],
+      "submit_time": "2026-03-22 16:01:17",
+      "audit_time": "2026-03-22 16:01:42",
+      "build_source": 0
+    },
+    "shop_has_brand35": false,
+    "poi_id": null,
+    "shop_settle_day": {
+      "detail_url": "https://example.invalid/ffa/fxg-bill/settle",
+      "delay_day_list": [21],
+      "delay_day_display": "21天"
+    },
+    "operate_status": 0,
+    "operate_status_str": "正常营业",
+    "shop_open_time": 1774166504,
+    "shop_open_time_str": "2026-03-22",
+    "stop_status": 0,
+    "allow_update_main_category": true
+  }
+}

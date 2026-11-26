@@ -7,7 +7,7 @@ from tests.fakes import ok
 SHOP_ROW_KEYS = {
     "id", "name", "status", "health", "expires_at", "paused_reason", "egress_mode",
     "proxy_display", "egress_ip", "egress_ip_pending", "egress_status", "proxy_expires_at",
-    "ready_for_label", "not_ready_reasons",
+    "ready_for_label", "not_ready_reasons", "entity", "shop_no", "admin_name",
 }
 TOKEN_A = "tok_" + "a" * 8
 
@@ -30,6 +30,17 @@ def test_list_shops_fields(api):
 def test_list_never_exposes_proxy_credentials(api):
     api.new_shop()
     assert "pw5secret" not in api.client.get("/api/shops").text
+
+
+def test_list_includes_entity_and_shop_no(api):
+    """营业执照主体与平台店铺号要能在列表里显示，不能在读接口被丢掉。"""
+    sid = api.client.post(
+        "/api/shops", json={"name": "店C", "entity": "张三", "shop_no": "123456"}
+    ).json()["id"]
+
+    (row,) = [s for s in api.client.get("/api/shops").json() if s["id"] == sid]
+
+    assert (row["entity"], row["shop_no"]) == ("张三", "123456")
 
 
 def test_create_and_patch_shop(api):
@@ -138,13 +149,14 @@ def test_login_flow_success_runs_probe_and_base_sync(api):
 
     api.scan_impl = good_scan
     api.transport.queue(
-        TOKEN_A, tabcnt_ok(), fx("express_list"), fx("address_list"), fx("template_list"),
-        fx("ebill_accounts"),
+        TOKEN_A, tabcnt_ok(), fx("shop_info"), fx("shop_admin"),
+        fx("express_list"), fx("address_list"), fx("template_list"), fx("ebill_accounts"),
     )
     assert api.client.post(f"/api/shops/{sid}/login").status_code == 202
     api.wait_for(lambda: api.shop(sid)["ready_for_label"])
     row = api.shop(sid)
     assert row["status"] == "active"
+    assert row["admin_name"] == "张三"  # 登录后自动同步的店铺负责人
     (profile, channel, proxy, _), = api.scan_calls
     assert profile.name == str(sid) and proxy == proxy_url(5)  # 扫码经该店出口
 

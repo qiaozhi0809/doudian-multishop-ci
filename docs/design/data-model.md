@@ -83,22 +83,21 @@ CREATE TABLE proxy_pool (
 CREATE TABLE shop_profile (
   shop_id           INTEGER PRIMARY KEY REFERENCES shop(id),
   qual_id           TEXT,                   -- 资质主键（≠ shop_no，改名也不变）
-  shop_type_code    INTEGER,
+  shop_name         TEXT,                   -- 平台店铺名（本地 name 是可自起的别名）
+  shop_type         INTEGER,
   operate_status_str TEXT,                  -- 如「正常营业」
-  open_time         TEXT,
-  main_category     TEXT,
-  main_category_id  INTEGER,
-  province          TEXT,
-  city              TEXT,
-  district          TEXT,
-  street            TEXT,
-  address_detail    TEXT,
+  open_time         TEXT,                   -- YYYY-MM-DD
   settle_delay      TEXT,                   -- 如「21天」
-  admin_name        TEXT,
+  admin_name        TEXT,                   -- 店铺负责人姓名
   admin_mobile      TEXT,                   -- 平台只返回脱敏值
   raw_json          TEXT,
   synced_at         TEXT NOT NULL
 );
+
+> 字段按 2026-11-26 实测响应定（迁移 0009）：`GET /center/qualification/shop/info?version=0`
+> 提供 qual_id / shop_name / shop_type / operate_status_str / open_time / settle_delay，
+> `GET /byteshop/shopuser/getAdminV2` 提供 admin_name / admin_mobile。
+> 原设计里的类目与地址字段在这两个接口中不存在，等找到来源接口再补迁移。
 
 -- ② 会话
 CREATE TABLE session (

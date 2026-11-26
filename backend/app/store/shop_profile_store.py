@@ -1,0 +1,35 @@
+"""shop_profile 表 CRUD：登录后从平台同步的店铺资质与负责人。无业务判断。"""
+
+from collections.abc import Mapping
+from typing import Any
+
+import sqlalchemy as sa
+
+from app.store.schema import shop_profile
+
+
+def upsert(conn: sa.Connection, shop_id: int, now: str, **values: Any) -> None:
+    """整行覆盖写；未知列名抛 ValueError。"""
+    unknown = set(values) - (set(shop_profile.c.keys()) - {"shop_id", "synced_at"})
+    if unknown:
+        raise ValueError(f"未知列: {sorted(unknown)}")
+    exists = conn.execute(
+        sa.select(shop_profile.c.shop_id).where(shop_profile.c.shop_id == shop_id)
+    ).first()
+    if exists:
+        conn.execute(
+            sa.update(shop_profile)
+            .where(shop_profile.c.shop_id == shop_id)
+            .values(**values, synced_at=now)
+        )
+    else:
+        conn.execute(
+            sa.insert(shop_profile).values(shop_id=shop_id, **values, synced_at=now)
+        )
+
+
+def get(conn: sa.Connection, shop_id: int) -> Mapping[str, Any] | None:
+    row = conn.execute(
+        sa.select(shop_profile).where(shop_profile.c.shop_id == shop_id)
+    ).mappings().first()
+    return dict(row) if row else None

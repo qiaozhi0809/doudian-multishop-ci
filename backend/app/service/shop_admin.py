@@ -14,7 +14,7 @@ from app.service.base_data import BaseDataService
 from app.service.egress import EgressConflict, EgressService, ProxyPoolInUse
 from app.service.events import SHOP_STATUS_CHANGED, EventBus
 from app.service.session_manager import ACTIVE, DISABLED, NEEDS_LOGIN
-from app.store import audit_store, base_data_store, session_store, shop_store
+from app.store import audit_store, base_data_store, session_store, shop_profile_store, shop_store
 
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
 CHANNELS = ("protocol", "browser")
@@ -205,13 +205,16 @@ class ShopAdminService:
         session = session_store.load(conn, shop["id"])
         expires_at = session.expires_at if session else None
         ready, reasons = BaseDataService.readiness(conn, shop["id"])
+        profile = shop_profile_store.get(conn, shop["id"])
         return {
             "id": shop["id"], "name": shop["name"], "status": shop["status"],
+            "entity": shop["entity"], "shop_no": shop["shop_no"],
             "health": health_from_expiry(expires_at, self._clock()) if session else None,
             "expires_at": expires_at, "paused_reason": shop["paused_reason"],
             "egress_mode": shop["egress_mode"], "proxy_display": shop["proxy_display"],
             "egress_ip": shop["egress_ip"], "egress_ip_pending": shop["egress_ip_pending"],
             "egress_status": shop["egress_status"], "proxy_expires_at": shop["proxy_expires_at"],
             "ready_for_label": ready, "not_ready_reasons": reasons,
+            "admin_name": (profile or {}).get("admin_name"),
         }
 
