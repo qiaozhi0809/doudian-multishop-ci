@@ -73,7 +73,7 @@ export function CheckDialog({ check, busy, onClose, onConfirm }: CheckDialogProp
           </DialogClose>
           <HoldToConfirm
             label={`${confirmLabel(check)}${check.dry_run ? "（演练）" : ""}`}
-            confirmedLabel="已提交"
+            confirmedLabel="已发起发货"
             onConfirm={onConfirm}
             disabled={busy || check.total_orders === 0}
           />

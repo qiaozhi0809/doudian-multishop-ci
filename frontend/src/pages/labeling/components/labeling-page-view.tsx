@@ -40,7 +40,8 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
     stage: pool.stage,
     selectedCount: pool.selected.size,
     componentAvailable: print.status ? print.status.available : null,
-    busy: actions.previewBusy || actions.executeBusy || print.printing,
+    // 打印提交中由按钮转圈挡住重复点击，不算进置灰条件
+    busy: actions.previewBusy || actions.executeBusy,
   });
   const waybillIds = selectedWaybillIds(pool.selected, pool.rows);
   return (
@@ -68,19 +69,10 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
       {actions.error && (
         <Alert tone="danger" title={actions.error} onDismiss={actions.clearError} />
       )}
-      {actions.simulated && (
-        <Alert tone="warning" title="演练模式：已记录请求，未真实执行">
-          本次执行只写入了审计记录并返回模拟结果；关闭演练模式后重新预览并提交才会真实生效。
-        </Alert>
-      )}
-      {print.simulated && (
-        <Alert tone="warning" title="演练模式：已记录打印请求，未真正打印" />
-      )}
       {ship.error && <Alert tone="danger" title={ship.error} onDismiss={ship.clearError} />}
-      {ship.simulated && (
-        <Alert tone="warning" title="演练模式：已记录发货请求，未真实发货">
-          本次提交只写入了审计记录并返回模拟结果；关闭演练模式后重新检查并确认才会真实回传平台。
-        </Alert>
+      {/* 演练模式的整体说明在外壳顶部横条，这里只报本次结果 */}
+      {(actions.simulated || print.simulated || ship.simulated) && (
+        <Alert tone="warning" title="已记录请求，未真实执行" />
       )}
       <LabelProgress progress={actions.progress} />
       <ShipProgress progress={ship.progress} />

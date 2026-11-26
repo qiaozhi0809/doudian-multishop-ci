@@ -52,6 +52,11 @@ describe("printGate", () => {
     expect(printGate({ stage: "labeled", selectedCount: 1, componentAvailable: true, busy: true }).disabled).toBe(true);
   });
 
+  it("没有勾选时提示先勾选订单", () => {
+    expect(printGate({ stage: "labeled", selectedCount: 0, componentAvailable: true, busy: false }).reason)
+      .toBe("先勾选订单");
+  });
+
   it("组件可用且有勾选时放行", () => {
     expect(printGate({ stage: "labeled", selectedCount: 2, componentAvailable: true, busy: false }))
       .toEqual({ disabled: false, reason: null });

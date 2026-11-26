@@ -2,7 +2,7 @@ import { Badge } from "@/components/arc/badge/badge";
 import { Button } from "@/components/arc/button/button";
 import { Checkbox } from "@/components/arc/checkbox/checkbox";
 import { formatCents } from "@/lib/money-format";
-import { formatBjTimeSmart } from "@/lib/time-format";
+import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import {
   canSelect,
   itemSummary,
@@ -45,10 +45,7 @@ function WaybillCell({ row, printRow }: { row: LabelOrder; printRow?: WaybillPri
       </span>
       {badge && <Badge tone={badge.tone} dot>{badge.label}</Badge>}
       {noPrintData && (
-        <span
-          className={styles.muted}
-          title="恢复的面单没有打印数据：打印时会先尝试补打，失败需到抖店后台手动补打"
-        >
+        <span className={styles.muted} title="打印时先补打，失败到抖店后台补打">
           无打印数据
         </span>
       )}
@@ -125,10 +122,12 @@ export function LabelTable({
                   <td className={styles.numeric}>
                     {row.amount_cents === null ? EMPTY_TEXT : formatCents(row.amount_cents)}
                   </td>
-                  <td className={styles.tabular}>{formatBjTimeSmart(row.pay_time)}</td>
+                  <td>
+                    <span className={styles.tabular} title={formatBjTime(row.pay_time)}>{formatBjTimeSmart(row.pay_time)}</span>
+                  </td>
                   <td><WaybillCell row={row} printRow={printRows?.get(row.waybill?.id ?? -1)} /></td>
                   <td>
-                    <Button variant="ghost" size="sm" onClick={() => onReceiver(row.id)}>
+                    <Button variant="secondary" size="sm" onClick={() => onReceiver(row.id)}>
                       查看收件人
                     </Button>
                   </td>
