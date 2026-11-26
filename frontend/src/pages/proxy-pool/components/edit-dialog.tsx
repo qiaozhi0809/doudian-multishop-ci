@@ -2,7 +2,9 @@ import { useState, type FormEvent } from "react";
 import { useLastPresent } from "@/lib/use-last-present";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog } from "@/components/arc/dialog/dialog";
+import { AppDialogContent } from "@/components/custom/app-dialog/app-dialog-content";
+import { DialogFooter } from "@/components/custom/dialog-footer/dialog-footer";
 import { Input } from "@/components/arc/input/input";
 import { PasswordField } from "@/components/arc/password-field/password-field";
 import type { ActionResult, PoolItem, PoolPatch } from "../hooks/use-proxy-pool";
@@ -20,9 +22,9 @@ export function EditDialog({ item, onOpenChange, pending, onSave }: EditDialogPr
   const shown = useLastPresent(item);
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange} busy={pending}>
-      <DialogContent title="编辑代理" description={shown?.proxy_display}>
+      <AppDialogContent size="form" title="编辑代理" description={shown?.proxy_display}>
         {item && <EditForm key={item.id} item={item} pending={pending} onSave={onSave} onDone={() => onOpenChange(false)} />}
-      </DialogContent>
+      </AppDialogContent>
     </Dialog>
   );
 }
@@ -63,16 +65,11 @@ function EditForm({ item, pending, onSave, onDone }: FormProps) {
       <PasswordField label="密码" placeholder="留空表示不改" autoComplete="new-password" value={form.password} onChange={(e) => set({ password: e.target.value })} />
       <Input label="到期日" type="date" description="清空表示不限期" value={form.expires_at} onChange={(e) => set({ expires_at: e.target.value })} />
       {error && <Alert tone="danger" title={error} />}
-      <div className={styles.formActions}>
-        <DialogClose asChild>
-          <Button type="button" variant="ghost" disabled={pending}>
-            取消
-          </Button>
-        </DialogClose>
+      <DialogFooter busy={pending}>
         <Button type="submit" loading={pending}>
           保存
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

@@ -2,6 +2,7 @@ import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Drawer, DrawerContent } from "@/components/arc/drawer/drawer";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { keepOpenOnNotice } from "@/components/custom/notice/keep-open-on-notice";
 import type { components } from "@/lib/api-types";
 import type { ShopRow } from "@/lib/use-shops";
 import { BaseDataSections } from "./base-data-sections";
@@ -23,7 +24,7 @@ export function BaseDataDrawer({
 }: BaseDataDrawerProps) {
   return (
     <Drawer open={shop !== null} onOpenChange={onOpenChange}>
-      <DrawerContent title="店铺资料" description={shop?.name} side="right">
+      <DrawerContent title="店铺资料" description={shop?.name} side="right" onInteractOutside={keepOpenOnNotice}>
         {shop && (
           <ShopProfileSections shop={shop} onSyncCard={onSyncCard} syncing={syncing} />
         )}

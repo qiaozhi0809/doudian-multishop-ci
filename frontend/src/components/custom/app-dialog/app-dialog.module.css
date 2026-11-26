@@ -1,0 +1,33 @@
+/* 三档宽度。选择器叠两层类名，压过 Arc 对话框自带的宽度。 */
+.dialog.confirm {
+  width: min(calc(100vw - var(--space-8)), 400px);
+}
+
+.dialog.form {
+  width: min(calc(100vw - var(--space-8)), 480px);
+}
+
+.dialog.wide {
+  width: min(calc(100vw - var(--space-8)), 640px);
+}
+
+/* 内容超长时底部按钮栏贴底，键盘移到下面的控件时多滚一段，不被它盖住 */
+.dialog {
+  scroll-padding-bottom: var(--space-20);
+}
+
+/* Arc 对话框的两个直接子元素依次是标题区、正文区：三档统一为无分隔线、同一内边距 */
+.dialog > :first-child {
+  padding: var(--space-6) var(--space-6) 0;
+  border-bottom: 0;
+}
+
+.dialog > :last-child {
+  padding: var(--space-5) var(--space-6) var(--space-6);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

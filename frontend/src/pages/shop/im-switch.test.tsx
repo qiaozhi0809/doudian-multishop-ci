@@ -74,11 +74,11 @@ describe("飞鸽消息", () => {
     renderPage();
     const user = userEvent.setup();
     await pick(user, "开启飞鸽消息");
-    const confirm = await screen.findByRole("dialog", { name: "开启飞鸽消息 店铺甲" });
+    const confirm = await screen.findByRole("dialog", { name: "开启「店铺甲」的飞鸽消息" });
     expect(confirm).toHaveAccessibleDescription("开启后会在后台常驻该店飞鸽页面，有多个客服账号的店铺尚未验证");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(patchCalls(fetchMock)).toHaveLength(0);
-    const button = within(confirm).getByRole("button", { name: "开启" });
+    const button = within(confirm).getByRole("button", { name: "开启飞鸽消息" });
     expect(button.className).toMatch(/primary/);
     await user.click(button);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -107,7 +107,7 @@ describe("飞鸽消息", () => {
     const user = userEvent.setup();
     await pick(user, "开启飞鸽消息");
     const confirm = await screen.findByRole("dialog");
-    await user.click(within(confirm).getByRole("button", { name: "开启" }));
+    await user.click(within(confirm).getByRole("button", { name: "开启飞鸽消息" }));
     expect(await within(confirm).findByText("该店暂时不能开启")).toBeInTheDocument();
   });
 

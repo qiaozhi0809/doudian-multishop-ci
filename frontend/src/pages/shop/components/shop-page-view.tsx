@@ -2,6 +2,7 @@ import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { NoticeList } from "@/components/custom/notice/notice-list";
+import { ConfirmDialog } from "@/components/custom/confirm-dialog/confirm-dialog";
 import type { ShopRow } from "@/lib/use-shops";
 import type { ShopPage } from "../hooks/use-shop-page";
 import { isLoggedIn } from "../logic/shop-status";
@@ -9,7 +10,6 @@ import styles from "../shop-page.module.css";
 import { AddShopDialog } from "./add-shop-dialog";
 import { BackupCard } from "./backup-card";
 import { BaseDataDrawer } from "./base-data-drawer";
-import { ConfirmDialog } from "./confirm-dialog";
 import { EditShopDialog } from "./edit-shop-dialog";
 import { EgressDialog } from "./egress-dialog";
 import { EmptyShops } from "./empty-shops";
@@ -88,16 +88,16 @@ export function ShopPageView({ page }: { page: ShopPage }) {
         onAcceptChange={() => page.egressShop && void actions.checkEgress(page.egressShop.id, true)}
       />
       <ConfirmDialog
-        shop={page.resumeShop}
-        action="恢复店铺"
+        target={page.resumeShop}
+        title={(shop) => `恢复店铺「${shop.name}」`}
         confirmLabel="恢复店铺"
         pending={pendingFor("resume", page.resumeShop)}
         onOpenChange={(open) => !open && dialogs.setResumeShopId(null)}
         onConfirm={() => actions.resume(page.resumeShop!.id)}
       />
       <ConfirmDialog
-        shop={page.disableShop}
-        action="停用店铺"
+        target={page.disableShop}
+        title={(shop) => `停用店铺「${shop.name}」`}
         confirmLabel="停用店铺"
         danger
         pending={pendingFor("toggle", page.disableShop)}
@@ -111,10 +111,10 @@ export function ShopPageView({ page }: { page: ShopPage }) {
         onSubmit={(patch) => actions.updateShop(page.editShop!.id, patch)}
       />
       <ConfirmDialog
-        shop={page.imShop}
-        action="开启飞鸽消息"
+        target={page.imShop}
+        title={(shop) => `开启「${shop.name}」的飞鸽消息`}
         description="开启后会在后台常驻该店飞鸽页面，有多个客服账号的店铺尚未验证"
-        confirmLabel="开启"
+        confirmLabel="开启飞鸽消息"
         pending={pendingFor("im", page.imShop)}
         onOpenChange={(open) => !open && dialogs.setImShopId(null)}
         onConfirm={() => actions.setIm(page.imShop!.id, true, true)}

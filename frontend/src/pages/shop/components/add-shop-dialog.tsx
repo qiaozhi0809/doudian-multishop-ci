@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog } from "@/components/arc/dialog/dialog";
+import { AppDialogContent } from "@/components/custom/app-dialog/app-dialog-content";
+import { DialogFooter } from "@/components/custom/dialog-footer/dialog-footer";
 import { Input } from "@/components/arc/input/input";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import type { components } from "@/lib/api-types";
@@ -27,9 +29,9 @@ interface AddShopDialogProps {
 export function AddShopDialog({ open, onOpenChange, pending, shops, onSubmit }: AddShopDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={pending}>
-      <DialogContent title="添加店铺">
+      <AppDialogContent size="form" title="添加店铺">
         <AddShopForm pending={pending} shops={shops} onSubmit={onSubmit} onDone={() => onOpenChange(false)} />
-      </DialogContent>
+      </AppDialogContent>
     </Dialog>
   );
 }
@@ -126,16 +128,11 @@ function AddShopForm({ pending, shops, onSubmit, onDone }: Pick<AddShopDialogPro
         />
       )}
       {error && <Alert tone="danger" title={error} />}
-      <div className={styles.formActions}>
-        <DialogClose asChild>
-          <Button type="button" variant="ghost" disabled={pending}>
-            取消
-          </Button>
-        </DialogClose>
+      <DialogFooter busy={pending}>
         <Button type="submit" loading={pending}>
           添加店铺
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

@@ -66,10 +66,11 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
         error={print.error}
         onDismissError={print.clearError}
       />
-      {actions.error && (
+      {/* 对话框开着时报错显示在对话框里 */}
+      {actions.error && !actions.preview && (
         <Alert tone="danger" title={actions.error} onDismiss={actions.clearError} />
       )}
-      {ship.error && <Alert tone="danger" title={ship.error} onDismiss={ship.clearError} />}
+      {ship.error && !ship.check && <Alert tone="danger" title={ship.error} onDismiss={ship.clearError} />}
       {/* 演练模式的整体说明在外壳顶部横条，这里只报本次结果 */}
       {(actions.simulated || print.simulated || ship.simulated) && (
         <Alert tone="warning" title="已记录请求，未真实执行" />
@@ -110,10 +111,11 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
         preview={actions.preview}
         mode={actions.previewMode}
         busy={actions.executeBusy}
+        error={actions.error}
         onClose={actions.closePreview}
         onConfirm={actions.execute}
       />
-      <CheckDialog check={ship.check} busy={ship.shipBusy} onClose={ship.closeCheck} onConfirm={ship.confirm} />
+      <CheckDialog check={ship.check} busy={ship.shipBusy} error={ship.error} onClose={ship.closeCheck} onConfirm={ship.confirm} />
       <ReceiverDrawer
         orderId={receiver.orderId}
         pending={receiver.pending}
