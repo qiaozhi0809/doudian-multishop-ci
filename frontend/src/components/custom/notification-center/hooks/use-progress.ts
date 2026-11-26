@@ -35,10 +35,13 @@ interface PrintDone { ok: number; failed: number; manual: number; skipped: numbe
 
 const { publish } = progressStore;
 
-/** 订阅批量任务的 SSE 进度事件，返回进行中的任务；结束的任务已移除。 */
+/** 进行中的批量任务（只读共用的 store）；结束的任务已移除。 */
 export function useProgress(): ProgressItem[] {
-  const current = useSyncExternalStore(progressStore.subscribe, progressStore.getSnapshot, progressStore.getSnapshot);
+  return useSyncExternalStore(progressStore.subscribe, progressStore.getSnapshot, progressStore.getSnapshot).tasks;
+}
 
+/** 订阅批量任务的 SSE 进度事件推进 store：全应用只在通知中心根部挂一次。 */
+export function useProgressSubscriptions(): void {
   useEventSubscription<LabelProgress>("label_progress", (e) =>
     publish({ type: "label_progress", previewId: e.preview_id, mode: e.mode, orderId: e.order_id, result: e.result }),
   );
@@ -57,6 +60,4 @@ export function useProgress(): ProgressItem[] {
   useEventSubscription<PrintDone>("print_done", (e) =>
     publish({ type: "print_done", ok: e.ok, failed: e.failed, manual: e.manual, skipped: e.skipped }),
   );
-
-  return current.tasks;
 }

@@ -30,3 +30,68 @@ export function groupForPanel(items: NotificationItem[]): { open: NotificationIt
 /** 只对 alert=true 且本会话还没提醒过的通知弹提醒。 */
 export const shouldAlert = (event: NotificationEvent, alerted: number[]): boolean =>
   event.alert && event.item !== null && !alerted.includes(event.item.id);
+
+/** 横条里的问题名（与后端通知标题一致）。 */
+const PROBLEM_LABELS: Partial<Record<NotificationItem["kind"], string>> = {
+  login_expired: "登录失效",
+  egress_unreachable: "出口不通",
+  egress_changed: "出口 IP 已变化",
+  egress_duplicate: "出口 IP 与其他店重复",
+  risk_paused: "风控暂停",
+  ship_deadline: "临近发货超时",
+};
+
+/** 横条最多逐店列出几家，超过合并为一行。 */
+export const BANNER_MAX_ROWS = 3;
+
+export interface BannerRow {
+  shopId: number;
+  text: string;
+  link: string;
+}
+
+export type BannerView = { kind: "none" } | { kind: "rows"; rows: BannerRow[] } | { kind: "merged"; text: string };
+
+/** 后端没给链接时按第一项问题兜底：临近超时 → 超时未发筛选，其余 → 店铺页高亮该店。 */
+function fallbackLink(shop: StrongOpenShop): string {
+  return shop.kinds[0] === "ship_deadline" ? `/orders?quick=exp_ship&shops=${shop.shop_id}` : `/shops?shop=${shop.shop_id}`;
+}
+
+/** 顶部横条：一店一行「店A：登录失效、出口不通」；超过 3 家合并为「N 家店需要处理」。 */
+export function bannerView(shops: StrongOpenShop[]): BannerView {
+  if (shops.length === 0) return { kind: "none" };
+  if (shops.length > BANNER_MAX_ROWS) return { kind: "merged", text: `${shops.length} 家店需要处理` };
+  return {
+    kind: "rows",
+    rows: shops.map((shop) => ({
+      shopId: shop.shop_id,
+      text: `${shop.shop_name}：${shop.kinds.map((k) => PROBLEM_LABELS[k] ?? "需要处理").join("、")}`,
+      link: shop.link ?? fallbackLink(shop),
+    })),
+  };
+}
+
+/** 分页的最后一页（至少为 1）。 */
+export const lastPage = (total: number, pageSize: number): number =>
+  pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
+
+/** 中档弹窗停留 5 秒。 */
+export const MEDIUM_HOLD_MS = 5000;
+
+export interface AlertNotice {
+  text: string;
+  tone: Tone;
+  key: string;
+  persistent: boolean;
+  holdMs?: number;
+}
+
+/** 右下角弹窗：强档常驻、中档 5 秒、弱档不弹。 */
+export function alertNotice(item: NotificationItem): AlertNotice | null {
+  if (item.level === "weak") return null;
+  const text = item.body ? `${item.title}，${item.body}` : item.title;
+  const key = `notification:${item.id}`;
+  return item.level === "strong"
+    ? { text, tone: "danger", key, persistent: true }
+    : { text, tone: "warning", key, persistent: false, holdMs: MEDIUM_HOLD_MS };
+}

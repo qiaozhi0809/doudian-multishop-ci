@@ -82,6 +82,11 @@
   font-weight: 500;
 }
 
+/* 通知跳转来的店（?shop=<id>）：整行浅强调底色，与勾选行同一写法 */
+.tableWrap tbody tr[aria-current="true"] td {
+  --cell-fill: color-mix(in oklab, var(--accent) 8%, var(--cell-base));
+}
+
 .tabular {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

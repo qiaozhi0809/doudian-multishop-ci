@@ -3,19 +3,21 @@ import { shopStatusSortValue } from "../logic/shop-status";
 import { orEmpty } from "@/lib/empty-text";
 import type { ShopRow } from "@/lib/use-shops";
 import styles from "../shop-page.module.css";
-import { ActionsCell, EgressCell, ExpiryCell, ReadyCell, StatusCell, type RowActions } from "./shop-cells";
+import { ActionsCell, EgressCell, ExpiryCell, NameCell, ReadyCell, StatusCell, type RowActions } from "./shop-cells";
 
 interface ShopTableProps {
   shops: ShopRow[];
   pending: string[];
   waitingShopIds: number[];
   actionsFor: (row: ShopRow) => RowActions & { onResume: () => void };
+  /** 通知跳转来的店（`?shop=<id>`）：高亮并滚动到该行 */
+  highlightId: number | null;
 }
 
 /** 店铺列表（一次全量返回，前端排序）：序号由 DataTable 按显示顺序编号；店铺名、平台店铺名、状态、到期可排序。 */
-export function ShopTable({ shops, pending, waitingShopIds, actionsFor }: ShopTableProps) {
+export function ShopTable({ shops, pending, waitingShopIds, actionsFor, highlightId }: ShopTableProps) {
   const columns: TableColumn<ShopRow>[] = [
-    { key: "name", label: "店铺", sortable: true, width: 110, render: (v) => <span className={styles.shopName}>{String(v)}</span> },
+    { key: "name", label: "店铺", sortable: true, width: 110, render: (v, row) => <NameCell name={String(v)} highlighted={row.id === highlightId} /> },
     {
       key: "shop_name",
       label: "平台店铺名",

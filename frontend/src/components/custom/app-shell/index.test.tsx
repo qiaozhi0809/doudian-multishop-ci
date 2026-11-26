@@ -19,6 +19,8 @@ function renderShell(path: string, extraRoutes: Record<string, ReturnType<typeof
   mockFetch({
     "GET /api/auth/status": jsonResponse(IN),
     "GET /api/shops": jsonResponse(shops),
+    "GET /api/notifications": jsonResponse({ items: [], total: 0, page: 1, page_size: 20 }),
+    "GET /api/notifications/summary": jsonResponse({ unread: 0, strong_open: [] }),
     ...extraRoutes,
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -94,9 +96,27 @@ describe("App Shell", () => {
     );
   });
 
-  it("侧栏常驻任务中心", async () => {
+  it("侧栏不再有任务入口；右上角健康指示旁有通知铃铛", async () => {
     renderShell("/orders");
-    expect(await screen.findByRole("button", { name: "任务中心" })).toBeInTheDocument();
+    const bell = await screen.findByRole("button", { name: "通知" });
+    expect(screen.queryByRole("button", { name: /任务/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("任务")).not.toBeInTheDocument();
+    const head = screen.getByRole("heading", { level: 1 }).closest("header")!;
+    expect(await within(head).findByText("店铺正常")).toBeInTheDocument();
+    expect(head).toContainElement(bell);
+  });
+
+  it("有未解决的强提醒时内容区最上方显示横条", async () => {
+    renderShell("/orders", {
+      "GET /api/notifications/summary": jsonResponse({
+        unread: 1,
+        strong_open: [{ shop_id: 1, shop_name: "示例店", kinds: ["login_expired"], link: "/shops?shop=1" }],
+      }),
+    });
+    const banner = await screen.findByRole("region", { name: "需要处理的店铺" });
+    expect(banner).toHaveTextContent("示例店：登录失效");
+    await userEvent.setup().click(within(banner).getByRole("button", { name: "示例店：登录失效" }));
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/shops?shop=1"));
   });
 
   it("会话掉线时可在顶栏一键重登", async () => {

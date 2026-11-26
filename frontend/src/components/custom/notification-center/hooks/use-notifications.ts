@@ -5,6 +5,7 @@ import { api, errorText } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import { useEventSubscription } from "@/lib/use-events";
 import {
+  lastPage,
   shouldAlert,
   type NotificationEvent,
   type NotificationItem,
@@ -48,6 +49,14 @@ export function useNotifications() {
     queryFn: () => api.get<NotificationSummary>("/api/notifications/summary"),
   });
 
+  // 只看未读时把最后一页都标成已读后，这一页就空了：退回最后一个有内容的页
+  // （渲染时比较并调整，不放 effect）
+  const data = list.data;
+  if (data && page > 1 && data.items.length === 0) {
+    const target = Math.min(page - 1, lastPage(data.total, data.page_size));
+    if (target !== page) setPage(target);
+  }
+
   const refresh = () => client.invalidateQueries({ queryKey: queryKeys.notificationsRoot() });
   useEventSubscription("notification", () => void refresh());
   useEventSubscription("open", () => void refresh());
@@ -80,6 +89,8 @@ export function useNotifications() {
     markRead: (id: number) => write(`/api/notifications/${id}/read`),
     markAllRead: () => write("/api/notifications/read-all"),
     loading: list.isPending || summary.isPending,
+    error: list.isError,
+    retry: () => void list.refetch(),
   };
 }
 

@@ -7,6 +7,10 @@ export type NoticeTone = "success" | "info" | "warning" | "danger";
 export interface NoticeOptions {
   /** 同一个 key 的提示互相替换（如某店的「等待扫码」被「登录成功」取代）；不给则按文字去重。 */
   key?: string;
+  /** 停留时长（毫秒）；不给时普通 4 秒、报错 8 秒。 */
+  holdMs?: number;
+  /** 常驻：不自动消失、换页面也不收起，只能手动关闭（强提醒用）。 */
+  persistent?: boolean;
 }
 export type Notify = (text: string, tone?: NoticeTone, options?: NoticeOptions) => void;
 
@@ -15,6 +19,7 @@ interface Item {
   key: string;
   text: string;
   tone: NoticeTone;
+  persistent: boolean;
 }
 
 /** 没有 Provider 时为 null：调用方据此退回页面内提示（单独渲染页面的测试里会这样）。 */
@@ -33,7 +38,8 @@ interface Timer {
 
 /**
  * 右下角浮动提示（同壹帆智播 notice.tsx）：操作结果不再插在页面里把表格往下推。
- * 普通 4 秒、报错 8 秒自动消失；鼠标停在上面暂停计时；换页面收起上一页的提示；同 key 只留一条。
+ * 普通 4 秒、报错 8 秒自动消失（可用 holdMs 指定，persistent 常驻）；鼠标停在上面暂停计时；
+ * 换页面收起上一页的提示（常驻的保留）；同 key 只留一条。
  * 需要用户处理才能继续的问题（读取失败、演练模式）仍用页面内提示条，不要靠这里。
  */
 export function NoticeProvider({ children }: { children: ReactNode }) {
@@ -83,7 +89,7 @@ export function NoticeProvider({ children }: { children: ReactNode }) {
   const [shownPath, setShownPath] = useState(pathname);
   if (shownPath !== pathname) {
     setShownPath(pathname);
-    setItems([]);
+    setItems((list) => list.filter((item) => item.persistent));
   }
 
   useEffect(() => {
@@ -102,9 +108,10 @@ export function NoticeProvider({ children }: { children: ReactNode }) {
       const key = options.key ?? text;
       setItems((list) => {
         for (const old of list.filter((item) => item.key === key)) clear(old.id);
-        return [...list.filter((item) => item.key !== key), { id, key, text, tone }].slice(-MAX_VISIBLE);
+        const persistent = options.persistent === true;
+        return [...list.filter((item) => item.key !== key), { id, key, text, tone, persistent }].slice(-MAX_VISIBLE);
       });
-      start(id, tone === "danger" ? HOLD_DANGER_MS : HOLD_MS);
+      if (!options.persistent) start(id, options.holdMs ?? (tone === "danger" ? HOLD_DANGER_MS : HOLD_MS));
     },
     [clear, start],
   );

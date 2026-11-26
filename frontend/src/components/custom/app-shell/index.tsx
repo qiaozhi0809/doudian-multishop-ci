@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { NoticeProvider } from "@/components/custom/notice/notice";
-import { TaskCenter } from "@/components/custom/task-center";
+import { NotificationBanner, NotificationBell, NotificationCenterProvider } from "@/components/custom/notification-center";
 import { useEvents } from "@/lib/use-events";
 import { useShops } from "@/lib/use-shops";
 import { useSystemInfo } from "@/lib/use-system-info";
@@ -20,7 +20,7 @@ import { listAttention, summarizeHealth } from "./logic/health-summary";
 import { pageTitle } from "./logic/nav-items";
 import styles from "./app-shell.module.css";
 
-/** 后台外壳：浮动侧栏（左下角个人中心）+ 内容区（页面标题行 + `<Outlet />`）。 */
+/** 后台外壳：浮动侧栏（左下角个人中心）+ 内容区（强提醒横条 + 页面标题行与铃铛 + `<Outlet />`）。 */
 export function AppShell() {
   useEvents();
   const { pathname } = useLocation();
@@ -36,15 +36,16 @@ export function AppShell() {
   const healthState = shopsQuery.isError ? "error" : shopsQuery.isLoading ? "loading" : "ready";
   return (
     <NoticeProvider>
+    <NotificationCenterProvider>
     <div className={styles.shell}>
       <SideNav
         shopIds={shopIds}
         scope={<ShopFilterSelect shops={shops} shopIds={shopIds} disabled={healthState !== "ready"} onChange={setShopIds} />}
-        tasks={<TaskCenter />}
         account={<AdminMenu username={auth.status?.username ?? "管理员"} onChangePassword={() => password.setOpen(true)} onLogout={() => void auth.logout()} />}
       />
       <main className={styles.main}>
         <div className={styles.page}>
+          <NotificationBanner />
           {system.dryRun && <DryRunBanner active />}
           <PageHead
             title={pageTitle(pathname)}
@@ -57,6 +58,7 @@ export function AppShell() {
                 login={{ pendingIds: login.pendingIds, waitingIds: login.waitingIds, errors: login.errors, onLogin: (id) => void login.login(id) }}
               />
             }
+            bell={<NotificationBell />}
           />
           <Outlet />
         </div>
@@ -70,6 +72,7 @@ export function AppShell() {
         succeeded={password.succeeded}
       />
     </div>
+    </NotificationCenterProvider>
     </NoticeProvider>
   );
 }

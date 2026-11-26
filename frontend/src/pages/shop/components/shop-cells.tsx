@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { Badge } from "@/components/arc/badge/badge";
 import { Button } from "@/components/arc/button/button";
 import { RowMenu } from "@/components/custom/row-menu/row-menu";
@@ -15,6 +16,21 @@ import {
 } from "../logic/shop-status";
 import styles from "../shop-page.module.css";
 
+/** 店铺名单元格；highlighted 时把所在行标为当前（`aria-current`，带底色）并滚动到视野中间。 */
+export function NameCell({ name, highlighted }: { name: string; highlighted: boolean }) {
+  const mark = useCallback((el: HTMLSpanElement | null) => {
+    const row = el?.closest("tr");
+    if (!row) return;
+    row.setAttribute("aria-current", "true");
+    row.scrollIntoView({ block: "center", behavior: "smooth" });
+    return () => row.removeAttribute("aria-current");
+  }, []);
+  return (
+    <span className={styles.shopName} ref={highlighted ? mark : undefined}>
+      {name}
+    </span>
+  );
+}
 
 export function StatusCell({ row, waiting, onResume }: { row: ShopRow; waiting: boolean; onResume: () => void }) {
   const status = shopStatusBadge(row);

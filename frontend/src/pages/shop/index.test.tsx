@@ -35,6 +35,22 @@ beforeEach(() => {
 afterEach(() => restore());
 
 describe("店铺与设置页", () => {
+  it("?shop=2 高亮第 2 店并滚动到该行；与全局筛选 shops= 互不影响", async () => {
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+    mockPageFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" }), makeShop({ id: 2, name: "店铺乙" }), makeShop({ id: 3, name: "店铺丙" })]),
+    });
+    renderPage("/shops?shops=1,2&shop=2");
+    await screen.findByRole("table");
+    expect(screen.queryByRole("row", { name: /店铺丙/ })).not.toBeInTheDocument();
+    expect(rowOf("店铺乙")).toHaveAttribute("aria-current", "true");
+    expect(rowOf("店铺甲")).not.toHaveAttribute("aria-current");
+    await waitFor(() => expect(scroll).toHaveBeenCalled());
+    expect(scroll.mock.contexts[0]).toBe(rowOf("店铺乙"));
+    scroll.mockRestore();
+  });
+
+
   it("还没有店铺：显示引导添加店铺的空状态，而不是空表格", async () => {
     mockPageFetch({ "GET /api/shops": jsonResponse([]) });
     renderPage();

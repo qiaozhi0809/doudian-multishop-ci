@@ -63,6 +63,32 @@ describe("useNotifications", () => {
     );
   });
 
+  it("只看未读时最后一页清空，退回最后一个有内容的页", async () => {
+    const fetch = mockFetch({
+      "GET /api/notifications": () => {
+        const url = String(fetch.mock.calls.at(-1)?.[0] ?? "");
+        const page = Number(new URLSearchParams(url.split("?")[1]).get("page") ?? 1);
+        return jsonResponse({ items: page >= 4 ? [] : [item({ id: page })], total: 41, page, page_size: 20 });
+      },
+      "GET /api/notifications/summary": jsonResponse(summary),
+    });
+    const { Wrapper } = wrapper();
+    const { result } = renderHook(() => useNotifications(), { wrapper: Wrapper });
+    act(() => result.current.setPage(4));
+    await waitFor(() => expect(result.current.page).toBe(3));
+  });
+
+  it("第 1 页以外为空且总数为 0 时回到第 1 页", async () => {
+    mockFetch({
+      "GET /api/notifications": jsonResponse({ items: [], total: 0, page: 2, page_size: 20 }),
+      "GET /api/notifications/summary": jsonResponse(summary),
+    });
+    const { Wrapper } = wrapper();
+    const { result } = renderHook(() => useNotifications(), { wrapper: Wrapper });
+    act(() => result.current.setPage(2));
+    await waitFor(() => expect(result.current.page).toBe(1));
+  });
+
   it("收到 notification 事件后重新拉取摘要与列表", async () => {
     const fetch = routes();
     const { Wrapper } = wrapper();

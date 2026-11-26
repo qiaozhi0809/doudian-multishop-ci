@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { FakeEventSource } from "@/test/fake-event-source";
-import { progressStore, useProgress } from "./use-progress";
+import { progressStore, useProgress, useProgressSubscriptions } from "./use-progress";
 
 let restore: () => void;
 beforeEach(() => {
@@ -9,9 +9,15 @@ beforeEach(() => {
 });
 afterEach(() => restore());
 
+/** 订阅只在通知中心根部挂一次；其余地方只读 store。 */
+function useBoth() {
+  useProgressSubscriptions();
+  return useProgress();
+}
+
 describe("进行中任务的 SSE 绑定", () => {
   it("label_progress 建立任务，label_done 后移除", () => {
-    const { result } = renderHook(() => useProgress());
+    const { result } = renderHook(() => useBoth());
     act(() =>
       FakeEventSource.latest().emit("label_progress", { preview_id: "p1", mode: "fetch_and_ship", order_id: 1, result: "success" }),
     );
@@ -23,7 +29,7 @@ describe("进行中任务的 SSE 绑定", () => {
   });
 
   it("ship 与 print 事件推进并在 done 后移除", () => {
-    const { result } = renderHook(() => useProgress());
+    const { result } = renderHook(() => useBoth());
     act(() => FakeEventSource.latest().emit("ship_progress", { batch_id: "b1", order_id: 2, result: "success" }));
     act(() => FakeEventSource.latest().emit("print_progress", { job_id: 9, result: "success" }));
     expect(result.current).toHaveLength(2);
@@ -33,10 +39,15 @@ describe("进行中任务的 SSE 绑定", () => {
   });
 
   it("页面间共用同一份进度", () => {
-    const first = renderHook(() => useProgress());
+    const first = renderHook(() => useBoth());
     act(() => FakeEventSource.latest().emit("ship_progress", { batch_id: "b1", order_id: 2, result: "success" }));
     const second = renderHook(() => useProgress());
     expect(second.result.current).toHaveLength(1);
     first.unmount();
+  });
+
+  it("useProgress 只读 store，不建立 SSE 订阅", () => {
+    renderHook(() => useProgress());
+    expect(FakeEventSource.instances).toHaveLength(0);
   });
 });
