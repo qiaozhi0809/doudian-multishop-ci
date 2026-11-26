@@ -1,8 +1,8 @@
 """ENG-07：临近发货超时告警（只读本地订单，不请求抖店）。
 
 扫描未发货的订单：`exp_ship_time` 距现在不足 N 小时（含已超时）的，按最紧急排序，
-发布 `ship_deadline_warning` SSE 事件，界面任务中心直接展示。
-每次扫描都发布（数量为 0 时界面据此移除提醒），无需持久化。
+发布 `ship_deadline_warning` SSE 事件，由 NotificationFeed 翻译成临近超时通知（状态类）。
+每次扫描都发布（数量为 0 时通知据此恢复），无需持久化。
 """
 
 from collections.abc import Callable

@@ -58,6 +58,9 @@
 | 任务与事件 | `GET /api/tasks` · `GET /api/tasks/{id}` | 任务列表与进度 |
 | | `POST /api/tasks/{id}/retry` · `POST /api/tasks/{id}/cancel` | 重试 / 取消 |
 | | `GET /api/events` | SSE 推送 |
+| 通知 | `GET /api/notifications?unread=&page=` | 通知列表（新的在前，每页 50）：`{items, total, page, page_size}`，条目含 `kind` `level` `shop_id` `title` `body` `link` `count` `state_key` `resolved_at` `read_at` `created_at` `updated_at` |
+| | `GET /api/notifications/summary` | `{unread, strong_open: [{shop_id, shop_name, kinds, link}]}`：铃铛未读数与全站横条（未解决的强状态，一店一行） |
+| | `POST /api/notifications/{id}/read` · `POST /api/notifications/read-all` | 标已读（204）；单条不存在 404 |
 | 售后（只读） | `GET /api/aftersale` · `GET /api/aftersale/todo` · `GET /api/aftersale/counts` · `GET /api/aftersale/statuses` · `GET /api/aftersale/{after_sale_id}?shop_id=` · `POST /api/aftersale/sync` | 快照列表 / 待办队列（按处理截止时间）、平台计数、状态筛选项、按需详情、同步 |
 | 商品 / 库存（只读） | `GET /api/catalog/products` · `GET /api/catalog/products/counts` · `GET /api/catalog/products/groups` · `GET /api/catalog/stock` · `GET /api/catalog/stock/summary` · `GET /api/catalog/stock/warehouses` · `POST /api/catalog/products/sync` · `POST /api/catalog/stock/sync` | 商品快照、状态计数、分组、库存快照、本地预警汇总、仓库列表、同步 |
 | 资金（只读） | `GET /api/fund/summary` · `GET /api/fund/unsettled` · `GET /api/fund/margin` · `GET /api/fund/bills?days=&page=` · `POST /api/fund/sync` | 多店概览、待结算快照、保证金、近 N 天账单（上游、不落库）、同步 |
@@ -80,6 +83,8 @@ M5 只读聚合的读取口径（实现于 `service/aftersale.py` / `catalog.py`
 - 账单不落库；金额字段尚未校准（[api/fund.md](../api/fund.md) F.4），命中候选字段时 `amount_status=confirmed`，否则金额记 0 且 `amount_status=pending`，界面标注「待探明」。
 - 库存的 `spot_stock_num` 与 `future_stock_num` 分列返回，前端不提供相加。
 详细 schema 待补（[gaps.md](../gaps.md) ENG-01）。
+
+**通知 SSE**：`notification {action: created|updated|resolved|read, item, alert}`。`item` 为上表条目（全部已读时为 `null`）；`alert` 为 `true` 才应弹窗 / 响铃（同类合并累加、状态重开、恢复都是 `false`）。
 
 **M2 已落地的取号接口细节**（2026-11-25）：
 

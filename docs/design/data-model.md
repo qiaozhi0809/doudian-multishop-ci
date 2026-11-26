@@ -447,6 +447,35 @@ CREATE TABLE margin_account (
   synced_at       TEXT NOT NULL,
   UNIQUE(shop_id)
 );
+
+-- ㉓ 通知（backend 5.18；迁移 0011）。事件类 state_key 为空；强状态类每个 state_key 至多一条未解决
+CREATE TABLE notification (
+  id              INTEGER PRIMARY KEY,
+  kind            TEXT NOT NULL,       -- new_order / new_aftersale / login_expired / egress_unreachable / egress_changed / egress_duplicate / risk_paused / ship_deadline / batch_done / batch_failed / sync_failed / sync_done / reconcile_done / recovered
+  level           TEXT NOT NULL,       -- strong / medium / weak，由 kind 在代码里映射
+  shop_id         INTEGER REFERENCES shop(id),  -- 跨店汇总时为空
+  title           TEXT NOT NULL,
+  body            TEXT,                -- 只写事实（原因等），不含敏感信息
+  link            TEXT,                -- 前端路由 + 查询串
+  count           INTEGER NOT NULL DEFAULT 1,   -- 合并后的数量
+  state_key       TEXT,                -- 如 egress:3、login:3、risk:3、deadline:3
+  resolved_at     TEXT,
+  read_at         TEXT,
+  recovered_notified_at TEXT,          -- 状态类：已写过「已恢复」的时间；30 分钟内重开后再恢复不再写
+  created_at      TEXT NOT NULL,
+  updated_at      TEXT NOT NULL
+);
+CREATE INDEX idx_notification_unread ON notification(read_at, created_at);
+CREATE UNIQUE INDEX uq_notification_open_state ON notification(state_key)
+  WHERE state_key IS NOT NULL AND resolved_at IS NULL;
+
+-- ㉔ 同步基线（某店某类数据完成过首次完整同步，之后的新增才算新事件）
+CREATE TABLE sync_baseline (
+  shop_id         INTEGER NOT NULL REFERENCES shop(id),
+  kind            TEXT NOT NULL,       -- orders / aftersales
+  established_at  TEXT NOT NULL,
+  PRIMARY KEY (shop_id, kind)
+);
 ```
 
 ### 6.3 关键约束
@@ -461,6 +490,7 @@ CREATE TABLE margin_account (
 7. 地址、模板、快递均按 `(shop_id, code)` 唯一，**禁止跨店复用**。
 8. 取号与官方组件打印**不依赖**收货地址解密（DEC-06）。收件人明文**不写入数据库**，只在内存中短暂缓存。
 9. `uq_shop_pool` 保证一个代理池项同一时间只绑一家启用店铺；`proxy_pool.identity` 唯一，保证同一代理不会在池里重复。
+10. `uq_notification_open_state` 保证同一 `state_key` 同时只有一条未解决的状态类通知；已读超过 30 天的事件类通知由每日快照之后的清理删除，未解决的状态类不清理。
 
 ### 6.4 只读聚合与存储说明（DM-06 ~ DM-09）
 

@@ -13,7 +13,7 @@
 | 层 | 模块 | 职责 |
 |---|---|---|
 | `api/` | `auth` `shop` `order` `label` `print` `shipping` `remark` `task` `event` `aftersale` `catalog` `fund` `reconcile` `audit` `setting` | 路由 + pydantic I/O schema，只调 service |
-| `service/` | `session_manager` `base_data` `order_sync` `labeling` `printing` `shipping` `reconcile` `aftersale` `catalog` `fund` `scheduler` | 业务编排、事务、状态机推进 |
+| `service/` | `session_manager` `base_data` `order_sync` `labeling` `printing` `shipping` `reconcile` `aftersale` `catalog` `fund` `scheduler` `notifications` `notification_feed` | 业务编排、事务、状态机推进 |
 | `adapter/doudian/` | `client` `endpoints` `bid` `error_codes` `enums` `signing/` | 抖店 HTTP 协议的唯一出口 |
 | `adapter/browser/` | `login` `channel` `page_print` | Playwright：扫码登录、兜底 fetch、借页面打印 |
 | `adapter/print/` | `component` `ports` | 官方打印组件 WebSocket |
@@ -239,9 +239,9 @@ class Signer(Protocol):
 - 可配置「工作时段」，时段外不跑定时任务。
 - 任务落 `tasks` 表（[data-model.md](data-model.md) 6.2 ⑥），进程重启时把 `running` 改回 `queued`；
   其中结果不明的写任务（取号 / 一体）改为「待核实」，按 5.12 处理，不直接重跑。
-- 定时任务（拉单 5 分钟、售后 5 分钟、商品库存 15 分钟、资金 30 分钟、每日对账）用进程内 asyncio 循环实现。
+- 定时任务（拉单 5 分钟、售后新单检查 5 分钟、商品库存 15 分钟、资金 30 分钟、每日对账）用进程内 asyncio 循环实现。
 - **M7 落地**：每日全店对账（默认本地 03:00，`DD_RECONCILE_DAILY` / `DD_RECONCILE_HOUR` / `DD_RECONCILE_WINDOW_DAYS`）、
-  每日数据库快照（默认 04:00，`DD_BACKUP_DAILY` / `DD_BACKUP_KEEP`）、临近超时发货扫描（每 30 分钟，
+  每日数据库快照（默认 04:00，`DD_BACKUP_DAILY` / `DD_BACKUP_KEEP`；快照之后清理已读超过 30 天的通知）、临近超时发货扫描（每 30 分钟，
   `DD_SHIP_DEADLINE_WARN_HOURS`）都挂在同一个 `run_daily_at` / `run_every` 循环上；
   启动时把 `running` 写任务转「待核实」、其余转 `queued`（`task_store.recover_after_restart`），
   会话失效时把该店 `running` 写任务转「待核实」（`mark_expired`），重登后按幂等键重试。
@@ -381,7 +381,7 @@ class Signer(Protocol):
 
 ### 5.15 实时推送
 
-`GET /api/events` 用 SSE 推送：任务进度（`sync_progress`）、店铺状态变化（`shop_status_changed`，含会话、出口、风控暂停）、扫码失败（`shop_login_failed`）、打印回执、告警。前端收到后让对应查询失效重取。不用 WebSocket，因为只需服务端单向推送。
+`GET /api/events` 用 SSE 推送：任务进度（`sync_progress`）、店铺状态变化（`shop_status_changed`，含会话、出口、风控暂停）、扫码失败（`shop_login_failed`）、打印回执、告警、通知（`notification {action: created|updated|resolved|read, item, alert}`，`alert` 为真才该响铃 / 弹窗）。前端收到后让对应查询失效重取。不用 WebSocket，因为只需服务端单向推送。
 
 ### 5.16 本机管理员登录（`service/auth.py`、`api/auth.py`）
 
@@ -447,3 +447,36 @@ class Signer(Protocol):
 cookie、订单数据等仍只存本机。
 
 **平台规则风险**：每店独立出口的作用之一是降低店铺被平台关联判定的概率。是否符合平台规则由所有者判断并承担（gaps DEC-11）。
+
+### 5.18 通知中心（`service/notifications.py`、`service/notification_feed.py`、`api/notification.py`）
+
+设计见 [通知中心设计](../superpowers/specs/2026-11-26-notification-center-design.md)。两类通知：**事件类**（一次性，`state_key` 为空）与**状态类**（登录失效、出口异常、风控暂停、临近超时；每店每类至多一条未解决记录，恢复时写 `resolved_at`）。档位、标题、跳转链接都在 `domain/notification_rules.py`（纯函数）：强 = 新售后、登录失效、出口异常（不通 / 变化 / 重复）、风控暂停、临近超时；中 = 新订单、批量操作有失败或待核实或转手动补打、同步失败；弱 = 批量全部成功、同步完成、对账完成、已恢复。
+
+**`NotificationService`** 是唯一的写入口，写库后发 `notification` SSE 事件：
+
+- `emit(kind, ...)`：事件类。同店同类（同步类按同步类型、批量类不合并）最近一条仍未读的通知累加 `count` 与标题，不新增，也不再响铃。
+- `raise_state(family, kind, ...)`：状态类。无未解决记录则新建并提醒；已有则只更新正文与时间。恢复后 30 分钟内再犯，重开原记录（清 `resolved_at`），不响铃、不写新的「已恢复」。
+- `resolve_state(family, ...)`：置 `resolved_at`；首次恢复写一条弱档「已恢复」（`recovered_notified_at` 标记已写过）。
+- `summary()`：未读数 + 未解决强状态按店分组（一店一行，列出该店所有问题）。
+- `purge(now)`：删已读超过 30 天的事件类；挂在每日快照之后，未解决的状态类永不清理。
+
+**`NotificationFeed`** 在 lifespan 里订阅事件总线（订阅队列放大到 2000），把现有事件翻译成上面的调用，业务服务基本不直接写通知：
+
+| 事件 | 翻译 |
+|---|---|
+| `shop_status_changed` `shop_login_failed` | 按库里该店当前状态对账：登录失效（有过会话的店才算）、出口异常（正文写具体原因，不写 IP）、风控暂停；状态恢复或店铺停用 / 删除则解决 |
+| `ship_deadline_warning` | 按店 `deadline:{shop}` 状态类；该店数量为 0 或不再出现则恢复 |
+| `label_done` `ship_done` `print_done` | 批量结果：有失败 / 待核实 / 需补打为中档 `batch_failed`，否则弱档 `batch_done`；演练模式（`simulated`）不写 |
+| `reconcile_done` | 弱档对账完成；全部店失败时不写 |
+| `orders_new` `aftersales_new` | 新订单（中）/ 新售后（强），按店合并 |
+| `sync_result` | 仅手动同步触发：成功弱档、失败中档（正文带失败原因）；定时同步成功不写 |
+
+事件处理在工作线程执行，单个事件出错只记日志，循环不退出。
+
+**新订单与新售后的识别**只在已有同步里比对，不增加请求：
+
+- `sync_baseline(shop_id, kind)`（`orders` / `aftersales`）记录某店某类数据完成过首次**完整**同步；没有基线时只入库不提醒，同步中途失败不建基线。有基线后，部分同步（没拉全）新入库的单也提醒。
+- 订单：`OrderSyncService` 入库前查出库里没有的订单号，按店发 `orders_new`。
+- 售后：`AftersaleService.check_new` 由定时任务每 5 分钟调用，每店只多一次售后计数请求（60 秒缓存）；各待办分组计数与上一轮不同才做完整售后同步，计数一直不变时每 6 轮（约 30 分钟）兜底同步一次。新增的「仍在流转」售后单（含等买家处理的）发 `aftersales_new`；已关闭的历史单只入库不提醒。完整同步失败的下一轮重试。
+
+**接口**见 [local-api.md](local-api.md)。通知正文只写事实（店名、数量、原因），不含账号密码、cookie、完整手机号、卡号。
