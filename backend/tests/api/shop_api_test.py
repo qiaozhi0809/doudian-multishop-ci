@@ -169,13 +169,13 @@ def test_patch_manual_profile_fields(api):
 
     row = api.client.patch(f"/api/shops/{sid}", json={
         "entity": "某主体",
-        "platform_shop_id": "141327228",
+        "platform_shop_id": "100000001",
         "bank_name": "中国工商银行",
         "bank_tail": "7433",
     }).json()
 
     assert (row["entity"], row["platform_shop_id"], row["bank_name"], row["bank_tail"]) == (
-        "某主体", "141327228", "中国工商银行", "7433")
+        "某主体", "100000001", "中国工商银行", "7433")
 
 
 

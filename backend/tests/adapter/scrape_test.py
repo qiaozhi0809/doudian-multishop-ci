@@ -16,8 +16,8 @@ def test_parse_bank_card_returns_empty_when_absent():
 
 
 def test_parse_shop_id():
-    assert parse_shop_id("店铺管理\n店铺ID: 141327228\n开店时间 2026-03-22") == {
-        "platform_shop_id": "141327228"
+    assert parse_shop_id("店铺管理\n店铺ID: 100000001\n开店时间 2026-03-22") == {
+        "platform_shop_id": "100000001"
     }
     assert parse_shop_id("没有编号") == {}
 

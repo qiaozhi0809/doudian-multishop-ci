@@ -7,7 +7,7 @@
     "address_list": [
       {
         "id": 90766101,
-        "shop_id": 141327228,
+        "shop_id": 100000001,
         "user_name": "测试",
         "mobile": "138****0000",
         "email": "",
@@ -69,7 +69,7 @@
     "default_address": [
       {
         "id": 90766101,
-        "shop_id": 141327228,
+        "shop_id": 100000001,
         "user_name": "测试",
         "mobile": "138****0000",
         "email": "",
@@ -126,7 +126,7 @@
       },
       {
         "id": 90766101,
-        "shop_id": 141327228,
+        "shop_id": 100000001,
         "user_name": "测试",
         "mobile": "138****0000",
         "email": "",
@@ -185,7 +185,7 @@
     "address_aggregate_list": [
       {
         "id": 90766101,
-        "shop_id": 141327228,
+        "shop_id": 100000001,
         "user_name": "测试",
         "mobile": "138****0000",
         "email": "",
