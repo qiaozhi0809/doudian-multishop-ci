@@ -14,8 +14,8 @@ from tests.service.im_watcher_support import ADMIN, Rig, drain, until
 
 CONV = "conv-test-1"
 BUYER = "测试买家"
-MINE = f"{BUYER} 在吗"
-OTHER = "测试顾客 你好"
+MINE = f"{BUYER}\n在吗"
+OTHER = "测试顾客\n你好"
 
 
 @pytest.fixture

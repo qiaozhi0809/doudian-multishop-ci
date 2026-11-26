@@ -36,12 +36,14 @@ async def _show_window(page: Page) -> None:
 async def focus_conversation(page: Page, buyer_name: str | None) -> bool:
     """点开了会话返回 True。定位到的不是恰好 1 个就不点、返回 False。
 
-    会话元素上没有会话编号：有昵称按文本定位；没有昵称时只在列表里仅一个会话时点它。
+    会话元素上没有会话编号：有昵称时要求会话里有一个文本**恰好等于**昵称的元素
+    （只做包含匹配的话，别的会话预览里出现这个昵称也会被点中）；没有昵称时只在
+    列表里仅一个会话时点它。
     """
     await _show_window(page)
     conversations = page.locator(ep.CONVERSATION_SELECTOR)
     if buyer_name:
-        conversations = conversations.filter(has_text=buyer_name)
+        conversations = conversations.filter(has=page.get_by_text(buyer_name, exact=True))
     if await conversations.count() != 1:
         return False
     await conversations.click()

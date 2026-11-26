@@ -32,14 +32,15 @@ class _FakeContext:
 
 
 class FakeLocator:
-    """会话列表元素：每个会话是一段可见文本。"""
+    """会话列表元素：每个会话是一段可见文本，各元素之间以换行分隔。"""
 
     def __init__(self, page: "FakeFocusPage", texts: list[str]) -> None:
         self._page = page
         self._texts = texts
 
-    def filter(self, *, has_text: str) -> "FakeLocator":
-        return FakeLocator(self._page, [t for t in self._texts if has_text in t])
+    def filter(self, *, has: "ExactText") -> "FakeLocator":
+        """会话文本按行切开，模拟「会话里有一个文本恰好等于昵称的元素」。"""
+        return FakeLocator(self._page, [t for t in self._texts if has.text in t.split("\n")])
 
     async def count(self) -> int:
         return len(self._texts)
@@ -49,6 +50,11 @@ class FakeLocator:
         if self._page.click_error is not None:
             raise self._page.click_error
         self._page.calls.append(("click", self._texts[0]))
+
+
+class ExactText:
+    def __init__(self, text: str) -> None:
+        self.text = text
 
 
 class FakeFocusPage:
@@ -62,6 +68,10 @@ class FakeFocusPage:
 
     async def bring_to_front(self) -> None:
         self.calls.append(("bring_to_front",))
+
+    def get_by_text(self, text: str, *, exact: bool = False) -> ExactText:
+        assert exact, "昵称必须精确匹配"
+        return ExactText(text)
 
     def locator(self, selector: str) -> FakeLocator:
         self.selectors.append(selector)

@@ -5,8 +5,8 @@ import pytest
 from app.adapter.flybird.focus import focus_conversation
 from tests.adapter.flybird_focus_fakes import WINDOW_ID, FakeFocusPage
 
-MINE = "测试买家 在吗"
-OTHER = "测试顾客 你好"
+MINE = "测试买家\n在吗"
+OTHER = "测试顾客\n你好"
 BOUNDS = {"left": 0, "top": 0, "width": 1400, "height": 900}
 
 
@@ -35,7 +35,7 @@ async def test_locates_by_buyer_name():
 
 
 @pytest.mark.parametrize("conversations", [
-    [], [OTHER], [MINE, "测试买家二号 在吗"],
+    [], [OTHER], [MINE, "测试买家\n还在吗"],
 ])
 async def test_ambiguous_or_missing_returns_false_without_click(conversations):
     page = FakeFocusPage(conversations)
@@ -72,3 +72,17 @@ async def test_window_session_detached_when_window_call_fails():
         await focus_conversation(page, "测试买家")
 
     assert page.calls == [("getWindowForTarget",), ("detach",)]
+
+
+async def test_name_in_other_preview_is_not_matched():
+    page = FakeFocusPage(["测试顾客\n测试买家刚才说的那个", MINE])
+
+    assert await focus_conversation(page, "测试买家") is True
+    assert page.clicked() == [MINE]
+
+
+async def test_longer_name_containing_buyer_name_is_not_matched():
+    page = FakeFocusPage(["测试买家二号\n在吗"])
+
+    assert await focus_conversation(page, "测试买家") is False
+    assert page.clicked() == []
