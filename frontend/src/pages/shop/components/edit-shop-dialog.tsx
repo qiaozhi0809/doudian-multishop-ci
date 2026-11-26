@@ -1,32 +1,28 @@
 import { useState, type FormEvent } from "react";
+import { useLastPresent } from "@/lib/use-last-present";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { Input } from "@/components/arc/input/input";
+import type { ActionResult } from "@/lib/action-result";
 import type { ShopRow } from "@/lib/use-shops";
+import type { ShopPatch } from "../hooks/use-shop-actions";
+import { BANK_NAME_MAX, buildShopPatch, shopFieldErrors } from "../logic/shop-fields";
 import styles from "../shop-page.module.css";
-
-type Patch = {
-  name: string;
-  entity: string | null;
-  platform_shop_id: string | null;
-  bank_name: string | null;
-  bank_tail: string | null;
-};
-type Result = { ok: true; error: null } | { ok: false; error: string };
 
 interface EditShopDialogProps {
   shop: ShopRow | null | undefined;
   pending: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (patch: Patch) => Promise<Result>;
+  onSubmit: (patch: ShopPatch) => Promise<ActionResult>;
 }
 
-/** 只改本地别名。平台店铺名、店铺号、主体都来自平台，不可在此编辑。 */
+/** 编辑店铺：本地别名，以及平台没有稳定接口、需要手工维护的主体、店铺ID、收款账户。 */
 export function EditShopDialog({ shop, pending, onOpenChange, onSubmit }: EditShopDialogProps) {
+  const shown = useLastPresent(shop);
   return (
-    <Dialog open={shop != null} onOpenChange={onOpenChange}>
-      <DialogContent title="编辑店铺">
+    <Dialog open={shop != null} onOpenChange={onOpenChange} busy={pending}>
+      <DialogContent title="编辑店铺" description={shown?.name}>
         {shop && (
           <EditShopForm
             key={shop.id}
@@ -43,48 +39,82 @@ export function EditShopDialog({ shop, pending, onOpenChange, onSubmit }: EditSh
 
 function EditShopForm({
   shop, pending, onSubmit, onDone,
-}: { shop: ShopRow; pending: boolean; onSubmit: (p: Patch) => Promise<Result>; onDone: () => void }) {
+}: { shop: ShopRow; pending: boolean; onSubmit: (p: ShopPatch) => Promise<ActionResult>; onDone: () => void }) {
   const [name, setName] = useState(shop.name);
   const [entity, setEntity] = useState(shop.entity ?? "");
   const [platformShopId, setPlatformShopId] = useState(shop.platform_shop_id ?? "");
   const [bankName, setBankName] = useState(shop.bank_name ?? "");
   const [bankTail, setBankTail] = useState(shop.bank_tail ?? "");
   const [nameError, setNameError] = useState<string>();
+  const [idError, setIdError] = useState<string>();
+  const [tailError, setTailError] = useState<string>();
+  const [bankNameError, setBankNameError] = useState<string>();
   const [error, setError] = useState<string | null>(null);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setNameError("请填写店铺名称");
-      return;
-    }
-    setNameError(undefined);
+    const values = { name, entity, platformShopId, bankName, bankTail };
+    const errors = shopFieldErrors(shop, values);
+    setNameError(errors.name);
+    setIdError(errors.id);
+    setBankNameError(errors.bankName);
+    setTailError(errors.tail);
+    if (errors.name || errors.id || errors.bankName || errors.tail) return;
     setError(null);
-    const r = await onSubmit({
-      name: trimmed,
-      entity: entity.trim() || null,
-      platform_shop_id: platformShopId.trim() || null,
-      bank_name: bankName.trim() || null,
-      bank_tail: bankTail.trim() || null,
-    });
+    // 只发有改动的字段：旧的不合规数据不改就不会挡住保存
+    const patch = buildShopPatch(shop, values);
+    if (Object.keys(patch).length === 0) return onDone();
+    const r = await onSubmit(patch);
     if (r.ok) onDone();
     else setError(r.error);
   };
 
   return (
-    <form onSubmit={submit}>
+    <form className={styles.form} onSubmit={submit} noValidate>
       <Input label="店铺名称" value={name} error={nameError} onChange={(e) => setName(e.target.value)} />
-      <Input label="主体（公司名称）" value={entity} onChange={(e) => setEntity(e.target.value)} />
-      <Input label="店铺ID" value={platformShopId} onChange={(e) => setPlatformShopId(e.target.value)} />
-      <Input label="提现卡开户行" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+      <Input label="主体" optional value={entity} onChange={(e) => setEntity(e.target.value)} />
       <Input
-        label="提现卡尾号（后四位）"
+        label="店铺ID"
+        optional
+        inputMode="numeric"
+        maxLength={20}
+        value={platformShopId}
+        error={idError}
+        onChange={(e) => {
+          setPlatformShopId(e.target.value);
+          setIdError(undefined);
+        }}
+      />
+      <Input
+        label="开户行"
+        optional
+        maxLength={BANK_NAME_MAX}
+        value={bankName}
+        error={bankNameError}
+        onChange={(e) => {
+          setBankName(e.target.value);
+          setBankNameError(undefined);
+        }}
+      />
+      <Input
+        label="卡号尾号"
+        optional
+        inputMode="numeric"
+        maxLength={4}
         value={bankTail}
-        onChange={(e) => setBankTail(e.target.value)}
+        error={tailError}
+        onChange={(e) => {
+          setBankTail(e.target.value.replace(/\D/g, "").slice(0, 4));
+          setTailError(undefined);
+        }}
       />
       {error && <Alert tone="danger" title={error} />}
       <div className={styles.formActions}>
+        <DialogClose asChild>
+          <Button type="button" variant="ghost" disabled={pending}>
+            取消
+          </Button>
+        </DialogClose>
         <Button type="submit" loading={pending}>
           保存
         </Button>

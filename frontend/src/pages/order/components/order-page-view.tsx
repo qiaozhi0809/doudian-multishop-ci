@@ -1,9 +1,10 @@
 import { Alert } from "@/components/arc/alert/alert";
-import { Pagination } from "@/components/arc/pagination/pagination";
+import { ListPager } from "@/components/custom/list-pager/list-pager";
 import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { seqOffset } from "@/lib/list-sort";
 import type { OrderPage } from "../hooks/use-order-page";
-import { PAGE_SIZE, pageCount } from "../logic/order-columns";
+import { PAGE_SIZE } from "../logic/order-columns";
 import styles from "../order-page.module.css";
 import { CountTabs } from "./count-tabs";
 import { EmptyOrders } from "./empty-orders";
@@ -42,6 +43,7 @@ export function OrderPageView({ page }: { page: OrderPage }) {
         data={counts.data}
         shopName={page.shopName}
         onRetry={() => void counts.refetch()}
+        cardProps={orders.quick.cardProps}
       />
       {orders.query.isLoading && <Skeleton label="正在读取订单" lines={6} />}
       {orders.query.isError && (
@@ -56,13 +58,13 @@ export function OrderPageView({ page }: { page: OrderPage }) {
       )}
       {data && (
         <>
-          <OrderTable rows={data.items} />
-          <div className={styles.pager}>
-            <span>
-              共 {data.total} 单，每页 {PAGE_SIZE} 单
-            </span>
-            <Pagination page={orders.page} pageCount={pageCount(data.total)} onPageChange={orders.setPage} label="订单分页" />
-          </div>
+          <OrderTable
+            rows={data.items}
+            sort={orders.sort}
+            onSortChange={orders.setSort}
+            seqOffset={seqOffset(data.page, PAGE_SIZE)}
+          />
+          <ListPager total={data.total} page={orders.page} pageSize={PAGE_SIZE} onPageChange={orders.setPage} label="订单分页" noun="单" />
         </>
       )}
     </div>

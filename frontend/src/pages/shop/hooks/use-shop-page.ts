@@ -29,6 +29,7 @@ export function useShopPage() {
     egressShop: byId(dialogs.egressShopId),
     resumeShop: byId(dialogs.resumeShopId),
     editShop: byId(dialogs.editShopId),
+    disableShop: byId(dialogs.disableShopId),
   };
 }
 

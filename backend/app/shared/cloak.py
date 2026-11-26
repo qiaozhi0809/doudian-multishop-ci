@@ -3,28 +3,33 @@
 种子决定 CloakBrowser 生成的整套指纹（硬件并发、内存、屏幕、窗口、GPU 等）。
 固定种子 = 该店铺永远呈现同一台设备，与「每店固定出口 IP」是同一个思路。
 同级 profile 目录之间的种子互不重复；复制 profile 目录产生的重复值会被
-检测并重建，避免两家店呈现同一台设备。
+检测，并且只重建 shop_id 较大（目录名即 shop_id）的那一方：老店保留原种子，
+不管谁先启动，结果都一样。
 """
 
 import os
 import random
 from pathlib import Path
 
+import structlog
+
+log = structlog.get_logger()
+
 SEED_FILE = ".cloak-seed"
 SEED_MIN = 10_000
 SEED_MAX = 99_999
 
 
-def _sibling_seeds(profile_dir: Path) -> set[int]:
-    """同级 profile 目录里已被占用的种子。"""
+def _sibling_seeds(profile_dir: Path) -> dict[int, list[str]]:
+    """同级 profile 目录里已被占用的种子 → 占用它的目录名。"""
     parent = profile_dir.parent
     if not parent.is_dir():
-        return set()
+        return {}
     try:
         own = profile_dir.resolve()
     except (OSError, RuntimeError):
         own = profile_dir
-    seeds: set[int] = set()
+    seeds: dict[int, list[str]] = {}
     for child in parent.iterdir():
         if not child.is_dir():
             continue
@@ -43,16 +48,26 @@ def _sibling_seeds(profile_dir: Path) -> set[int]:
         except OSError:
             continue
         if text.isdigit() and SEED_MIN <= int(text) <= SEED_MAX:
-            seeds.add(int(text))
+            seeds.setdefault(int(text), []).append(child.name)
     return seeds
+
+
+def _order(name: str) -> tuple[int, int, str]:
+    """目录名即 shop_id，按数字比较（店 9 先于店 10）；非数字目录排在后面。"""
+    return (0, int(name), "") if name.isdigit() else (1, 0, name)
+
+
+def _shop_id(name: str) -> int | str:
+    return int(name) if name.isdigit() else name
 
 
 def get_or_create_seed(profile_dir: Path) -> int:
     """读取该 profile 的固定指纹种子；缺失或非法时生成并落盘。
 
-    新种子会避开同级 profile 目录已用的种子；已有种子与同级目录冲突
-    （例如复制 profile 目录导致）时按非法处理并重建——保证不同店铺
-    不会呈现同一台设备。profile 目录不可写时抛 OSError——调用方应据此
+    新种子会避开同级 profile 目录已用的种子。已有种子与同级目录冲突
+    （例如复制 profile 目录导致）时，只有 shop_id 较大的一方重建，并记
+    ``cloak.seed_rebuilt`` 告警；shop_id 较小的老店保留原种子（禁止轮换老店指纹）。
+    这样不同店铺不会呈现同一台设备。profile 目录不可写时抛 OSError——调用方应据此
     报错，而不是静默换随机值，否则同一店铺的身份会在每次启动时变化。
     """
     profile_dir.mkdir(parents=True, exist_ok=True)
@@ -62,9 +77,11 @@ def get_or_create_seed(profile_dir: Path) -> int:
         text = path.read_text(encoding="ascii", errors="ignore").strip()
         if text.isdigit() and SEED_MIN <= int(text) <= SEED_MAX:
             seed = int(text)
-            # 与同级目录冲突（复制 profile 导致）时视为非法，走重建
-            if seed not in used:
+            # 与同级目录冲突（复制 profile 导致）：只有比所有占用者 shop_id 都小才保留
+            own = _order(profile_dir.name)
+            if all(own < _order(other) for other in used.get(seed, [])):
                 return seed
+            log.warning("cloak.seed_rebuilt", shop_id=_shop_id(profile_dir.name))
 
     for _ in range(100):
         seed = random.randint(SEED_MIN, SEED_MAX)
@@ -83,8 +100,23 @@ def get_or_create_seed(profile_dir: Path) -> int:
     return seed
 
 
-def cloak_launch_args(seed: int) -> list[str]:
+WEBRTC_PROXY_ONLY = "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"
+OFFSCREEN_WINDOW = "--window-position=-32000,-32000"
+# 屏幕外窗口在 Windows 上会被判为「被遮挡」，页面转为 hidden、定时器被节流，
+# 懒挂载的微应用读不到。这两项是渲染策略参数，不是指纹参数。
+OFFSCREEN_RENDER = (
+    "--disable-features=CalculateNativeWinOcclusion",
+    "--disable-backgrounding-occluded-windows",
+)
+
+
+def cloak_launch_args(seed: int, *, proxied: bool = False, offscreen: bool = False) -> list[str]:
     """CloakBrowser 启动参数：固定指纹 + 声称 Windows 平台 + 静音提示条。
+
+    - ``proxied``：经代理时禁止 WebRTC 走非代理的 UDP。HTTP 代理不转发 UDP，
+      默认策略会经 STUN 直连拿到本机真实公网 IP，让「每店独立出口」失效。直连店不加。
+    - ``offscreen``：有头窗口放到屏幕外，用于不需要人操作的后台读取（同步收款信息）；
+      同时关掉遮挡判定，避免页面被当成 hidden 而不挂载。
 
     后两项是**纯 UI 参数**，不是指纹配置：
     - ``--test-type`` 让 Chromium 认为处在自动化环境，抑制
@@ -93,12 +125,18 @@ def cloak_launch_args(seed: int) -> list[str]:
       js-reverse-mcp 的 cloak 模式同样传它（见其 browser.js 注释）。
     - ``--hide-crash-restore-bubble`` 隐藏「Chrome 未正常关闭」气泡。
     """
-    return [
+    args = [
         f"--fingerprint={seed}",
         "--fingerprint-platform=windows",
         "--test-type",
         "--hide-crash-restore-bubble",
     ]
+    if proxied:
+        args.append(WEBRTC_PROXY_ONLY)
+    if offscreen:
+        args.append(OFFSCREEN_WINDOW)
+        args.extend(OFFSCREEN_RENDER)
+    return args
 
 
 def apply_env(cache_dir: Path) -> None:

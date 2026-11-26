@@ -11,6 +11,9 @@ import {
 } from "../logic/label-columns";
 import { jobBadge, type WaybillPrint } from "../logic/print-status";
 import styles from "../labeling-page.module.css";
+import { EMPTY_TEXT } from "@/lib/empty-text";
+import { SortHeader } from "@/components/custom/data-table/sort-header";
+import type { ListSort } from "@/lib/list-sort";
 
 
 interface LabelTableProps {
@@ -21,6 +24,9 @@ interface LabelTableProps {
   onToggleAll: () => void;
   onReceiver: (id: number) => void;
   printRows?: ReadonlyMap<number, WaybillPrint>;
+  sort: ListSort | null;
+  onSortChange: (sort: ListSort) => void;
+  seqOffset: number;
 }
 
 function WaybillCell({ row, printRow }: { row: LabelOrder; printRow?: WaybillPrint }) {
@@ -28,14 +34,14 @@ function WaybillCell({ row, printRow }: { row: LabelOrder; printRow?: WaybillPri
     if (row.blocked_reason) {
       return <span className={styles.blocked} title={row.blocked_reason}>{row.blocked_reason}</span>;
     }
-    return <span className={styles.muted}>暂无</span>;
+    return <span className={styles.muted}>{EMPTY_TEXT}</span>;
   }
   const badge = jobBadge(printRow?.job);
   const noPrintData = printRow !== undefined && !printRow.has_print_data && !badge;
   return (
     <span className={styles.waybillCell}>
       <span className={styles.waybill}>
-        {row.waybill.courier_code} · <span className={styles.tabular}>{row.waybill.waybill_no ?? "暂无"}</span>
+        {row.waybill.courier_code} · <span className={styles.tabular}>{row.waybill.waybill_no ?? EMPTY_TEXT}</span>
       </span>
       {badge && <Badge tone={badge.tone} dot>{badge.label}</Badge>}
       {noPrintData && (
@@ -50,7 +56,10 @@ function WaybillCell({ row, printRow }: { row: LabelOrder; printRow?: WaybillPri
   );
 }
 
-/** 打单发货表格：首列勾选，阻断行禁用勾选并显示原因（跨页勾选由外部状态维护）。 */
+/**
+ * 打单发货表格：首列勾选，阻断行禁用勾选并显示原因（跨页勾选由外部状态维护）。
+ * 勾选之后是「序号」（翻页连续）；勾选 + 序号 + 店铺固定在左侧。点表头改 URL 里的排序，由服务端排好再分页。
+ */
 export function LabelTable({
   rows,
   selected,
@@ -59,6 +68,9 @@ export function LabelTable({
   onToggleAll,
   onReceiver,
   printRows,
+  sort,
+  onSortChange,
+  seqOffset,
 }: LabelTableProps) {
   const someSelected = selected.size > 0 && !allChecked;
   return (
@@ -74,12 +86,13 @@ export function LabelTable({
                 aria-label="全选本页可勾选订单"
               />
             </th>
-            <th>店铺</th>
+            <th className={styles.seqCol}>序号</th>
+            <SortHeader label="店铺" sortKey="shop_name" sort={sort} onSort={onSortChange} />
             <th>订单号</th>
-            <th>本地状态</th>
+            <SortHeader label="本地状态" sortKey="status" sort={sort} onSort={onSortChange} />
             <th>商品</th>
-            <th className={styles.numeric}>实付</th>
-            <th>支付时间</th>
+            <SortHeader label="实付" sortKey="amount_cents" sort={sort} onSort={onSortChange} numeric className={styles.numeric} />
+            <SortHeader label="支付时间" sortKey="pay_time" sort={sort} onSort={onSortChange} />
             <th>面单 / 阻断原因</th>
             <th className={styles.opCol}>操作</th>
           </tr>
@@ -87,10 +100,10 @@ export function LabelTable({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={9} className={styles.emptyCell}>没有符合条件的订单</td>
+              <td colSpan={10} className={styles.emptyCell}>没有符合条件的订单</td>
             </tr>
           ) : (
-            rows.map((row) => {
+            rows.map((row, index) => {
               const badge = rowStatusBadge(row.status);
               return (
                 <tr key={row.id} data-blocked={!canSelect(row)}>
@@ -102,12 +115,15 @@ export function LabelTable({
                       aria-label={`选择订单 ${row.order_no}`}
                     />
                   </td>
+                  <td className={styles.seqCol}>{seqOffset + index + 1}</td>
                   <td>{row.shop_name}</td>
                   <td className={styles.tabular}>{row.order_no}</td>
                   <td><Badge tone={badge.tone} dot>{badge.label}</Badge></td>
-                  <td>{itemSummary(row.items)}</td>
+                  <td>
+                    <span className={`cell-ellipsis ${styles.itemCell}`} title={itemSummary(row.items)}>{itemSummary(row.items)}</span>
+                  </td>
                   <td className={styles.numeric}>
-                    {row.amount_cents === null ? "暂无" : formatCents(row.amount_cents)}
+                    {row.amount_cents === null ? EMPTY_TEXT : formatCents(row.amount_cents)}
                   </td>
                   <td className={styles.tabular}>{formatBjTimeSmart(row.pay_time)}</td>
                   <td><WaybillCell row={row} printRow={printRows?.get(row.waybill?.id ?? -1)} /></td>

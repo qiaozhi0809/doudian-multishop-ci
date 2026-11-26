@@ -50,7 +50,7 @@ describe("数据备份卡片", () => {
     expect(run).toHaveBeenCalledTimes(1);
 
     rerender(<BackupCard backup={state({ pending: true })} />);
-    expect(screen.getByRole("button", { name: "备份中…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /立即备份/ })).toHaveAttribute("aria-busy", "true");
   });
 
   it("成功与失败都有就地提示", () => {

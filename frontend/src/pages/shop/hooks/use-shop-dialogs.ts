@@ -7,8 +7,9 @@ export function useShopDialogs() {
   const [baseShopId, setBaseShopId] = useState<number | null>(null);
   const [resumeShopId, setResumeShopId] = useState<number | null>(null);
   const [editShopId, setEditShopId] = useState<number | null>(null);
+  const [disableShopId, setDisableShopId] = useState<number | null>(null);
   return {
     addOpen, setAddOpen, egressShopId, setEgressShopId, baseShopId, setBaseShopId,
-    resumeShopId, setResumeShopId, editShopId, setEditShopId,
+    resumeShopId, setResumeShopId, editShopId, setEditShopId, disableShopId, setDisableShopId,
   };
 }

@@ -2,6 +2,7 @@ import {
   billAmountText,
   billSummary,
   hasPendingAmount,
+  marginLevelRank,
   marginLevelText,
   parseBillDays,
   settledMarginTotal,
@@ -23,10 +24,10 @@ describe("fund logic", () => {
     expect(billAmountText(item({ amount_cents: 1234, amount_status: "confirmed" }))).toBe("¥12.34");
   });
 
-  it("账单摘要优先平台文案，其次单号，最后 —", () => {
+  it("账单摘要优先平台文案，其次单号，最后暂无", () => {
     expect(billSummary(item({ raw: { bill_type_text: "技术服务费", bill_no: "B1" } }))).toBe("技术服务费");
     expect(billSummary(item({ raw: { bill_no: "B1" } }))).toBe("B1");
-    expect(billSummary(item())).toBe("—");
+    expect(billSummary(item())).toBe("暂无");
   });
 
   it("存在未校准金额时给出提示标记", () => {
@@ -61,5 +62,12 @@ describe("fund logic", () => {
     expect(parseBillDays("30")).toBe(30);
     expect(parseBillDays("999")).toBe(30);
     expect(parseBillDays(null)).toBe(30);
+  });
+});
+
+describe("marginLevelRank", () => {
+  it("等级按显示顺序 低 → 中 → 高 排，未知在后，空值为 null", () => {
+    expect(["high", "low", "x", "middle"].sort((a, b) => (marginLevelRank(a) ?? 99) - (marginLevelRank(b) ?? 99))).toEqual(["low", "middle", "high", "x"]);
+    expect(marginLevelRank(null)).toBeNull();
   });
 });

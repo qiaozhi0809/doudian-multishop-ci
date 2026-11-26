@@ -1,5 +1,6 @@
 import { Alert } from "@/components/arc/alert/alert";
-import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
+import { Button } from "@/components/arc/button/button";
+import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { HoldToConfirm } from "@/components/arc/hold-to-confirm/hold-to-confirm";
 import { checkSummary, confirmLabel, placeHolderText, type ShipCheck } from "../logic/ship-messages";
 import styles from "../labeling-page.module.css";
@@ -22,7 +23,7 @@ export function CheckDialog({ check, busy, onClose, onConfirm }: CheckDialogProp
   if (check === null) return null;
   const placeHolder = placeHolderText(check.shops[0]?.place_holder ?? null);
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open busy={busy} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent title="发货前检查" description={checkSummary(check)}>
         <div className={styles.planList}>
           {check.shops.map((shop) => (
@@ -59,19 +60,17 @@ export function CheckDialog({ check, busy, onClose, onConfirm }: CheckDialogProp
           </Alert>
         )}
         {check.double_check_total > 0 && (
-          <Alert tone="warning" title="平台要求二次确认">
-            请先核对上面的二次确认项；按住确认按钮即表示已核对。
-          </Alert>
+          <Alert tone="warning" title="平台要求二次确认" />
         )}
         {check.dry_run && (
-          <Alert tone="warning" title="演练模式：本次只记录请求，不发真实发货请求">
-            确认后会生成一条审计记录并返回模拟结果；关闭演练模式后再次提交才会真正发货。
-          </Alert>
+          <Alert tone="warning" title="演练模式：本次只记录请求，不发真实发货请求" />
         )}
         <div className={styles.dialogFooter}>
-          <span className={styles.muted}>
-            {check.total_orders > 0 ? `共 ${check.total_orders} 单将回传平台` : "没有可执行的订单"}
-          </span>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost" disabled={busy}>
+              取消
+            </Button>
+          </DialogClose>
           <HoldToConfirm
             label={`${confirmLabel(check)}${check.dry_run ? "（演练）" : ""}`}
             confirmedLabel="已提交"

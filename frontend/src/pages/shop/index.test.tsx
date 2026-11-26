@@ -71,14 +71,14 @@ describe("店铺与设置页", () => {
     expect(b.getByText("未就绪")).toBeInTheDocument();
   });
 
-  it("只有店铺名与到期可排序，操作、状态等列没有排序按钮", async () => {
+  it("首列是序号；店铺名、平台店铺名、状态、到期可排序，出口、操作等列没有排序按钮", async () => {
     mockPageFetch({ "GET /api/shops": jsonResponse([makeShop()]) });
     renderPage();
     await screen.findByRole("table");
     const sortable = (name: string) => within(screen.getByRole("columnheader", { name })).queryByRole("button");
-    expect(sortable("店铺")).not.toBeNull();
-    expect(sortable("到期")).not.toBeNull();
-    for (const name of ["状态", "出口", "取号就绪", "操作"]) expect(sortable(name)).toBeNull();
+    expect(screen.getAllByRole("columnheader")[0]).toHaveTextContent("序号");
+    for (const name of ["店铺", "平台店铺名", "状态", "到期"]) expect(sortable(name)).not.toBeNull();
+    for (const name of ["序号", "负责人", "出口", "取号就绪", "操作"]) expect(sortable(name)).toBeNull();
   });
 
   it("全局店铺筛选只显示选中的店铺", async () => {
@@ -225,6 +225,9 @@ describe("店铺与设置页", () => {
       await waitFor(() =>
         expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain("/api/shops/1/egress/check?accept_change=true"),
       );
+      // 确认新 IP 不得顺带提交出口表单
+      expect(screen.queryByText("请选择池里的代理")).toBeNull();
+      expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === "PUT")).toBe(false);
     });
   });
 
@@ -262,7 +265,7 @@ describe("店铺与设置页", () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(within(await screen.findByRole("row", { name: /店铺甲/ })).getByRole("button", { name: "更多操作" }));
-    await user.click(await screen.findByRole("menuitem", { name: "查看店铺资料" }));
+    await user.click(await screen.findByRole("menuitem", { name: "店铺资料" }));
     const drawer = await screen.findByRole("dialog");
     expect(await within(drawer).findByText("仓库")).toBeInTheDocument();
     expect(within(drawer).getByText("圆通")).toBeInTheDocument();

@@ -3,7 +3,7 @@
 import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import Engine
@@ -21,6 +21,7 @@ from app.service.shop_cache import ShopTtlCache
 from app.service.shop_fanout import fan_out
 from app.service.shop_runner import ShopRunner
 from app.store import aftersale_store, shop_store
+from app.store.sorting import SortOrder
 
 MAX_PAGES = 50
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
@@ -102,12 +103,15 @@ class AftersaleService:
     def list_local(
         self, shop_ids: Sequence[int], *, status: int | None = None, open_only: bool = False,
         keyword: str | None = None, by_deadline: bool = False, page: int = 1,
-        page_size: int = 50,
+        page_size: int = 50, sort: str | None = None, order: SortOrder = "asc",
+        quick: str | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
+        due_before = (self._clock() + timedelta(hours=24)).strftime(_ISO_FMT)
         with self._engine.connect() as conn:
             rows, total = aftersale_store.list_aftersales(
                 conn, shop_ids, status=status, open_only=open_only, keyword=keyword,
                 by_deadline=by_deadline, page=page, page_size=page_size,
+                sort=sort, order=order, quick=quick, due_before=due_before,
             )
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}
         return [self._row(r, names) for r in rows], total

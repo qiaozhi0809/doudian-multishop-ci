@@ -1,8 +1,10 @@
 import { Alert } from "@/components/arc/alert/alert";
-import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
+import { Button } from "@/components/arc/button/button";
+import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { HoldToConfirm } from "@/components/arc/hold-to-confirm/hold-to-confirm";
 import { MODE_LABELS, previewTotals, type ExecMode, type PreviewResponse } from "../logic/preview-summary";
 import styles from "../labeling-page.module.css";
+import { EMPTY_TEXT } from "@/lib/empty-text";
 
 interface PreviewDialogProps {
   preview: PreviewResponse | null;
@@ -22,7 +24,7 @@ function ShopPlans({ preview }: { preview: PreviewResponse }) {
             <div className={styles.planOrders}>
               {shop.waybills.map((w) => (
                 <span key={w.waybill_id} className={styles.planChip}>
-                  {w.order_no} · {w.courier_code} {w.waybill_no ?? "暂无"}
+                  {w.order_no} · {w.courier_code} {w.waybill_no ?? EMPTY_TEXT}
                 </span>
               ))}
             </div>
@@ -39,7 +41,7 @@ function ShopPlans({ preview }: { preview: PreviewResponse }) {
           <span>
             {shop.courier_name ?? shop.courier_code} · 模板 {shop.template_code} · 账户{" "}
             {shop.ebill_id}/{shop.net_code}
-            {shop.account_balance === -1 ? "（月结）" : `（余 ${shop.account_balance ?? "暂无"} 张）`}
+            {shop.account_balance === -1 ? "（月结）" : `（余 ${shop.account_balance ?? EMPTY_TEXT} 张）`}
           </span>
           <span>{shop.ready_order_ids.length} 单</span>
         </div>
@@ -53,7 +55,7 @@ export function PreviewDialog({ preview, mode, busy, onClose, onConfirm }: Previ
   if (preview === null) return null;
   const totals = previewTotals(preview);
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open busy={busy} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         title={`预览：${MODE_LABELS[mode]}`}
         description={`影响 ${totals.shops} 家店、${totals.ready} 单；${totals.blocked} 单被跳过`}
@@ -83,14 +85,14 @@ export function PreviewDialog({ preview, mode, busy, onClose, onConfirm }: Previ
           </Alert>
         )}
         {preview.dry_run && (
-          <Alert tone="warning" title="演练模式：本次只记录请求，不发真实写请求">
-            确认后会生成一条审计记录并返回模拟结果；关闭演练模式后再次提交才会真正执行。
-          </Alert>
+          <Alert tone="warning" title="演练模式：本次只记录请求，不发真实写请求" />
         )}
         <div className={styles.dialogFooter}>
-          <span className={styles.muted}>
-            {totals.ready > 0 ? `预计发出 ${totals.shops} 个批量请求` : "没有可执行的订单"}
-          </span>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost" disabled={busy}>
+              取消
+            </Button>
+          </DialogClose>
           <HoldToConfirm
             label={`按住确认${MODE_LABELS[mode]}${preview.dry_run ? "（演练）" : ""}`}
             confirmedLabel="已提交"

@@ -1,11 +1,12 @@
 import { Alert } from "@/components/arc/alert/alert";
+import { ListPager } from "@/components/custom/list-pager/list-pager";
 import { Button } from "@/components/arc/button/button";
-import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
 import { SyncMessageBar } from "@/components/custom/sync-control/sync-control";
 import type { CatalogPageState } from "../hooks/use-catalog-page";
-import { PAGE_SIZE, mergeGroups, pageCount } from "../logic/catalog-page";
+import { seqOffset } from "@/lib/list-sort";
+import { PAGE_SIZE, mergeGroups } from "../logic/catalog-page";
 import styles from "../catalog-page.module.css";
 import { CatalogToolbar } from "./catalog-toolbar";
 import { ProductCounts, ProductGroups } from "./product-counts";
@@ -46,6 +47,7 @@ export function CatalogPageView({ page }: { page: CatalogPageState }) {
         data={page.counts.data}
         shopName={page.shopName}
         onRetry={() => void page.counts.refetch()}
+        cardProps={page.quick.cardProps}
       />
       <ProductGroups
         loading={page.groups.isLoading}
@@ -65,18 +67,13 @@ export function CatalogPageView({ page }: { page: CatalogPageState }) {
       )}
       {data && (
         <>
-          <ProductTable rows={data.items} />
-          <div className={styles.pager}>
-            <span>
-              共 {data.total} 个商品，每页 {PAGE_SIZE} 个
-            </span>
-            <Pagination
-              page={page.page}
-              pageCount={pageCount(data.total)}
-              onPageChange={page.setPage}
-              label="商品分页"
-            />
-          </div>
+          <ProductTable
+            rows={data.items}
+            sort={page.sort}
+            onSortChange={page.setSort}
+            seqOffset={seqOffset(data.page, PAGE_SIZE)}
+          />
+          <ListPager total={data.total} page={page.page} pageSize={PAGE_SIZE} onPageChange={page.setPage} label="商品分页" noun="个商品" pageUnit="个" />
         </>
       )}
     </div>

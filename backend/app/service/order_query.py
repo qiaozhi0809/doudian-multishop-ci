@@ -17,6 +17,7 @@ from app.domain.order_status import LocalOrderStatus
 from app.service.egress import EgressConflict, EgressNotReady
 from app.service.shop_runner import ShopPaused, ShopRunner
 from app.store import order_store, shop_store
+from app.store.sorting import SortOrder
 
 log = structlog.get_logger()
 
@@ -51,10 +52,14 @@ class OrderQueryService:
         self._cache.pop(shop_id, None)
 
     def list_orders(
-        self, shop_ids: Sequence[int], status: LocalOrderStatus | None, page: int, page_size: int
+        self, shop_ids: Sequence[int], status: LocalOrderStatus | None, page: int, page_size: int,
+        sort: str | None = None, order: SortOrder = "asc", quick: str | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
+        now = self._clock()
         with self._engine.connect() as conn:
-            rows, total = order_store.list_orders(conn, shop_ids, status, page, page_size)
+            rows, total = order_store.list_orders(
+                conn, shop_ids, status, page, page_size, sort, order, quick=quick,
+                now=now.strftime(_ISO_FMT), in_24h=(now + timedelta(hours=24)).strftime(_ISO_FMT))
             items = order_store.items_by_order(conn, [r["id"] for r in rows])
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}
         return [

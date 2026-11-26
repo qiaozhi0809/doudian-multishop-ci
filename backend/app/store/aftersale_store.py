@@ -8,6 +8,7 @@ import sqlalchemy as sa
 
 from app.domain.aggregate_models import AftersaleDTO
 from app.store.aggregate_schema import aftersale
+from app.store.sorting import SortOrder, order_by, shop_name_of
 
 OPEN_ONLY = "open_only"
 
@@ -46,10 +47,40 @@ def prune_unseen(conn: sa.Connection, shop_id: int, now: str) -> int:
     return result.rowcount or 0
 
 
+# 计数卡快捷筛选：pending 待办（仍在流转）/ audit 待审核（有审核类操作按钮）/
+# due_soon 临近超时（24 小时内到处理截止时间，含已超时未完结的）
+AFTERSALE_QUICK_FILTERS = ("pending", "audit", "due_soon")
+
+_OPEN = aftersale.c.status_deadline.is_not(None)
+
+
+def _audit_button() -> Any:
+    """报文 buttons 里有 *_audit（如 refund_audit「同意退款」）= 等商家审核。平台未公开数字状态，
+    按可用操作判断，不猜测状态码。"""
+    buttons = sa.func.json_each(aftersale.c.detail_json, "$.buttons").table_valued("value")
+    return sa.exists(
+        sa.select(1).select_from(buttons)
+        .where(sa.func.json_extract(buttons.c.value, "$.button").like("%\\_audit", escape="\\"))
+    )
+
+
+def _quick_cond(quick: str, due_before: str) -> Any:
+    if quick == "pending":
+        return _OPEN
+    if quick == "audit":
+        return sa.and_(_OPEN, _audit_button())
+    if quick == "due_soon":
+        return sa.and_(_OPEN, aftersale.c.status_deadline < due_before)
+    raise ValueError(f"未知的售后快捷筛选: {quick}")
+
+
 def _conds(
     shop_ids: Sequence[int], status: int | None, open_only: bool, keyword: str | None,
+    quick: str | None = None, due_before: str = "",
 ) -> list[Any]:
     conds: list[Any] = [aftersale.c.shop_id.in_(list(shop_ids))]
+    if quick is not None:
+        conds.append(_quick_cond(quick, due_before))
     if status is not None:
         conds.append(aftersale.c.status == status)
     if open_only:
@@ -62,25 +93,48 @@ def _conds(
     return conds
 
 
+def _label(text_key: str, code: Any, prefix: str) -> Any:
+    """界面显示的文案：平台下发的成品文案，缺省时「状态 13」这类兜底（与前端 statusLabel 一致）。
+    数字枚举取值未公开、无法定义顺序，所以状态 / 类型列按显示文案排，同名的排在一起。"""
+    return sa.func.coalesce(
+        sa.func.json_extract(aftersale.c.detail_json, f"$.text_part.{text_key}"),
+        sa.case((code.is_(None), None), else_=sa.literal(prefix) + sa.cast(code, sa.Text)),
+    )
+
+
+AFTERSALE_SORTS: dict[str, Any] = {
+    "shop_name": shop_name_of(aftersale.c.shop_id),
+    "type": _label("after_sale_type_text", aftersale.c.type, "类型 "),
+    "status": _label("after_sale_status_text", aftersale.c.status, "状态 "),
+    "refund_amount_cents": aftersale.c.refund_amount_cents,
+    "apply_time": aftersale.c.apply_time,
+    "status_deadline": aftersale.c.status_deadline,
+}
+
+
 def list_aftersales(
     conn: sa.Connection, shop_ids: Sequence[int], *, status: int | None = None,
     open_only: bool = False, keyword: str | None = None, by_deadline: bool = False,
-    page: int = 1, page_size: int = 50,
+    page: int = 1, page_size: int = 50, sort: str | None = None, order: SortOrder = "asc",
+    quick: str | None = None, due_before: str = "",
 ) -> tuple[list[dict[str, Any]], int]:
-    """本地列表；`by_deadline` 用于待办队列（处理截止时间升序，已完结的排最后）。"""
+    """本地列表；默认排序：`by_deadline`（待办队列）按处理截止时间升序、已完结的排最后，
+    否则按申请时间倒序。指定 sort 时按白名单字段排序。due_before 供 quick=due_soon 使用。"""
     if not shop_ids:
         return [], 0
-    conds = _conds(shop_ids, status, open_only, keyword)
+    conds = _conds(shop_ids, status, open_only, keyword, quick, due_before)
     total = conn.execute(
         sa.select(sa.func.count()).select_from(aftersale).where(*conds)
     ).scalar_one()
-    order = (
-        (aftersale.c.status_deadline.is_(None), aftersale.c.status_deadline.asc())
+    default = (
+        (aftersale.c.status_deadline.is_(None), aftersale.c.status_deadline.asc(),
+         aftersale.c.id.asc())
         if by_deadline else
         (aftersale.c.apply_time.desc(), aftersale.c.id.desc())
     )
     rows = conn.execute(
-        sa.select(aftersale).where(*conds).order_by(*order)
+        sa.select(aftersale).where(*conds)
+        .order_by(*order_by(AFTERSALE_SORTS, sort, order, default, aftersale.c.id))
         .limit(page_size).offset((page - 1) * page_size)
     ).mappings().all()
     return [dict(r) for r in rows], int(total)

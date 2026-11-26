@@ -10,7 +10,6 @@ export function EmptyNoShops() {
     <EmptyState
       icon={<Store size={24} strokeWidth={1.75} aria-hidden="true" />}
       title="还没有店铺"
-      description="先添加店铺并扫码登录"
       action={<Button onClick={() => navigate("/shops")}>前往店铺页</Button>}
     />
   );

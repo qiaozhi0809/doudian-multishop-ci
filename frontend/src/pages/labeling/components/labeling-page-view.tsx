@@ -1,9 +1,10 @@
 import { Alert } from "@/components/arc/alert/alert";
+import { ListPager } from "@/components/custom/list-pager/list-pager";
+import { seqOffset } from "@/lib/list-sort";
 import { Button } from "@/components/arc/button/button";
-import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
-import { PAGE_SIZE, pageCount } from "../logic/label-columns";
+import { PAGE_SIZE } from "../logic/label-columns";
 import { componentNotice, printGate, selectedWaybillIds } from "../logic/print-status";
 import styles from "../labeling-page.module.css";
 import type { LabelPage } from "../hooks/use-label-page";
@@ -105,16 +106,11 @@ export function LabelingPageView({ page }: { page: LabelPage }) {
             onToggleAll={pool.toggleAll}
             onReceiver={(id) => void receiver.open(id)}
             printRows={print.rowsByWaybill}
+            sort={pool.sort}
+            onSortChange={pool.setSort}
+            seqOffset={seqOffset(data.page, PAGE_SIZE)}
           />
-          <div className={styles.pager}>
-            <span>共 {data.total} 单，每页 {PAGE_SIZE} 单</span>
-            <Pagination
-              page={pool.page}
-              pageCount={pageCount(data.total)}
-              onPageChange={pool.setPage}
-              label="订单池分页"
-            />
-          </div>
+          <ListPager total={data.total} page={pool.page} pageSize={PAGE_SIZE} onPageChange={pool.setPage} label="订单池分页" noun="单" />
         </>
       )}
 

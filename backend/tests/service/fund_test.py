@@ -66,9 +66,23 @@ async def test_sync_without_shop_no_skips_margin(env):
     (outcome,) = await service(env).sync([env.shop_id], "admin")
     assert outcome.unsettled_count == 2
     assert outcome.margin_synced is False
-    assert outcome.note and "缺少店铺编号" in outcome.note
+    assert outcome.note and "缺少店铺ID" in outcome.note
     # 没有店铺编号就不发保证金请求
     assert len(env.transport.requests) == 1
+
+
+async def test_margin_prefers_platform_shop_id_over_shop_no(env):
+    """保证金 bizId 就是平台店铺ID：优先用 shop_profile.platform_shop_id，为空再回退 shop_no。"""
+    from app.store import shop_profile_store
+
+    set_shop_no(env, "100000002")
+    with env.engine.begin() as conn:
+        shop_profile_store.patch(conn, env.shop_id, "2026-11-26T00:00:00Z",
+                                 platform_shop_id=SHOP_NO)
+    env.transport.responses[:] = [reply(fx("fund_unsettled")), reply(fx("fund_margin"))]
+    (outcome,) = await service(env).sync([env.shop_id], "admin")
+    assert outcome.margin_synced is True
+    assert env.transport.requests[1]["params"]["bizId"] == SHOP_NO
 
 
 async def test_bills_upstream_shape_and_amount_status(env):

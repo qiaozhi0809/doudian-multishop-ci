@@ -1,11 +1,12 @@
 import { Alert } from "@/components/arc/alert/alert";
+import { ListPager } from "@/components/custom/list-pager/list-pager";
 import { Button } from "@/components/arc/button/button";
-import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
 import { SyncMessageBar } from "@/components/custom/sync-control/sync-control";
+import { seqOffset } from "@/lib/list-sort";
 import type { AftersalePageState } from "../hooks/use-aftersale-page";
-import { PAGE_SIZE, aggregateAftersaleCounts, pageCount } from "../logic/aftersale-page";
+import { PAGE_SIZE, aggregateAftersaleCounts } from "../logic/aftersale-page";
 import styles from "../aftersale-page.module.css";
 import { AftersaleMetrics } from "./aftersale-metrics";
 import { AftersaleTable } from "./aftersale-table";
@@ -50,6 +51,7 @@ export function AftersalePageView({ page }: { page: AftersalePageState }) {
         data={page.counts.data ? aggregateAftersaleCounts(page.counts.data) : undefined}
         shopName={page.shopName}
         onRetry={() => void page.counts.refetch()}
+        cardProps={page.quick.cardProps}
       />
       {page.list.isLoading && <Skeleton label="正在读取售后单" lines={6} />}
       {page.list.isError && (
@@ -64,18 +66,13 @@ export function AftersalePageView({ page }: { page: AftersalePageState }) {
       )}
       {data && (
         <>
-          <AftersaleTable rows={data.items} />
-          <div className={styles.pager}>
-            <span>
-              共 {data.total} 单，每页 {PAGE_SIZE} 单
-            </span>
-            <Pagination
-              page={page.page}
-              pageCount={pageCount(data.total)}
-              onPageChange={page.setPage}
-              label="售后分页"
-            />
-          </div>
+          <AftersaleTable
+            rows={data.items}
+            sort={page.sort}
+            onSortChange={page.setSort}
+            seqOffset={seqOffset(data.page, PAGE_SIZE)}
+          />
+          <ListPager total={data.total} page={page.page} pageSize={PAGE_SIZE} onPageChange={page.setPage} label="售后分页" noun="单" />
         </>
       )}
     </div>

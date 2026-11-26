@@ -52,7 +52,7 @@ export function FundSummaryCards({
     .pop();
   return (
     <div className={styles.counts}>
-      <div className={styles.countGrid}>
+      <div className="count-row">
         <StatCard
           label="待结算总额"
           value={formatCents(data.total_unsettled_amount_cents)}

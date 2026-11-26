@@ -46,7 +46,7 @@ describe("useProxyPool", () => {
     expect(out).toEqual({ error: "一次最多导入 500 行" });
   });
 
-  it("检测后列表刷新，返回检测结果", async () => {
+  it("检查后列表刷新，返回检查结果", async () => {
     let checked = false;
     mockFetch({
       "GET /api/proxy-pool": () => jsonResponse([item({ last_check_ip: checked ? "9.9.9.9" : null })]),

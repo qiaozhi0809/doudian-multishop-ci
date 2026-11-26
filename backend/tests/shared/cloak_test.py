@@ -126,3 +126,55 @@ def test_apply_env_keeps_explicit_cache_dir(monkeypatch, tmp_path):
     apply_env(tmp_path)
 
     assert os.environ["CLOAKBROWSER_CACHE_DIR"] == custom
+
+
+def test_copied_profile_original_started_first_keeps_seed(tmp_path):
+    """先启动原店：老店保留原种子，副本（shop_id 较大）下次启动时才重建。"""
+    import shutil
+
+    from structlog.testing import capture_logs
+
+    source = tmp_path / "1"
+    source.mkdir()
+    original = get_or_create_seed(source)
+    copy = tmp_path / "2"
+    shutil.copytree(source, copy)
+
+    with capture_logs() as logs:
+        assert get_or_create_seed(source) == original  # 老店不动
+    assert logs == []
+
+    with capture_logs() as logs:
+        rebuilt = get_or_create_seed(copy)
+    assert rebuilt != original
+    assert get_or_create_seed(source) == original
+    assert [(e["event"], e["shop_id"]) for e in logs] == [("cloak.seed_rebuilt", 2)]
+
+
+def test_conflict_rebuilds_only_larger_shop_id_numerically(tmp_path):
+    """目录名按数字比较：店 10 与店 9 冲突时重建的是 10，不是按字符串排序的 9。"""
+    for name in ("9", "10"):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / ".cloak-seed").write_text("12345", encoding="ascii")
+
+    assert get_or_create_seed(tmp_path / "9") == 12345
+    assert get_or_create_seed(tmp_path / "10") != 12345
+
+
+def test_launch_args_proxy_blocks_non_proxied_webrtc():
+    proxied = cloak_launch_args(12345, proxied=True)
+    assert "--force-webrtc-ip-handling-policy=disable_non_proxied_udp" in proxied
+    assert not any("webrtc" in a for a in cloak_launch_args(12345))
+
+
+def test_launch_args_offscreen_window():
+    args = cloak_launch_args(12345, offscreen=True)
+    assert "--window-position=-32000,-32000" in args
+    assert "--disable-features=CalculateNativeWinOcclusion" in args
+    assert "--disable-backgrounding-occluded-windows" in args
+
+
+def test_launch_args_onscreen_keeps_occlusion_default():
+    args = cloak_launch_args(12345)
+    assert not any("Occlu" in a or "occluded" in a for a in args)
+    assert not any(a.startswith("--window-position") for a in cloak_launch_args(12345))

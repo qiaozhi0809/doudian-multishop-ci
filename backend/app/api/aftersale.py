@@ -12,6 +12,7 @@ from app.api.aftersale_schemas import (
     ShopAftersaleSync,
 )
 from app.api.deps import require_admin
+from app.api.list_sort import AftersaleQuick, AftersaleSort, SortOrder
 from app.api.params import parse_shop_ids
 
 router = APIRouter(prefix="/api/aftersale", tags=["aftersale"])
@@ -26,12 +27,15 @@ def list_aftersale(
     request: Request, shop_ids: str | None = None, status: int | None = None,
     pending: bool = False, keyword: str | None = None,
     page: int = Query(1, ge=1), page_size: int = Query(50, ge=1, le=200),
+    sort: AftersaleSort | None = None, order: SortOrder = "asc",
+    quick: AftersaleQuick | None = None,
 ) -> AftersalePage:
+    """默认按申请时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。"""
     state = request.app.state
     ids = state.shop_admin.target_ids(parse_shop_ids(shop_ids))
     rows, total = state.aftersale.list_local(
         ids, status=status, open_only=pending, keyword=keyword,
-        page=page, page_size=page_size,
+        page=page, page_size=page_size, sort=sort, order=order, quick=quick,
     )
     return _page(rows, total, page, page_size)
 
@@ -40,12 +44,15 @@ def list_aftersale(
 def list_todo(
     request: Request, shop_ids: str | None = None,
     page: int = Query(1, ge=1), page_size: int = Query(50, ge=1, le=200),
+    sort: AftersaleSort | None = None, order: SortOrder = "asc",
+    quick: AftersaleQuick | None = None,
 ) -> AftersalePage:
-    """跨店待办队列：仍在流转（有处理截止时间）的售后单，按截止时间升序。"""
+    """跨店待办队列：仍在流转（有处理截止时间）的售后单，默认按截止时间升序。"""
     state = request.app.state
     ids = state.shop_admin.target_ids(parse_shop_ids(shop_ids))
     rows, total = state.aftersale.list_local(
-        ids, open_only=True, by_deadline=True, page=page, page_size=page_size
+        ids, open_only=True, by_deadline=True, page=page, page_size=page_size,
+        sort=sort, order=order, quick=quick,
     )
     return _page(rows, total, page, page_size)
 

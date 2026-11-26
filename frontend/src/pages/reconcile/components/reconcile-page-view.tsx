@@ -1,11 +1,11 @@
 import { Alert } from "@/components/arc/alert/alert";
+import { ListPager } from "@/components/custom/list-pager/list-pager";
 import { Button } from "@/components/arc/button/button";
-import { Pagination } from "@/components/arc/pagination/pagination";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { EmptyNoShops } from "@/components/custom/empty-no-shops";
+import { seqOffset } from "@/lib/list-sort";
 import {
   PAGE_SIZE,
-  pageCount,
   runSummary,
   runTone,
 } from "../logic/reconcile-view";
@@ -43,7 +43,7 @@ export function ReconcilePageView({ page }: { page: ReconcilePageState }) {
         running={state.running}
         onRun={state.runNow}
       />
-      <Alert tone={runTone(state.run)} title={runSummary(state.run)} />
+      {state.run && <Alert tone={runTone(state.run)} title={runSummary(state.run)} />}
       {state.error && (
         <Alert tone="danger" title={state.error} onDismiss={state.clearError} />
       )}
@@ -65,16 +65,11 @@ export function ReconcilePageView({ page }: { page: ReconcilePageState }) {
             rows={data.items}
             marking={state.marking}
             onMarkHandled={state.markHandled}
+            sort={state.sort}
+            onSortChange={state.setSort}
+            seqOffset={seqOffset(data.page, PAGE_SIZE)}
           />
-          <div className={styles.pager}>
-            <span>共 {data.total} 条异常，每页 {PAGE_SIZE} 条</span>
-            <Pagination
-              page={state.page}
-              pageCount={pageCount(data.total)}
-              onPageChange={state.setPage}
-              label="发货异常分页"
-            />
-          </div>
+          <ListPager total={data.total} page={state.page} pageSize={PAGE_SIZE} onPageChange={state.setPage} label="发货异常分页" noun="条异常" pageUnit="条" />
         </>
       )}
     </div>

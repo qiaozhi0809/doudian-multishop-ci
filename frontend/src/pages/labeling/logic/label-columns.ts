@@ -1,5 +1,6 @@
 import type { components } from "@/lib/api-types";
 import { isLocalStatus, localStatusBadge } from "@/lib/order-status";
+import { EMPTY_TEXT } from "@/lib/empty-text";
 
 export type LabelOrder = components["schemas"]["LabelOrderRow"];
 export type LabelItem = LabelOrder["items"][number];
@@ -13,6 +14,8 @@ export function rowStatusBadge(status: string) {
 }
 
 export const PAGE_SIZE = 50;
+/** 可排序的列，与后端 /api/labels/pool 的 sort 白名单一致；默认按支付时间从早到晚（先处理老单）。 */
+export const LABEL_SORT_KEYS = ["shop_name", "status", "amount_cents", "pay_time"] as const;
 
 export const STAGE_OPTIONS: { value: Stage; label: string }[] = [
   { value: "pending", label: "待打单" },
@@ -25,12 +28,11 @@ export const isStage = (value: string | null): value is Stage =>
 /** 有阻断原因的订单不可勾选（缺 combine_id / sku_id、已有面单等，gaps API-04）。 */
 export const canSelect = (row: LabelOrder): boolean => row.blocked_reason === null;
 
-export const pageCount = (total: number) => Math.max(1, Math.ceil(total / PAGE_SIZE));
 
 /** 商品摘要：首个商品名 + 「等 N 件」（N 为商品行数）。 */
 export function itemSummary(items: LabelItem[]): string {
-  if (items.length === 0) return "暂无";
-  const first = items[0].product_name || "暂无";
+  if (items.length === 0) return EMPTY_TEXT;
+  const first = items[0].product_name || EMPTY_TEXT;
   return items.length > 1 ? `${first} 等 ${items.length} 件` : first;
 }
 

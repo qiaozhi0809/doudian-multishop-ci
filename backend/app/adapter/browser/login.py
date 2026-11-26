@@ -15,8 +15,12 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from playwright.async_api import async_playwright
 
+from app.adapter.browser.cloak_launch import (  # noqa: F401 - build_cloak_kwargs 供测试与调用方复用
+    CloakUnavailable,
+    build_cloak_kwargs,
+    launch_cloak,
+)
 from app.adapter.doudian.endpoints import BASE_URL
-from app.shared.cloak import cloak_launch_args, get_or_create_seed
 
 ORDER_PAGE_URL = BASE_URL + "/ffa/morder/order/list"
 SESSION_LIFETIME = timedelta(days=60)
@@ -33,10 +37,6 @@ class LoginResult:
     token: str
     expires_at: str
     device_headers: dict[str, str]
-
-
-class CloakUnavailable(RuntimeError):
-    """CloakBrowser 不可用（未安装或启动失败）；消息面向用户，可直接展示。"""
 
 
 def playwright_proxy(url: str | None) -> dict | None:
@@ -123,23 +123,6 @@ async def await_login(
     return token, headers, await ctx.cookies()
 
 
-def build_cloak_kwargs(profile_dir: Path, proxy: dict | None) -> dict:
-    """CloakBrowser 启动参数。proxy 已由 playwright_proxy() 转成 dict。
-
-    有头模式下**必须**显式传 ``viewport=None``：cloakbrowser 在拿不到 viewport
-    时会套用写死的 ``DEFAULT_VIEWPORT``（1920x947），与真实窗口尺寸不一致，
-    页面会被渲染成错误的缩放比例。传 None 让它设置 ``no_viewport``，
-    直接用真实窗口尺寸，屏幕/窗口比例由种子派生的指纹保持一致。
-    """
-    return {
-        "user_data_dir": str(profile_dir),
-        "headless": False,
-        "proxy": proxy,
-        "viewport": None,
-        "args": cloak_launch_args(get_or_create_seed(profile_dir)),
-    }
-
-
 async def scan_login(
     profile_dir: Path, channel: str, proxy: str | None, timeout_s: int = 300,
     use_cloak: bool = False,
@@ -151,16 +134,7 @@ async def scan_login(
     """
     playwright_proxy_value = playwright_proxy(proxy)
     if use_cloak:
-        try:
-            from cloakbrowser import launch_persistent_context_async
-        except ImportError as exc:
-            raise CloakUnavailable(
-                "未安装 cloakbrowser，请先执行：pip install cloakbrowser==0.3.30"
-            ) from exc
-
-        ctx = await launch_persistent_context_async(
-            **build_cloak_kwargs(profile_dir, playwright_proxy_value),
-        )
+        ctx = await launch_cloak(profile_dir, playwright_proxy_value)
         try:
             page = ctx.pages[0] if ctx.pages else await ctx.new_page()
             token, headers, cookies = await await_login(ctx, page, timeout_s)

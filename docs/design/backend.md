@@ -423,6 +423,11 @@ class Signer(Protocol):
 | 出口 IP 重复 | 与其他启用店铺的 `egress_ip` 相同 → **`created_at` 较晚**的那家店 `egress_status=duplicate`（新 IP 存 `egress_ip_pending`），暂停 |
 | 代理凭证 | 代理 URL（含账号密码）与 cookie 一样用 `SecretBox` 加密存库；日志只显示主机与端口 |
 | 设备参数 | 浏览器统一使用 CloakBrowser 定制 Chromium；每店一个固定指纹种子（`profiles/<shop_id>/.cloak-seed`），跨会话不变。扫码时记录该浏览器的 `User-Agent` 与 `sec-ch-ua*` 头，协议通道发请求时使用同一组值（参数前后不一致本身就是风控信号）。**禁止轮换指纹种子** |
+| 指纹种子冲突 | 复制 profile 目录会带出相同种子。冲突时只重建 `shop_id` 较大（目录名即 `shop_id`）的一方并记 `cloak.seed_rebuilt` 告警；老店保留原种子，与谁先启动无关 |
+| 浏览器二进制 | 按部署文档预下载（关闭自动更新）。运行时**不下载**：库在协程里同步下载约 200MB 会卡住整个事件循环。启动前检查二进制，缺失或启动失败一律报 `CloakUnavailable`，按原因给具体提示：未预下载、程序无法运行（权限）、资料目录无法读写（种子文件写不进、磁盘满）、资料目录正被占用（该店已有浏览器窗口）、其余「浏览器启动失败，请查看日志」；只按异常类型和关键词判断，消息与日志不带原消息、命令行参数与代理地址。代理地址格式不受支持（如 socks5 带账号密码）原样提示 |
+| WebRTC | 代理模式启动参数加 `--force-webrtc-ip-handling-policy=disable_non_proxied_udp`：HTTP 代理不转发 UDP，默认策略会经 STUN 直连暴露本机真实公网 IP。直连店不加。扫码与同步收款信息都生效 |
+| 同步收款信息 | 与扫码同一套环境：有头模式、`viewport=None`（跟随真实窗口）、同一种子与启动参数，只多 `--window-position=-32000,-32000` 把窗口放到屏幕外，并加 `--disable-features=CalculateNativeWinOcclusion`、`--disable-backgrounding-occluded-windows`，防止 Windows 把屏幕外窗口判为被遮挡（页面变 hidden、微应用不挂载）。**需在 Windows 真机验证**：三个字段都能读到、`document.visibilityState` 为 `visible`；页面能读到 `screenX/screenY = -32000`，这一特征目前接受。**不用无头**：无头的窗口 / 屏幕尺寸、GPU 路径都和有头不同，同一账号同一 IP 会出现两套设备特征 |
+| 收款信息入库 | 抓到的店铺ID / 卡号尾号 / 开户行按手工维护的同一规则校验（`domain/shop_profile_rules.py`，数字只认半角 0-9），不合规的字段丢弃；主体已手填的不覆盖。审计 `shop.profile_scrape` 只记实际写入与丢弃的字段名（不记值），失败也记一条 `result=error`（只记异常类型名）。手工维护的格式错误由服务层抛 `InvalidRequest`，接口 422 的 message 就是具体原因 |
 | 统一入口 | 凡是会请求抖店的操作（定时任务、手动同步 / 探测 / 计数、扫码），都经 `ShopRunner.run`：先出口检查，再进该店串行队列（5.7） |
 
 **代理池（配置来源，不是轮换）**：`proxy_pool` 表（`store/proxy_pool_store.py`、`service/proxy_pool.py`、`api/proxy_pool.py`）只是候选代理清单，

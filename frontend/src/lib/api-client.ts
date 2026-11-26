@@ -87,3 +87,9 @@ export const api = {
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, undefined, body),
   delete: <T>(path: string) => request<T>("DELETE", path),
 };
+
+/** 不是后端信封错误（如前端异常）时给用户看的兜底文案。 */
+export const FALLBACK_ERROR = "请求失败，请确认本地服务正常后重试";
+
+/** 把任意异常转成给用户看的一句话：后端信封错误用其 message，其余用兜底文案。 */
+export const errorText = (e: unknown): string => (e instanceof ApiError ? e.message : FALLBACK_ERROR);

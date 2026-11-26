@@ -6,18 +6,22 @@ import { api } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
 import { metricQueries } from "@/lib/metric-queries";
 import { queryKeys } from "@/lib/query-keys";
+import { useListSort, useSettledSort } from "@/lib/use-list-sort";
+import { useQuickFilter } from "@/lib/use-quick-filter";
 import { useShops } from "@/lib/use-shops";
-import { PAGE_SIZE, isView, parseStatus, type View } from "../logic/aftersale-page";
+import { AFTERSALE_QUICK_KEYS, AFTERSALE_SORT_KEYS, PAGE_SIZE, isView, parseStatus, type View } from "../logic/aftersale-page";
 import { useAftersaleSync } from "./use-aftersale-sync";
 
 type PageData = components["schemas"]["AftersalePage"];
 type StatusesResponse = components["schemas"]["AftersaleStatusesResponse"];
 
-/** 售后页的全部数据：视图（待办 / 全部）、状态筛选、页码都在 URL 里。 */
+/** 售后页的全部数据：视图（待办 / 全部）、状态筛选、排序、页码都在 URL 里。 */
 export function useAftersalePage() {
   const shops = useShops();
   const { shopIds } = useShopFilter();
   const [params, setParams] = useSearchParams();
+  const sorting = useListSort(AFTERSALE_SORT_KEYS);
+  const quick = useQuickFilter(AFTERSALE_QUICK_KEYS);
 
   const rawView = params.get("view");
   const view: View = isView(rawView) ? rawView : "todo";
@@ -57,12 +61,14 @@ export function useAftersalePage() {
   );
 
   const list = useQuery({
-    queryKey: queryKeys.aftersaleList(shopIds, { view, status, page }),
+    queryKey: queryKeys.aftersaleList(shopIds, { view, status, page, ...sorting.query, ...quick.query }),
     queryFn: () =>
       view === "todo"
-        ? api.get<PageData>("/api/aftersale/todo", { shop_ids: shopIds, page, page_size: PAGE_SIZE })
+        ? api.get<PageData>("/api/aftersale/todo", {
+            shop_ids: shopIds, page, page_size: PAGE_SIZE, ...sorting.query, ...quick.query,
+          })
         : api.get<PageData>("/api/aftersale", {
-            shop_ids: shopIds, status, page, page_size: PAGE_SIZE,
+            shop_ids: shopIds, status, page, page_size: PAGE_SIZE, ...sorting.query, ...quick.query,
           }),
     placeholderData: keepPreviousData,
   });
@@ -92,6 +98,7 @@ export function useAftersalePage() {
     [shops.data],
   );
 
+  const shownSort = useSettledSort(sorting.sort, !list.isPlaceholderData);
   return {
     shopsState: shops.isLoading
       ? ("loading" as const)
@@ -108,6 +115,9 @@ export function useAftersalePage() {
     setStatus,
     page,
     setPage: (value: number) => update({ page: value }),
+    sort: shownSort,
+    quick,
+    setSort: sorting.setSort,
     list,
     viewTotals: totals.data,
     statusOptions: statuses.data?.items ?? [],

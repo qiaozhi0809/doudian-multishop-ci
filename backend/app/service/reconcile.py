@@ -34,6 +34,7 @@ from app.service.periodic import SYSTEM_ACTOR, active_shop_ids
 from app.service.shipping_plan import describe
 from app.service.shop_runner import ShopRunner
 from app.store import reconcile_store, shop_store
+from app.store.sorting import SortOrder
 
 log = structlog.get_logger()
 
@@ -184,6 +185,7 @@ class ReconcileService:
     def findings(
         self, shop_ids: Sequence[int] | None, run_id: str | None, kind: str | None,
         status: str | None, page: int, page_size: int,
+        sort: str | None = None, order: SortOrder = "asc",
     ) -> tuple[list[dict], int, dict | None]:
         if kind is not None and kind not in FINDING_KINDS:
             raise InvalidRequest(f"不支持的对账异常类型: {kind}")
@@ -199,7 +201,7 @@ class ReconcileService:
                 raise NotFound(f"对账批次不存在: {run_id}")
             effective_run_id = run["run_id"] if run else None
             rows, total = reconcile_store.list_findings(
-                conn, shop_ids, effective_run_id, kind, status, page, page_size)
+                conn, shop_ids, effective_run_id, kind, status, page, page_size, sort, order)
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}
         items = [
             {

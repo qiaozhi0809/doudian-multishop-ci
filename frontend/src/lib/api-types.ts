@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Aftersale */
+        /**
+         * List Aftersale
+         * @description 默认按申请时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。
+         */
         get: operations["list_aftersale_api_aftersale_get"];
         put?: never;
         post?: never;
@@ -87,7 +90,7 @@ export interface paths {
         };
         /**
          * List Todo
-         * @description 跨店待办队列：仍在流转（有处理截止时间）的售后单，按截止时间升序。
+         * @description 跨店待办队列：仍在流转（有处理截止时间）的售后单，默认按截止时间升序。
          */
         get: operations["list_todo_api_aftersale_todo_get"];
         put?: never;
@@ -244,7 +247,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Products */
+        /**
+         * List Products
+         * @description 默认按销量倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。
+         */
         get: operations["list_products_api_catalog_products_get"];
         put?: never;
         post?: never;
@@ -312,7 +318,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Stock */
+        /**
+         * List Stock
+         * @description 默认按总库存升序（缺货的在前）；sort 指定白名单字段时按该字段排序后再分页；
+         *     quick 为计数卡快捷筛选（alarm 预警 / sold_out 售罄）。
+         */
         get: operations["list_stock_api_catalog_stock_get"];
         put?: never;
         post?: never;
@@ -468,7 +478,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Unsettled */
+        /**
+         * List Unsettled
+         * @description 默认最近同步进来的在前；sort 指定白名单字段时按该字段排序后再分页。
+         */
         get: operations["list_unsettled_api_fund_unsettled_get"];
         put?: never;
         post?: never;
@@ -553,7 +566,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Pool */
+        /**
+         * Pool
+         * @description 默认按支付时间从早到晚；sort 指定白名单字段时按该字段排序后再分页。
+         */
         get: operations["pool_api_labels_pool_get"];
         put?: never;
         post?: never;
@@ -621,7 +637,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Orders */
+        /**
+         * List Orders
+         * @description 默认按支付时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。
+         */
         get: operations["list_orders_api_orders_get"];
         put?: never;
         post?: never;
@@ -832,7 +851,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Findings */
+        /**
+         * Findings
+         * @description 默认最新发现的在前；sort 指定白名单字段时按该字段排序后再分页。
+         */
         get: operations["findings_api_reconcile_findings_get"];
         put?: never;
         post?: never;
@@ -1075,7 +1097,7 @@ export interface paths {
         put?: never;
         /**
          * Scrape Profile
-         * @description 手动读取平台页面上可见、但没有接口的收款信息（开户行 + 卡号尾号）。
+         * @description 手动读取平台页面上可见、但没有接口的固定信息：店铺ID、主体、收款账户摘要。
          */
         post: operations["scrape_profile_api_shops__shop_id__profile_scrape_post"];
         delete?: never;
@@ -2232,7 +2254,12 @@ export interface components {
             entity?: string | null;
             /** Name */
             name: string;
-            /** Shop No */
+            /** Platform Shop Id */
+            platform_shop_id?: string | null;
+            /**
+             * Shop No
+             * @description 旧字段，界面已不用；店铺ID 用 platform_shop_id
+             */
             shop_no?: string | null;
         };
         /** ShopFundSummary */
@@ -2699,6 +2726,9 @@ export interface operations {
                 keyword?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "type" | "status" | "refund_amount_cents" | "apply_time" | "status_deadline") | null;
+                order?: "asc" | "desc";
+                quick?: ("pending" | "audit" | "due_soon") | null;
             };
             header?: never;
             path?: never;
@@ -2825,6 +2855,9 @@ export interface operations {
                 shop_ids?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "type" | "status" | "refund_amount_cents" | "apply_time" | "status_deadline") | null;
+                order?: "asc" | "desc";
+                quick?: ("pending" | "audit" | "due_soon") | null;
             };
             header?: never;
             path?: never;
@@ -3112,6 +3145,9 @@ export interface operations {
                 keyword?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "tab" | "price" | "stock_num" | "sell_num" | "sell_num_30d") | null;
+                order?: "asc" | "desc";
+                quick?: ("onsale" | "draft" | "audit" | "sell_out_new" | "unpass" | "forbidden") | null;
             };
             header?: never;
             path?: never;
@@ -3239,6 +3275,9 @@ export interface operations {
                 alarm_only?: boolean;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "total_stock_num" | "spot_stock_num" | "future_stock_num" | "total_occupied_stock_num" | "total_unoccupied_stock_num" | "status" | "synced_at") | null;
+                order?: "asc" | "desc";
+                quick?: ("alarm" | "sold_out") | null;
             };
             header?: never;
             path?: never;
@@ -3520,6 +3559,8 @@ export interface operations {
                 shop_ids?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "income_amount_cents" | "platform_service_fee_cents" | "unsettled_amount_cents" | "ecom_order_status" | "synced_at") | null;
+                order?: "asc" | "desc";
             };
             header?: never;
             path?: never;
@@ -3682,6 +3723,8 @@ export interface operations {
                 stage?: "pending" | "labeled";
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "status" | "amount_cents" | "pay_time") | null;
+                order?: "asc" | "desc";
             };
             header?: never;
             path?: never;
@@ -3815,6 +3858,9 @@ export interface operations {
                 status?: ("synced" | "pending_label" | "label_obtained" | "printed" | "shipped" | "exception" | "cancelled" | "closed") | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "platform_status" | "status" | "amount_cents" | "pay_time" | "exp_ship_time") | null;
+                order?: "asc" | "desc";
+                quick?: ("stock_up" | "exp_ship" | "ship_delay" | "in_aftersale") | null;
             };
             header?: never;
             path?: never;
@@ -4225,6 +4271,8 @@ export interface operations {
                 status?: string | null;
                 page?: number;
                 page_size?: number;
+                sort?: ("shop_name" | "kind" | "created_at" | "status") | null;
+                order?: "asc" | "desc";
             };
             header?: never;
             path?: never;

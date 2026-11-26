@@ -1,6 +1,11 @@
+import { EMPTY_TEXT } from "@/lib/empty-text";
 import { Badge } from "@/components/arc/badge/badge";
+import { ID_COL_WIDTH, TIME_COL_WIDTH } from "@/lib/table-columns";
 import { Button } from "@/components/arc/button/button";
-import { formatBjTimeSmart } from "@/lib/time-format";
+import type { DataColumn } from "@/components/arc/sortable-data-table/sortable-data-table";
+import { DataTable } from "@/components/custom/data-table/data-table";
+import type { ListSort } from "@/lib/list-sort";
+import { formatBjTime, formatBjTimeSmart } from "@/lib/time-format";
 import { kindTone, trackingPair, type Finding } from "../logic/reconcile-view";
 import styles from "../reconcile-page.module.css";
 
@@ -8,66 +13,63 @@ interface FindingsTableProps {
   rows: Finding[];
   marking: boolean;
   onMarkHandled: (id: number) => void;
+  sort: ListSort | null;
+  onSortChange: (sort: ListSort) => void;
+  seqOffset: number;
 }
 
-/** 对账异常表：三类异常按 kind 着色，未处理的可一键标记。 */
-export function FindingsTable({ rows, marking, onMarkHandled }: FindingsTableProps) {
+/** 对账异常表：三类异常按 kind 着色，未处理的可一键标记。点表头改 URL 里的排序，由服务端排好再分页（默认最新发现的在前）。 */
+export function FindingsTable({ rows, marking, onMarkHandled, sort, onSortChange, seqOffset }: FindingsTableProps) {
+  const columns: DataColumn<Finding>[] = [
+    { key: "shop_name", label: "店铺", sortable: true, width: 100, render: (v) => <span className="cell-ellipsis" title={String(v)}>{String(v)}</span> },
+    { key: "shop_order_id", label: "订单号", width: ID_COL_WIDTH, render: (v) => <span className={styles.tabular}>{String(v)}</span> },
+    {
+      key: "kind", label: "异常", sortable: true, width: 120,
+      render: (_, row) => (
+        <span title={row.detail ?? undefined}>
+          <Badge tone={kindTone(row.kind)} dot>{row.kind_title}</Badge>
+        </span>
+      ),
+    },
+    {
+      key: "tracking", label: "运单号（本地 → 平台）", width: 220,
+      render: (_, row) => {
+        const text = trackingPair(row);
+        return <span className={`cell-ellipsis ${styles.waybill}`} title={text}>{text}</span>;
+      },
+    },
+    {
+      key: "status_change", label: "状态变化", width: 110,
+      render: (_, row) => <span className={styles.muted}>{row.local_status ?? EMPTY_TEXT} → {row.platform_status ?? EMPTY_TEXT}</span>,
+    },
+    {
+      key: "created_at", label: "发现时间", sortable: true, width: TIME_COL_WIDTH,
+      render: (v) => <span className={styles.tabular} title={formatBjTime(v as string)}>{formatBjTimeSmart(v as string)}</span>,
+    },
+    {
+      key: "status", label: "处理状态", sortable: true, width: 106,
+      render: (v) => (v === "handled" ? <Badge tone="success" dot>已处理</Badge> : <Badge tone="warning" dot>未处理</Badge>),
+    },
+    {
+      key: "actions", label: "操作", width: 120,
+      render: (_, row) => (
+        <Button variant="ghost" size="sm" disabled={row.status === "handled" || marking} onClick={() => onMarkHandled(row.id)}>
+          标记已处理
+        </Button>
+      ),
+    },
+  ];
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <caption className={styles.srOnly}>发货异常</caption>
-        <thead>
-          <tr>
-            <th>店铺</th>
-            <th>订单号</th>
-            <th>异常</th>
-            <th>运单号（本地 → 平台）</th>
-            <th>状态变化</th>
-            <th>发现时间</th>
-            <th>处理状态</th>
-            <th className={styles.opCol}>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 ? (
-            <tr>
-              <td colSpan={8} className={styles.emptyCell}>没有符合条件的发货异常</td>
-            </tr>
-          ) : (
-            rows.map((row) => (
-              <tr key={row.id}>
-                <td>{row.shop_name}</td>
-                <td className={styles.tabular}>{row.shop_order_id}</td>
-                <td title={row.detail ?? undefined}>
-                  <Badge tone={kindTone(row.kind)} dot>{row.kind_title}</Badge>
-                </td>
-                <td className={styles.waybill}>{trackingPair(row)}</td>
-                <td className={styles.muted}>
-                  {row.local_status ?? "无"} → {row.platform_status ?? "无"}
-                </td>
-                <td className={styles.tabular}>{formatBjTimeSmart(row.created_at)}</td>
-                <td>
-                  {row.status === "handled" ? (
-                    <Badge tone="success" dot>已处理</Badge>
-                  ) : (
-                    <Badge tone="warning" dot>未处理</Badge>
-                  )}
-                </td>
-                <td>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={row.status === "handled" || marking}
-                    onClick={() => onMarkHandled(row.id)}
-                  >
-                    标记已处理
-                  </Button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+    <DataTable<Finding>
+      rows={rows}
+      columns={columns}
+      rowKey={(row) => String(row.id)}
+      caption="发货异常"
+      emptyMessage="没有符合条件的发货异常"
+      sort={sort}
+      onSortChange={onSortChange}
+      serverSorted
+      seqOffset={seqOffset}
+    />
   );
 }

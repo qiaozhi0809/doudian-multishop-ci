@@ -1,11 +1,9 @@
 import type { components } from "@/lib/api-types";
 import {
-  PAGE_SIZE,
   allSelected,
   canSelect,
   isStage,
   itemSummary,
-  pageCount,
   pruneSelection,
   toggleAll,
 } from "./label-columns";
@@ -62,11 +60,9 @@ describe("label columns", () => {
     expect([...toggleAll(all, rows)]).toEqual([]);
   });
 
-  it("阶段与分页", () => {
+  it("阶段", () => {
     expect(isStage("pending")).toBe(true);
     expect(isStage("labeled")).toBe(true);
     expect(isStage(null)).toBe(false);
-    expect(pageCount(0)).toBe(1);
-    expect(pageCount(PAGE_SIZE + 1)).toBe(2);
   });
 });

@@ -26,7 +26,7 @@
 | 订单物流 | GET | `/api/order/getOrderLogistics?order_id=<shop_order_id>` | 返回 `logistics[]`：`logistics_name` / **`logistics_code`（运单号）** / `logistics_send_time` / `send_type` / `send_method_name` / `items[]` / `trace[]`（轨迹）；`data` 另有 `logistics_list[]`（按包裹分组）。**API-19 取号恢复的关键接口**；无 `deliverId` |
 | 订单详情 | GET | `/api/order/orderDetail?order_id=<shop_order_id>&source=shop_order_view_upgrade` | 返回 `order_base` / `receiver` / `delivery` / `product` / `action_map` / `url_map` 等；**不含运单号**（`delivery.labels` 只有「送货方式」） |
 | 店铺资质画像 | GET | `/center/qualification/shop/info?version=0` | **必须带 `version=0`**，缺参数返回 `1000004`「参数解析错误」（2026-11-26 从真实页面请求抄出）。响应 `data`：`qual_id` / `shop_name` / `shop_type` / `operate_status_str` / `shop_open_time_str` / `shop_settle_day.delay_day_display`；**不含类目与地址** |
-| 店铺管理人 | GET | `/byteshop/shopuser/getAdminV2` | `data.shop_charge_name`（负责人姓名）/ `shop_charge_mobile`（脱敏，如 `176****8444`） |
+| 店铺管理人 | GET | `/byteshop/shopuser/getAdminV2` | `data.shop_charge_name`（负责人姓名）/ `shop_charge_mobile`（脱敏，如 `138****0000`） |
 | 绑定账号 | GET | `/byteshop/accountbind/getbindlist` | |
 | 菜单 | GET | `/byteshop/menu/list/v2` | |
 | 登录校验 | GET | `/ecomauth/loginv1/session_check` | ⚠️ **不可用**：无 cookie 也返回 `check_code:0` |

@@ -12,6 +12,7 @@ from app.api.fund_schemas import (
     ShopFundSync,
     UnsettledPage,
 )
+from app.api.list_sort import SortOrder, UnsettledSort
 from app.api.params import parse_shop_ids
 from app.service.fund import DEFAULT_BILL_DAYS
 
@@ -29,10 +30,12 @@ def fund_summary(request: Request, shop_ids: str | None = None) -> FundSummary:
 def list_unsettled(
     request: Request, shop_ids: str | None = None, page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    sort: UnsettledSort | None = None, order: SortOrder = "asc",
 ) -> UnsettledPage:
+    """默认最近同步进来的在前；sort 指定白名单字段时按该字段排序后再分页。"""
     state = request.app.state
     ids = state.shop_admin.target_ids(parse_shop_ids(shop_ids))
-    rows, total = state.fund.list_unsettled(ids, page, page_size)
+    rows, total = state.fund.list_unsettled(ids, page, page_size, sort, order)
     return UnsettledPage(items=rows, total=total, page=page, page_size=page_size)
 
 

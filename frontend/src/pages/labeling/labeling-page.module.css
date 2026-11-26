@@ -25,15 +25,17 @@
 
 .tabular {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 12px);
+  border-radius: var(--radius-control);
   background: var(--surface);
 }
 
+/* 外观与全站 DataTable（Arc SortableDataTable）一致：表头 44 高、--text-sm、--text-muted；行 52 高 */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -43,17 +45,18 @@
 .table th,
 .table td {
   padding: 0 12px;
-  height: 44px;
+  height: 52px;
   text-align: left;
   white-space: nowrap;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .table th {
-  height: 40px;
-  font-size: 12px;
+  height: 44px;
+  border-bottom-color: var(--border);
+  font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   background: var(--surface);
   position: sticky;
   top: 0;
@@ -64,27 +67,74 @@
   border-bottom: none;
 }
 
-.table tr[data-blocked="true"] {
-  background: color-mix(in srgb, var(--warning, #b45309) 5%, transparent);
+/* 底色写在单元格上且不透明：左侧固定列滚动时盖住下面的内容 */
+.table td {
+  background: var(--surface);
+}
+
+.table tr[data-blocked="true"] td {
+  background: color-mix(in srgb, var(--warning, #b45309) 5%, var(--surface));
 }
 
 .checkCol {
   width: 48px;
 }
 
+/* 序号：表头与数字都居中（与 DataTable 一致） */
+.table .seqCol {
+  width: 56px;
+  padding: 0 var(--space-2);
+  text-align: center;
+}
+
+/* 勾选 + 序号 + 店铺固定在左侧（宽 48 / 56），横向滚动时都可见 */
+.table :is(td, th):nth-child(-n + 3) {
+  position: sticky;
+  z-index: 2;
+}
+
+.table :is(td, th):nth-child(1) {
+  left: 0;
+  min-width: 48px;
+  max-width: 48px;
+}
+
+.table :is(td, th):nth-child(2) {
+  left: 48px;
+  min-width: 56px;
+  max-width: 56px;
+}
+
+.table :is(td, th):nth-child(3) {
+  left: 104px;
+  box-shadow: inset -1px 0 var(--border-subtle);
+}
+
+.table th:nth-child(-n + 3) {
+  z-index: 3;
+}
+
+.itemCell {
+  max-width: 240px;
+}
+
 .opCol {
   width: 120px;
 }
 
-.numeric {
+/* 数字列：表头与单元格都右对齐（选择器带 .table，才能压过上面 .table th / td 的左对齐） */
+.table .numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-.emptyCell {
-  height: 88px;
+/* 与 SortableDataTable 的 .empty 同一视觉；选择器带 .table，才能压过上面 .table td 的左对齐 */
+.table .emptyCell {
+  height: 120px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
   text-align: center;
-  color: var(--text-secondary);
 }
 
 .blocked {
@@ -95,13 +145,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
 
 .planList {
   display: flex;
@@ -144,10 +187,11 @@
   gap: 4px;
 }
 
+/* 对话框底部：ghost「取消」在左、主按钮在右，整组靠右（全站一致） */
 .dialogFooter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--space-3, 12px);
   margin-top: var(--space-4, 16px);
 }

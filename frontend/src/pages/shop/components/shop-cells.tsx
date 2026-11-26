@@ -12,11 +12,9 @@ import {
   readyBadge,
   scanDisabledReason,
   shopStatusBadge,
-  type Tone,
 } from "../logic/shop-status";
 import styles from "../shop-page.module.css";
 
-const badgeTone = (tone: Tone) => tone;
 
 export function StatusCell({ row, waiting, onResume }: { row: ShopRow; waiting: boolean; onResume: () => void }) {
   const status = shopStatusBadge(row);
@@ -24,7 +22,7 @@ export function StatusCell({ row, waiting, onResume }: { row: ShopRow; waiting: 
   if (!paused) {
     return (
       <div className={styles.cellLine}>
-        <Badge tone={badgeTone(status.tone)} dot>
+        <Badge tone={status.tone} dot>
           {status.label}
         </Badge>
         {waiting && <Badge tone="info">等待扫码</Badge>}
@@ -35,7 +33,7 @@ export function StatusCell({ row, waiting, onResume }: { row: ShopRow; waiting: 
   return (
     <div className={styles.cellStack}>
       <div className={styles.cellRow}>
-        <Badge tone={badgeTone(status.tone)} dot>
+        <Badge tone={status.tone} dot>
           {status.label}
         </Badge>
         {waiting && <Badge tone="info">等待扫码</Badge>}
@@ -66,7 +64,7 @@ export function EgressCell({ row }: { row: ShopRow }) {
         {mode}
         {row.proxy_display ? <span className={styles.muted}>{` ${row.proxy_display}`}</span> : null}
       </span>
-      <Badge tone={badgeTone(egress.tone)} dot>
+      <Badge tone={egress.tone} dot>
         {egress.label}
       </Badge>
     </div>
@@ -85,7 +83,7 @@ export function ExpiryCell({ row }: { row: ShopRow }) {
 
 export function ReadyCell({ row }: { row: ShopRow }) {
   const ready = readyBadge(row);
-  const badge = <Badge tone={badgeTone(ready.tone)}>{ready.label}</Badge>;
+  const badge = <Badge tone={ready.tone}>{ready.label}</Badge>;
   if (!ready.detail) return badge;
   return (
     <Tooltip content={ready.detail}>
@@ -155,9 +153,9 @@ export function ActionsCell({ row, actions, pending, waiting }: ActionsCellProps
             : [{ label: "检查出口", onSelect: actions.onCheckEgress, disabled: busy("egress-check") }]),
           { label: "检查登录状态", onSelect: actions.onProbe, disabled: busy("probe") },
           { label: "更新发货资料", onSelect: actions.onSyncBase, disabled: busy("sync-base") },
-          { label: "查看店铺资料", onSelect: actions.onViewBase, separatorBefore: true },
+          { label: "店铺资料", onSelect: actions.onViewBase, separatorBefore: true },
           { label: "编辑店铺", onSelect: actions.onEdit },
-          { label: row.status === "disabled" ? "启用店铺" : "停用店铺", onSelect: actions.onToggle },
+          { label: row.status === "disabled" ? "启用店铺" : "停用店铺", onSelect: actions.onToggle, disabled: busy("toggle") },
         ]}
       />
     </div>

@@ -6,15 +6,14 @@ export type WarehousesResponse = components["schemas"]["WarehousesResponse"];
 export type WarehouseItem = components["schemas"]["WarehouseItem"];
 
 export const PAGE_SIZE = 50;
-export const STOCK_VIEWS = [
-  { value: "all", label: "全部库存" },
-  { value: "alarm", label: "只看预警" },
+/** 可排序的列，与后端 /api/catalog/stock 的 sort 白名单一致；默认按总库存升序（缺货的在前）。 */
+export const STOCK_SORT_KEYS = [
+  "shop_name", "total_stock_num", "spot_stock_num", "future_stock_num",
+  "total_occupied_stock_num", "total_unoccupied_stock_num", "status", "synced_at",
 ] as const;
-export type StockView = (typeof STOCK_VIEWS)[number]["value"];
-
-export function isStockView(value: string | null): value is StockView {
-  return value === "all" || value === "alarm";
-}
+/** 计数卡快捷筛选，与后端 /api/catalog/stock 的 quick 白名单一致；「商品数」卡 = 清除筛选。 */
+export const STOCK_QUICK_KEYS = ["alarm", "sold_out"] as const;
+export type StockQuick = (typeof STOCK_QUICK_KEYS)[number];
 
 export type StockBadgeTone = "success" | "warning" | "danger" | "neutral";
 
@@ -38,8 +37,4 @@ export function groupWarehouses(resp: WarehousesResponse): ShopWarehouses[] {
     items: shop.items ?? [],
     error: shop.source === "upstream" ? null : shop.error ?? "原因未知",
   }));
-}
-
-export function pageCount(total: number): number {
-  return Math.max(1, Math.ceil(total / PAGE_SIZE));
 }

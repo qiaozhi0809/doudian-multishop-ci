@@ -6,18 +6,22 @@ import { api } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
 import { metricQueries } from "@/lib/metric-queries";
 import { queryKeys } from "@/lib/query-keys";
+import { useListSort, useSettledSort } from "@/lib/use-list-sort";
+import { useQuickFilter } from "@/lib/use-quick-filter";
 import { useShops } from "@/lib/use-shops";
-import { PAGE_SIZE } from "../logic/catalog-page";
+import { PAGE_SIZE, PRODUCT_QUICK_KEYS, PRODUCT_SORT_KEYS } from "../logic/catalog-page";
 import { useCatalogSync } from "./use-catalog-sync";
 
 type PageData = components["schemas"]["ProductPage"];
 type GroupsResponse = components["schemas"]["ProductGroupsResponse"];
 
-/** 商品页数据：关键字与页码在 URL 里；计数与分组来自上游（每店一请求，失败隔离）。 */
+/** 商品页数据：快捷筛选、关键字、排序与页码在 URL 里（可以同时生效）；计数与分组来自上游（每店一请求，失败隔离）。 */
 export function useCatalogPage() {
   const shops = useShops();
   const { shopIds } = useShopFilter();
   const [params, setParams] = useSearchParams();
+  const sorting = useListSort(PRODUCT_SORT_KEYS);
+  const quick = useQuickFilter(PRODUCT_QUICK_KEYS);
 
   const keyword = params.get("q") ?? "";
   const rawPage = Number(params.get("page"));
@@ -47,10 +51,10 @@ export function useCatalogPage() {
   );
 
   const list = useQuery({
-    queryKey: queryKeys.products(shopIds, { keyword: keyword || undefined, page }),
+    queryKey: queryKeys.products(shopIds, { keyword: keyword || undefined, page, ...sorting.query, ...quick.query }),
     queryFn: () =>
       api.get<PageData>("/api/catalog/products", {
-        shop_ids: shopIds, keyword: keyword || undefined, page, page_size: PAGE_SIZE,
+        shop_ids: shopIds, keyword: keyword || undefined, page, page_size: PAGE_SIZE, ...sorting.query, ...quick.query,
       }),
     placeholderData: keepPreviousData,
   });
@@ -68,6 +72,7 @@ export function useCatalogPage() {
     [shops.data],
   );
 
+  const shownSort = useSettledSort(sorting.sort, !list.isPlaceholderData);
   return {
     shopsState: shops.isLoading
       ? ("loading" as const)
@@ -82,6 +87,9 @@ export function useCatalogPage() {
     setKeyword,
     page,
     setPage,
+    sort: shownSort,
+    quick,
+    setSort: sorting.setSort,
     list,
     counts,
     groups,

@@ -1,0 +1,13 @@
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 与 Arc Input 的字段错误同一排版：Select 没有 error 态，在下方补一行红字 */
+.error {
+  display: block;
+  padding-top: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--danger);
+}

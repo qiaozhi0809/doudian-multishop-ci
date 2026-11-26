@@ -1,4 +1,5 @@
 import type { components } from "@/lib/api-types";
+import { EMPTY_TEXT } from "@/lib/empty-text";
 
 type OrderRow = components["schemas"]["OrderRow"];
 export type LocalStatus = OrderRow["status"];
@@ -30,7 +31,7 @@ export const isLocalStatus = (value: string | null): value is LocalStatus =>
 
 /** 平台状态：已确认的状态码给出文字，其余保留原始整数。 */
 export function platformStatusText(code: number | null): string {
-  if (code === null) return "暂无";
+  if (code === null) return EMPTY_TEXT;
   const known: Record<number, string> = { 2: "待发货", 3: "已发货", 4: "已关闭", 5: "已完成" };
   return known[code] ?? `状态 ${code}`;
 }

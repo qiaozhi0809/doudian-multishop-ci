@@ -94,7 +94,9 @@ describe("添加店铺的出口区", () => {
     await user.click(screen.getByRole("button", { name: "添加店铺" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("button", { name: "直连" })).toBeDisabled();
-    expect(within(dialog).getByText("已有店铺「直连店」使用直连，最多一家店可直连")).toBeInTheDocument();
+    // 原因放在悬停提示里，不再单独占一条提示条
+    expect(within(dialog).getByTitle("已有店铺「直连店」使用直连，最多一家店可直连")).toBeInTheDocument();
+    expect(within(dialog).queryByText("已有店铺「直连店」使用直连，最多一家店可直连")).toBeNull();
   });
 
   it("直连店已停用时直连可选", async () => {
@@ -106,6 +108,24 @@ describe("添加店铺的出口区", () => {
     await screen.findByRole("table");
     await user.click(screen.getByRole("button", { name: "添加店铺" }));
     expect(within(await screen.findByRole("dialog")).getByRole("button", { name: "直连" })).toBeEnabled();
+  });
+  it("店铺ID 写进 platform_shop_id；不是数字时就地报错、不发请求", async () => {
+    const fetchMock = mockPageFetch({
+      "GET /api/shops": jsonResponse([]),
+      "POST /api/shops": jsonResponse(makeShop({ id: 9, name: "新店" }), 201),
+    });
+    const { user, dialog } = await openAdd();
+    expect(within(dialog).getByRole("button", { name: "取消" })).toBeInTheDocument();
+    const idInput = within(dialog).getByLabelText(/店铺ID/);
+    await user.type(idInput, "12a");
+    await user.click(within(dialog).getByRole("button", { name: "添加店铺" }));
+    expect(await within(dialog).findByText("店铺ID是 1 到 20 位数字")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+    await user.clear(idInput);
+    await user.type(idInput, "100000001");
+    await user.click(within(dialog).getByRole("button", { name: "添加店铺" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(true));
+    expect(postBody(fetchMock)).toEqual({ name: "新店", platform_shop_id: "100000001" });
   });
 });
 
@@ -130,4 +150,5 @@ describe("设置出口对话框的池入口", () => {
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")!;
     expect(JSON.parse(String(put[1]?.body))).toEqual({ mode: "proxy", pool_id: 5 });
   });
+
 });

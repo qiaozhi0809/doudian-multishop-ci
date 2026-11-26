@@ -1,13 +1,19 @@
 """店铺接口的请求与响应模型（前端类型由此生成）。"""
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 ShopStatus = Literal["active", "needs_login", "disabled"]
 Health = Literal["healthy", "expiring", "expired"]
 EgressMode = Literal["direct", "proxy"]
 EgressState = Literal["unchecked", "ok", "unreachable", "changed", "duplicate"]
+
+# 手工维护字段：这里只去首尾空白，格式由服务层按 domain/shop_profile_rules 校验，
+# 这样 422 的 message 是具体的中文原因（schema 的 pattern 报错只有笼统提示）。空串 = 清空。
+PlatformShopId = Annotated[str, StringConstraints(strip_whitespace=True)]
+BankName = Annotated[str, StringConstraints(strip_whitespace=True)]
+BankTail = Annotated[str, StringConstraints(strip_whitespace=True)]
 
 
 class ShopRow(BaseModel):
@@ -37,7 +43,9 @@ class ShopRow(BaseModel):
 class ShopCreate(BaseModel):
     name: str
     entity: str | None = None
-    shop_no: str | None = None
+    shop_no: str | None = Field(
+        default=None, description="旧字段，界面已不用；店铺ID 用 platform_shop_id")
+    platform_shop_id: PlatformShopId | None = None
     egress: "EgressRequest | None" = None
 
 
@@ -47,9 +55,9 @@ class ShopPatch(BaseModel):
     channel: Literal["protocol", "browser"] | None = None
     enabled: bool | None = None
     # 平台侧无稳定接口，允许手工维护（迁移 0010）
-    platform_shop_id: str | None = None
-    bank_name: str | None = None
-    bank_tail: str | None = None
+    platform_shop_id: PlatformShopId | None = None
+    bank_name: BankName | None = None
+    bank_tail: BankTail | None = None
 
 
 class EgressRequest(BaseModel):

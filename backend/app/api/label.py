@@ -15,6 +15,7 @@ from app.api.label_schemas import (
     VoidPreviewRequest,
     VoidPreviewResponse,
 )
+from app.api.list_sort import LabelPoolSort, SortOrder
 from app.api.params import parse_shop_ids
 from app.service.label_preview import MODE_FETCH_AND_SHIP, MODE_OBTAIN, MODE_VOID
 
@@ -32,10 +33,13 @@ def pool(
     stage: Literal["pending", "labeled"] = "pending",
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    sort: LabelPoolSort | None = None,
+    order: SortOrder = "asc",
 ) -> LabelPoolPage:
+    """默认按支付时间从早到晚；sort 指定白名单字段时按该字段排序后再分页。"""
     state = request.app.state
     ids = state.shop_admin.target_ids(parse_shop_ids(shop_ids))
-    rows, total = state.label_pool.list(ids, stage, page, page_size)
+    rows, total = state.label_pool.list(ids, stage, page, page_size, sort, order)
     return LabelPoolPage(
         items=[LabelOrderRow(**r) for r in rows], total=total, page=page, page_size=page_size
     )

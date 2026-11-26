@@ -3,15 +3,20 @@
 三类信息的渲染方式不同，因此容错策略也不同：
 - 提现卡：支付设置页是服务端渲染，稳定可读
 - 店铺ID：店铺管理页，时有时无（微应用懒挂载）
-- 主体：资质页是微应用，无头下常常不挂载
+- 主体：资质页是微应用，时有时无
+
+浏览器与扫码同一套环境（有头、viewport 跟随真实窗口、同一指纹种子），只是窗口放到
+屏幕外：无头模式的窗口/屏幕尺寸、GPU 路径都和有头不同，同一账号同一 IP 会出现两套设备特征。
 
 任何一项读不到都只是少存一个字段，不影响其它项。
 """
 
 import asyncio
-import os
 import re
 from pathlib import Path
+
+from app.adapter.browser.cloak_launch import launch_cloak
+from app.adapter.browser.login import playwright_proxy
 
 PAYMENT_URL = "https://fxg.jinritemai.com/ffa/ecom/merchant/payment-settings"
 SHOP_URL = "https://fxg.jinritemai.com/ffa/grs-new/qualification/common-tools"
@@ -69,19 +74,12 @@ def parse_entity(text: str) -> dict[str, str]:
     return {"entity": name} if name else {}
 
 
-async def scrape_platform_info(profile_dir: Path, proxy: object | None) -> dict[str, str]:
-    """依次尝试三类信息，返回读到的字段；失败项直接缺席。"""
-    from cloakbrowser import launch_persistent_context_async
+async def scrape_platform_info(profile_dir: Path, proxy: str | None) -> dict[str, str]:
+    """依次尝试三类信息，返回读到的字段；失败项直接缺席。
 
-    from app.shared.cloak import cloak_launch_args, get_or_create_seed
-
-    ctx = await launch_persistent_context_async(
-        os.fspath(profile_dir),
-        headless=True,
-        viewport=None,
-        proxy=proxy,
-        args=cloak_launch_args(get_or_create_seed(profile_dir)),
-    )
+    proxy 是该店出口代理 URL（直连为 None）；浏览器不可用时抛 CloakUnavailable。
+    """
+    ctx = await launch_cloak(profile_dir, playwright_proxy(proxy), offscreen=True)
     info: dict[str, str] = {}
     try:
         page = ctx.pages[0] if ctx.pages else await ctx.new_page()

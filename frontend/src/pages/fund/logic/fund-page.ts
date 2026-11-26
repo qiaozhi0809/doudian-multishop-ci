@@ -1,5 +1,6 @@
 import type { components } from "@/lib/api-types";
 import { formatCents } from "@/lib/money-format";
+import { EMPTY_TEXT } from "@/lib/empty-text";
 
 export type FundSummary = components["schemas"]["FundSummary"];
 export type ShopFundSummary = components["schemas"]["ShopFundSummary"];
@@ -10,6 +11,11 @@ export type BillsResponse = components["schemas"]["BillsResponse"];
 export type ShopBills = components["schemas"]["ShopBills"];
 
 export const UNSETTLED_PAGE_SIZE = 50;
+/** 待结算可排序的列，与后端 /api/fund/unsettled 的 sort 白名单一致；默认最近同步进来的在前。 */
+export const UNSETTLED_SORT_KEYS = [
+  "shop_name", "income_amount_cents", "platform_service_fee_cents",
+  "unsettled_amount_cents", "ecom_order_status", "synced_at",
+] as const;
 export const FUND_TABS = [
   { value: "unsettled", label: "待结算" },
   { value: "margin", label: "保证金" },
@@ -42,7 +48,7 @@ export function billSummary(item: BillItem): string {
     const value = raw[key];
     if (typeof value === "string" && value) return value;
   }
-  return "—";
+  return EMPTY_TEXT;
 }
 
 export function hasPendingAmount(shops: ShopBills[]): boolean {
@@ -55,8 +61,15 @@ export const MARGIN_LEVELS: Record<string, string> = {
   high: "高",
 };
 
+/** 「等级」列按显示顺序排：低 → 中 → 高，未知等级在后，空值最后。 */
+export function marginLevelRank(level: string | null): number | null {
+  if (!level) return null;
+  const index = Object.keys(MARGIN_LEVELS).indexOf(level);
+  return index === -1 ? Object.keys(MARGIN_LEVELS).length : index;
+}
+
 export function marginLevelText(level: string | null): string {
-  if (!level) return "暂无";
+  if (!level) return EMPTY_TEXT;
   return MARGIN_LEVELS[level] ?? level;
 }
 
@@ -66,8 +79,4 @@ export function settlementDelayText(days: number | null | undefined): string {
 
 export function settledMarginTotal(summary: FundSummary): number {
   return summary.shops.reduce((sum, shop) => sum + (shop.margin_balance_cents ?? 0), 0);
-}
-
-export function unsettledPageCount(total: number): number {
-  return Math.max(1, Math.ceil(total / UNSETTLED_PAGE_SIZE));
 }

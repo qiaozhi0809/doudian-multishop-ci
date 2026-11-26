@@ -34,7 +34,7 @@ D:\doudian-multishop\            ← 安装目录（可任意）
 | Python | 3.12.x（64 位） | `python --version`；安装时勾选 Add to PATH |
 | 磁盘 | ≥ 5 GB 可用（数据库 + 浏览器 profile + 备份） | 资源管理器 |
 | 网络 | 能访问 `fxg.jinritemai.com`；代理出口按店准备 | 浏览器打开抖店后台 |
-| 下载源可达 | 能直连 `https://cloakbrowser.dev`（失败会自动回退 GitHub Releases）下载约 200MB；或已预置 `<data_dir>\browser\chromium-146.*\` | 第 3 节步骤 2 的预下载命令成功输出二进制路径 |
+| 下载源可达 | 能直连 `https://cloakbrowser.dev`（失败会自动回退 GitHub Releases）下载约 200MB；或已预置 `<安装目录>\backend\browser\chromium-146.*\` | 第 3 节步骤 2 的预下载命令成功输出二进制路径 |
 | 抖店官方打印组件 | 已安装并**保持运行**（`wss://localhost:13999`） | `netstat -ano \| findstr 13999` 有 LISTENING |
 | 打印机 | 系统打印机已添加、能打测试页 | 打印机设置 |
 | 时间 | 与网络时间同步（对账 / 超时告警依赖系统时间） | `w32tm /query /status` |
@@ -52,6 +52,8 @@ D:\doudian-multishop\            ← 安装目录（可任意）
    .\.venv\Scripts\python.exe -m pip install --upgrade pip
    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
    # 预下载 CloakBrowser 定制浏览器（约 200MB，直连下载，不走店铺代理）
+   # 必须关闭自动更新：否则库会在后台下载新版并写 latest_version_* 标记，运行时改用未验证的新版
+   $env:CLOAKBROWSER_AUTO_UPDATE = "false"
    $env:CLOAKBROWSER_CACHE_DIR = "$PWD\browser"
    .\.venv\Scripts\python.exe -c "import cloakbrowser; print(cloakbrowser.ensure_binary())"
    ```
@@ -59,7 +61,7 @@ D:\doudian-multishop\            ← 安装目录（可任意）
    `requirements.txt` 是 `uv export` 生成的**锁定版本**清单，不安装开发依赖。
    开发机也可以用 `uv sync`，见 [engineering-rules.md](../engineering-rules.md)。
 
-   预下载输出应为 `...\browser\chromium-146.*\chrome.exe`。这一步失败说明出单机无法直连外网——请在能联网的机器上执行同样命令，再把整个 `browser` 目录拷过来。
+   预下载输出应为 `...\browser\chromium-146.*\chrome.exe`。这一步失败说明出单机无法直连外网——请在能联网的机器上执行同样命令，再把整个 `browser` 目录拷过来。程序运行时**不会**自动下载浏览器：二进制不在时扫码与同步收款信息直接提示「浏览器未预下载」。
 
 3. 前端产物：发布包里已带 `frontend\dist\`。若没有（例如只拿了源码），在开发机执行
    `cd frontend && pnpm install && pnpm build`，再把 `frontend\dist` 整个拷过来。
@@ -183,7 +185,7 @@ D:\doudian-multishop\            ← 安装目录（可任意）
 |---|---|
 | 双击 start.bat 没反应 | 看 `logs\app.err.log`；多半是没建 venv（§3）或端口被占 |
 | 打印按钮置灰 | 打印组件未启动或没有默认打印机；`netstat -ano \| findstr 13999` |
-| 扫码登录打不开浏览器 | CloakBrowser 二进制未下载成功（检查 `<data_dir>\browser\`）；或该店 profile 目录被占用（先停止其他实例）；若 `DD_USE_CLOAK=false` 则检查系统 Edge 是否安装 |
+| 扫码登录打不开浏览器 | CloakBrowser 二进制未预下载（提示「浏览器未预下载」；检查 `<安装目录>\backend\browser\`）；或该店 profile 目录被占用（先停止其他实例）；若 `DD_USE_CLOAK=false` 则检查系统 Edge 是否安装 |
 | 所有店都提示出口不通 | 代理失效（`DD_EGRESS_ECHO_URL` 不可达）；恢复后重新「出口检查」 |
 | 某店提示需要重新登录 | 会话过期（约 60 天）或平台踢出；顶栏「重登」重新扫码即可，其他店不受影响 |
 | 任务中心一直「进行中」 | 看日志；进程重启后未完成的写任务会转「待核实」，到单据里核对后重试 |

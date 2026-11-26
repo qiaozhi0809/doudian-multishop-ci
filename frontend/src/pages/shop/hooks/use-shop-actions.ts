@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ApiError, api } from "@/lib/api-client";
+import { useNoticeQueue, type QueuedNotice } from "@/components/custom/notice/use-notice-queue";
+import type { ActionResult } from "@/lib/action-result";
+import { api, errorText } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
 import { queryKeys } from "@/lib/query-keys";
 import { useEventSubscription } from "@/lib/use-events";
@@ -9,40 +11,27 @@ import { egressCheckResult } from "../logic/egress-check-result";
 
 type Schemas = components["schemas"];
 type EgressRequest = Schemas["EgressRequest"];
-
-export interface Notice {
-  id: number;
-  /** 同一个 key 的通知会互相替换（如某店的「等待扫码」被「登录成功」取代） */
-  key: string;
-  tone: "info" | "success" | "warning" | "danger";
-  text: string;
-}
+export type ShopPatch = Schemas["ShopPatch"];
+export type Notice = QueuedNotice;
+type Outcome = { tone: Notice["tone"]; text: string };
 
 const LOGIN_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
-const FALLBACK_ERROR = "请求失败，请确认本地服务正常后重试";
-const errorText = (e: unknown) => (e instanceof ApiError ? e.message : FALLBACK_ERROR);
+const OK: ActionResult = { ok: true };
 
-/** 店铺页的各项操作：结果以页面内通知呈现（不只靠 toast）；扫码登录有等待态与超时。 */
+/** 店铺页的各项操作：结果交给右下角浮动提示；对话框里发起的操作失败时把原因交回对话框就地显示。 */
 export function useShopActions(shops: ShopRow[]) {
   const client = useQueryClient();
-  const [notices, setNotices] = useState<Notice[]>([]);
+  const { notices, notify, dismissNotice } = useNoticeQueue();
   const [pending, setPending] = useState<string[]>([]);
   const [waitingShopIds, setWaiting] = useState<number[]>([]);
   const waitingRef = useRef<number[]>([]);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
-  const nextId = useRef(1);
   const shopsRef = useRef(shops);
   useEffect(() => {
     shopsRef.current = shops;
   });
 
   const nameOf = (id: number) => shopsRef.current.find((s) => s.id === id)?.name ?? `店铺 ${id}`;
-
-  const notify = useCallback((key: string, tone: Notice["tone"], text: string) => {
-    setNotices((prev) => [...prev.filter((n) => n.key !== key), { id: nextId.current++, key, tone, text }]);
-  }, []);
-
-  const dismissNotice = useCallback((id: number) => setNotices((prev) => prev.filter((n) => n.id !== id)), []);
 
   /** 刷新店铺；出口占用的池项也随之变化，一并刷新池。 */
   const refreshShops = () =>
@@ -105,22 +94,37 @@ export function useShopActions(shops: ShopRow[]) {
     });
   };
 
-  /** 通用：调用接口，成功给出 text（可含后续刷新），失败显示原因。 */
-  const run = async <T,>(action: string, id: number, call: () => Promise<T>, onOk: (r: T) => { tone: Notice["tone"]; text: string }) => {
-    await track(`${action}:${id}`, async () => {
+  /**
+   * 通用：调用接口，成功发提示并刷新店铺；失败时 inline=false 发提示，
+   * inline=true（对话框里发起）只把原因交回去，由对话框就地显示。
+   */
+  const run = async <T,>(
+    action: string,
+    id: number,
+    call: () => Promise<T>,
+    onOk: (r: T) => Outcome,
+    inline = false,
+  ): Promise<ActionResult> =>
+    track(`${action}:${id}`, async () => {
+      const key = `${action}:${id}`;
       try {
         const result = await call();
         const { tone, text } = onOk(result);
-        notify(`${action}:${id}`, tone, `${nameOf(id)}：${text}`);
-        await refreshShops();
+        // 改了店名时用新名字提示（返回的是 ShopRow 就以它为准）
+        const fresh = result as { id?: unknown; name?: unknown } | null;
+        const name = fresh && fresh.id === id && typeof fresh.name === "string" ? fresh.name : nameOf(id);
+        notify(key, tone, `${name}：${text}`);
       } catch (e) {
-        notify(`${action}:${id}`, "danger", `${nameOf(id)}：${errorText(e)}`);
+        if (!inline) notify(key, "danger", `${nameOf(id)}：${errorText(e)}`);
+        return { ok: false as const, error: errorText(e) };
       }
+      await refreshShops();
+      return OK;
     });
-  };
 
-  const probe = (id: number) =>
-    run("probe", id, () => api.post<ShopRow>(`/api/shops/${id}/probe`), () => ({ tone: "success", text: "登录状态正常" }));
+  const done = (text: string) => (): Outcome => ({ tone: "success", text });
+
+  const probe = (id: number) => run("probe", id, () => api.post<ShopRow>(`/api/shops/${id}/probe`), done("登录状态正常"));
 
   const syncBase = (id: number) =>
     run("sync-base", id, () => api.post<Schemas["BaseSummary"]>(`/api/shops/${id}/sync-base`), (s) => ({
@@ -138,21 +142,36 @@ export function useShopActions(shops: ShopRow[]) {
       egressCheckResult,
     );
 
-  const resume = (id: number) =>
-    run("resume", id, () => api.post<ShopRow>(`/api/shops/${id}/resume`), () => ({ tone: "success", text: "已解除风控暂停" }));
+  /** 恢复风控暂停：在确认对话框里发起，失败留在对话框。 */
+  const resume = (id: number) => run("resume", id, () => api.post<ShopRow>(`/api/shops/${id}/resume`), done("已解除风控暂停"), true);
 
-  /** 设置出口：失败原因交给对话框就地显示，不进通知。 */
-  const setEgress = async (id: number, request: EgressRequest): Promise<{ ok: boolean; error: string | null }> =>
-    track(`egress:${id}`, async () => {
-      try {
-        await api.put<ShopRow>(`/api/shops/${id}/egress`, request);
-      } catch (e) {
-        return { ok: false, error: errorText(e) };
-      }
-      notify(`egress:${id}`, "success", `${nameOf(id)}：出口已保存，请检查出口`);
-      await refreshShops();
-      return { ok: true, error: null };
-    });
+  /** 设置出口：失败原因交给对话框就地显示，不进提示。 */
+  const setEgress = (id: number, request: EgressRequest) =>
+    run("egress", id, () => api.put<ShopRow>(`/api/shops/${id}/egress`, request), done("出口已保存"), true);
+
+  /** 各列表行里都带店铺名（也按它排序）：改名后一并刷新。 */
+  const refreshNamedLists = () =>
+    Promise.all(
+      [queryKeys.ordersRoot(), queryKeys.labelPoolRoot(), queryKeys.aftersaleRoot(), queryKeys.productsRoot(),
+        queryKeys.stockRoot(), queryKeys.fundRoot(), queryKeys.reconcileRoot()].map((queryKey) =>
+        client.invalidateQueries({ queryKey }),
+      ),
+    );
+
+  /** 改本地别名与手工维护字段：PATCH /api/shops/{id}。 */
+  const updateShop = async (id: number, patch: ShopPatch) => {
+    const result = await run("edit", id, () => api.patch<ShopRow>(`/api/shops/${id}`, patch), done("已保存"), true);
+    if (result.ok && patch.name !== undefined) await refreshNamedLists();
+    return result;
+  };
+
+  /** 停用 / 启用：后端用 enabled 表达，重新启用时若出口被占用会被拒绝。inline=true 时从确认对话框发起。 */
+  const setEnabled = (id: number, enabled: boolean, inline = false) =>
+    run("toggle", id, () => api.patch<ShopRow>(`/api/shops/${id}`, { enabled }), done(enabled ? "已启用" : "已停用"), inline);
+
+  /** 手动读取收款信息：平台只把它渲染在页面里，没有接口，失败可手填。 */
+  const scrapeCard = (id: number) =>
+    run("scrape", id, () => api.post<ShopRow>(`/api/shops/${id}/profile/scrape`), done("收款信息已同步"));
 
   const addShop = async (
     input: Schemas["ShopCreate"],
@@ -160,7 +179,7 @@ export function useShopActions(shops: ShopRow[]) {
     track("add", async () => {
       try {
         const shop = await api.post<ShopRow>("/api/shops", input);
-        notify(`add:${shop.id}`, "success", `已添加「${shop.name}」，请先设置出口并检查通过，再扫码登录`);
+        notify(`add:${shop.id}`, "success", `已添加「${shop.name}」`);
         await refreshShops();
         return { ok: true as const, shop };
       } catch (e) {
@@ -168,57 +187,8 @@ export function useShopActions(shops: ShopRow[]) {
       }
     });
 
-  /** 改本地别名与手工维护字段：PATCH /api/shops/{id}。 */
-  const updateShop = async (
-    id: number,
-    patch: {
-      name: string;
-      entity: string | null;
-      platform_shop_id: string | null;
-      bank_name: string | null;
-      bank_tail: string | null;
-    },
-  ): Promise<{ ok: true; error: null } | { ok: false; error: string }> =>
-    track(`edit:${id}`, async () => {
-      try {
-        await api.patch<ShopRow>(`/api/shops/${id}`, patch);
-        notify(`edit:${id}`, "success", `${nameOf(id)}：已保存`);
-        await refreshShops();
-        return { ok: true as const, error: null };
-      } catch (e) {
-        return { ok: false as const, error: errorText(e) };
-      }
-    });
-
-  /** 停用 / 启用：后端用 enabled 表达，重新启用时若出口被占用会被拒绝。 */
-  const toggleEnabled = async (shop: ShopRow): Promise<void> => {
-    const disable = shop.status !== "disabled";
-    await track(`toggle:${shop.id}`, async () => {
-      try {
-        await api.patch<ShopRow>(`/api/shops/${shop.id}`, { enabled: !disable });
-        notify(`toggle:${shop.id}`, "success", `${shop.name}：已${disable ? "停用" : "启用"}`);
-        await refreshShops();
-      } catch (e) {
-        notify(`toggle:${shop.id}`, "danger", `${shop.name}：${errorText(e)}`);
-      }
-    });
-  };
-
-  /** 手动读取收款信息：平台只把它渲染在页面里，没有接口，失败可手填。 */
-  const scrapeCard = async (id: number): Promise<void> => {
-    await track(`scrape:${id}`, async () => {
-      try {
-        await api.post<ShopRow>(`/api/shops/${id}/profile/scrape`);
-        notify(`scrape:${id}`, "success", `${nameOf(id)}：收款信息已同步`);
-        await refreshShops();
-      } catch (e) {
-        notify(`scrape:${id}`, "danger", `${nameOf(id)}：${errorText(e)}`);
-      }
-    });
-  };
-
   return {
     notices, dismissNotice, pending, waitingShopIds, login, probe, syncBase, checkEgress,
-    resume, setEgress, addShop, updateShop, toggleEnabled, scrapeCard,
+    resume, setEgress, addShop, updateShop, setEnabled, scrapeCard,
   };
 }

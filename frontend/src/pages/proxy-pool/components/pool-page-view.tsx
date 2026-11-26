@@ -2,6 +2,7 @@ import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { NoticeList } from "@/components/custom/notice/notice-list";
 import type { PoolPage } from "../hooks/use-pool-page";
 import styles from "../proxy-pool-page.module.css";
 import { DeleteDialog } from "./delete-dialog";
@@ -18,13 +19,7 @@ export function PoolPageView({ page }: { page: PoolPage }) {
   return (
     <div className={styles.page}>
       {pool.items.length > 0 && <div className={styles.toolbar}>{importButton}</div>}
-      {page.notices.length > 0 && (
-        <div className={styles.notices} role="status" aria-live="polite">
-          {page.notices.map((n) => (
-            <Alert key={n.id} tone={n.tone} title={n.text} onDismiss={() => page.dismissNotice(n.id)} />
-          ))}
-        </div>
-      )}
+      <NoticeList notices={page.notices} onDismiss={page.dismissNotice} />
       {pool.loading && <Skeleton label="正在读取代理池" lines={5} />}
       {pool.failed && (
         <div className={styles.page}>

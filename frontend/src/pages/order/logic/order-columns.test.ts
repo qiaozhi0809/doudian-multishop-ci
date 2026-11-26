@@ -1,4 +1,4 @@
-import { itemSummary, localStatusBadge, pageCount, platformStatusText } from "./order-columns";
+import { itemSummary, localStatusBadge, platformStatusText } from "./order-columns";
 
 const item = (name: string | null) => ({
   sku_order_id: null, product_id: null, product_name: name, sku_spec: null, quantity: 1, price_cents: null,
@@ -41,15 +41,5 @@ describe("platformStatusText", () => {
     expect(platformStatusText(5)).toBe("已完成");
     expect(platformStatusText(99)).toBe("状态 99");
     expect(platformStatusText(null)).toBe("暂无");
-  });
-});
-
-describe("pageCount", () => {
-  it("每页 50，向上取整，没有数据为 0", () => {
-    expect(pageCount(0)).toBe(0);
-    expect(pageCount(1)).toBe(1);
-    expect(pageCount(50)).toBe(1);
-    expect(pageCount(51)).toBe(2);
-    expect(pageCount(120)).toBe(3);
   });
 });

@@ -1,4 +1,4 @@
-import { ApiError, api, setUnauthorizedHandler } from "./api-client";
+import { ApiError, FALLBACK_ERROR, api, errorText, setUnauthorizedHandler } from "./api-client";
 
 function mockFetch(response: Response | Error) {
   const fn = vi.fn<typeof fetch>(async () => {
@@ -129,5 +129,12 @@ describe("api client", () => {
       await failure(api.get("/api/shops"));
       expect(handler).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("errorText", () => {
+  it("ApiError 用后端文案，其他异常用兜底文案", () => {
+    expect(errorText(new ApiError({ type: "X", message: "端口必须是数字", status: 400 }))).toBe("端口必须是数字");
+    expect(errorText(new Error("boom"))).toBe(FALLBACK_ERROR);
   });
 });

@@ -1,6 +1,10 @@
-import { aggregateAftersaleCounts, deadlineInfo, parseStatus } from "./aftersale-page";
+import { aggregateAftersaleCounts, deadlineInfo, parseStatus, typeLabel } from "./aftersale-page";
 
 describe("aftersale logic", () => {
+  it("售后类型缺失显示暂无", () => {
+    expect(typeLabel({ type: null, display: { type_text: null } } as never)).toBe("暂无");
+  });
+
   it("状态筛选只接受正整数", () => {
     expect(parseStatus("13")).toBe(13);
     expect(parseStatus(null)).toBeUndefined();

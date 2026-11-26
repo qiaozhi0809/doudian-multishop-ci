@@ -1,10 +1,16 @@
 import type { components } from "@/lib/api-types";
+import { EMPTY_TEXT } from "@/lib/empty-text";
 
 export type AftersaleRow = components["schemas"]["AftersaleRow"];
 export type AftersaleStatusOption = components["schemas"]["AftersaleStatusOption"];
 export type AftersaleCountsResponse = components["schemas"]["AftersaleCountsResponse"];
 
 export const PAGE_SIZE = 50;
+/** 可排序的列，与后端 /api/aftersale（含 /todo）的 sort 白名单一致；默认：待办按处理截止升序，全部按申请时间倒序。 */
+export const AFTERSALE_SORT_KEYS = ["shop_name", "type", "status", "refund_amount_cents", "apply_time", "status_deadline"] as const;
+/** 计数卡快捷筛选，与后端 /api/aftersale（含 /todo）的 quick 白名单一致：待办 / 待审核 / 临近超时。 */
+export const AFTERSALE_QUICK_KEYS = ["pending", "audit", "due_soon"] as const;
+export type AftersaleQuick = (typeof AFTERSALE_QUICK_KEYS)[number];
 export const VIEW_OPTIONS = [
   { value: "todo", label: "待办队列" },
   { value: "all", label: "全部售后" },
@@ -79,9 +85,5 @@ export function statusLabel(row: AftersaleRow): string {
 }
 
 export function typeLabel(row: AftersaleRow): string {
-  return row.display.type_text ?? (row.type === null ? "—" : `类型 ${row.type}`);
-}
-
-export function pageCount(total: number): number {
-  return Math.max(1, Math.ceil(total / PAGE_SIZE));
+  return row.display.type_text ?? (row.type === null ? EMPTY_TEXT : `类型 ${row.type}`);
 }

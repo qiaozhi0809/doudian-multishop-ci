@@ -7,6 +7,9 @@
 
 - 前缀 `/api`，JSON；金额字段统一以 `_cents` 结尾；时间为 ISO-8601 字符串。
 - 分页：本地 API 统一 `page`（从 1 开始）+ `page_size`；抖店各接口的 0/1 基准差异只在 adapter 里处理，不外泄。
+- 排序：分页列表统一 `sort=<字段>&order=asc|desc`（`order` 省略为 `asc`），在 SQL 里排好序再分页；字段是白名单（`app/api/list_sort.py`，非白名单 422），空值不论升降都排最后，同值按 id 同向兜底。省略 `sort` 用各列表的默认排序：订单按支付时间倒序、打单发货按支付时间正序、售后待办按处理截止正序 / 全部按申请时间倒序、商品按销量倒序、库存按总库存正序、待结算与发货异常按入库顺序倒序。适用：`/api/orders`、`/api/labels/pool`、`/api/aftersale`（含 `/todo`）、`/api/catalog/products`、`/api/catalog/stock`、`/api/fund/unsettled`、`/api/reconcile/findings`。
+- 状态列排序按界面显示的顺序，不按内部代码的字典序（`store/sorting.py` 的 `rank_of`）：本地订单状态 待处理 → 待打单 → 已打单 → 已打印 → 已发货 → 异常 → 已取消 → 已关闭；平台订单状态 待发货 → 已发货 → 已完成 → 已关闭（未确认的码在后）；商品 在售 → 草稿 → 审核中 → 售罄 → 未通过 → 禁售 / 下架（`domain/product_status.py`）；库存 正常 → 预警 → 售罄；发货异常 未处理 → 已处理、异常类型按定义顺序。售后的状态 / 类型平台未公开数字取值，按显示的平台文案排（同名挨在一起）。
+- 快捷筛选（计数卡）：`quick=<键>`，白名单（`app/api/list_sort.py` 的 `*Quick`，非白名单 422），在 SQL 里筛完再分页，可与排序、关键字、其他筛选同时用。`/api/orders`：`stock_up` 平台待发货、`exp_ship` 24 小时内到承诺发货时间、`ship_delay` 已过承诺发货时间、`in_aftersale` 本地有仍在流转的售后单；`/api/aftersale`（含 `/todo`）：`pending` 仍在流转、`audit` 报文里有 `*_audit` 操作按钮、`due_soon` 24 小时内到处理截止；`/api/catalog/products`：`onsale` / `draft` / `audit` / `sell_out_new` / `unpass` / `forbidden`（按条目 `tab` 归类：中文文案如「售卖中」「已下架」、英文代码如 `onSale`、新旧别名都归到同一项）；`/api/catalog/stock`：`alarm` 预警、`sold_out` 总库存为 0。计数卡是平台口径，列表是本地快照，两边数字可能不完全一致。
 - 多店查询用 `shop_ids` 参数（逗号分隔，省略 = 全部启用店铺）。
 - 错误统一结构：`{ "error": { "type": "BizRejected", "message": "...", "shop_id": 1, "detail": {...} } }`。
 - 跨店聚合结果每店附 `source: upstream | local_db` 与失败原因，单店失败不让整个请求失败。
@@ -20,12 +23,12 @@
 | | `POST /api/auth/logout` | 删除当前会话 |
 | | `POST /api/auth/password {old_password, new_password}` | 改密，其他会话失效 |
 | 店铺与会话 | `GET /api/shops` | 店铺列表 + 会话健康 |
-| | `POST /api/shops {name, entity?, shop_no?, egress?}` | 新增店铺（随后发起扫码）；可带 `egress`（同 `PUT .../egress` 请求体），与建店在同一事务内完成，避免半成品 |
+| | `POST /api/shops {name, entity?, platform_shop_id?, egress?}` | 新增店铺（随后发起扫码）；`platform_shop_id` 为平台店铺ID（1~20 位数字），与 `egress`（同 `PUT .../egress` 请求体）都在建店的同一事务内完成，避免半成品。`shop_no` 为旧字段，界面不再使用（保证金 bizId 优先用店铺ID，为空才回退它） |
 | | `POST /api/shops/{id}/login` | 打开浏览器扫码 / 重登 |
 | | `POST /api/shops/{id}/probe` | 立即探测会话 |
 | | `POST /api/shops/{id}/sync-base` | 同步地址 / 模板 / 快递 / 面单账户 |
 | | `GET /api/shops/{id}/base` | 查看本店基础数据 |
-| | `PATCH /api/shops/{id}` | 改名、停用、切换通道、默认打印机 |
+| | `PATCH /api/shops/{id}` | 改名、停用、切换通道、默认打印机；手工维护主体 / 店铺ID（1~20 位数字）/ 开户行（≤ 50 字）/ 卡尾号（4 位数字），省略 = 不改，显式 `null` = 清空，格式不符 422；改动写审计 `shop.profile_edit`（只记字段名） |
 | | `PUT /api/shops/{id}/egress {mode: direct\|proxy, pool_id? \| proxy_url? \| paste?, expires_at?}` | 设置固定出口；`pool_id`（从代理池选）、`proxy_url`、`paste` 三者最多给一个，否则 422；`pool_id` 要求池项存在、未过期、未被别的启用店铺占用；`paste` / `proxy_url` 先按 `identity` 写入代理池再绑定；`paste` 为代理商格式 `IP\|端口\|账号\|密码\|到期日`；只接受 `http(s)://`；修改已登录店铺的出口会使其转 `needs_login`（backend 5.17） |
 | | `POST /api/shops/{id}/egress/check[?accept_change=true]` | 经该出口检查连通并取出口 IP → `{egress_ip, egress_ip_pending, egress_status}`；`accept_change` 用于人工确认 IP 变化 |
 | | `POST /api/shops/{id}/resume` | 解除风控暂停（`paused_reason` 置空） |

@@ -22,6 +22,7 @@ from app.service.shop_cache import ShopTtlCache
 from app.service.shop_fanout import ShopResult, fan_out
 from app.service.shop_runner import ShopRunner
 from app.store import catalog_store, shop_store
+from app.store.sorting import SortOrder
 
 MAX_PAGES = 50
 _ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
@@ -120,11 +121,13 @@ class CatalogService:
 
     def list_products(
         self, shop_ids: Sequence[int], *, tab: str | None = None, keyword: str | None = None,
-        page: int = 1, page_size: int = 50,
+        page: int = 1, page_size: int = 50, sort: str | None = None, order: SortOrder = "asc",
+        quick: str | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         with self._engine.connect() as conn:
             rows, total = catalog_store.list_products(
-                conn, shop_ids, tab=tab, keyword=keyword, page=page, page_size=page_size
+                conn, shop_ids, tab=tab, keyword=keyword, page=page, page_size=page_size,
+                sort=sort, order=order, quick=quick,
             )
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}
         out = []
@@ -209,11 +212,13 @@ class CatalogService:
 
     def list_stock(
         self, shop_ids: Sequence[int], *, alarm_only: bool = False, page: int = 1,
-        page_size: int = 50,
+        page_size: int = 50, sort: str | None = None, order: SortOrder = "asc",
+        quick: str | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         with self._engine.connect() as conn:
             rows, total = catalog_store.list_stock(
-                conn, shop_ids, alarm_only=alarm_only, page=page, page_size=page_size
+                conn, shop_ids, alarm_only=alarm_only, page=page, page_size=page_size,
+                sort=sort, order=order, quick=quick,
             )
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}
         return [{**r, "shop_name": names.get(r["shop_id"], "")} for r in rows], total

@@ -112,8 +112,16 @@
 | 库存管理 | `sortable-data-table` + `usage-meter` + `range-histogram-slider` | [附录 D](../api/catalog.md) |
 | 资金看板 | `billing-overview`（Pro）+ `revenue-explorer`（Pro）+ `wallet-card` | [附录 F](../api/fund.md) |
 | 跨店对账 | `sortable-data-table` + `empty-states`（Free block） | [附录 G](../api/reconcile.md) |
-| 店铺 / 设置 | `settings-page`（Pro）+ `sortable-data-table`；每店显示序号、本地别名、平台店铺名、负责人、出口方式、出口 IP 与出口状态，扫码按钮在出口检查通过前禁用；操作菜单提供「编辑店铺」（改本地别名）与「停用 / 启用」。**不提供删除**（DEC-12）；主体与店铺号平台无可用接口，不展示 | backend 5.1 / 5.17 |
+| 店铺 / 设置 | `settings-page`（Pro）+ `sortable-data-table`；每店显示序号、本地别名、平台店铺名、负责人、出口方式、出口 IP 与出口状态，扫码按钮在出口检查通过前禁用；操作菜单提供「编辑店铺」（本地别名，以及平台没有稳定接口、需手工维护的主体、店铺ID、开户行、卡号尾号；只发送改动过的字段）与「停用 / 启用」；收款信息可一键从平台页面抓取（不合规的值丢弃）。**不提供删除**（DEC-12） | backend 5.1 / 5.17 |
 | 通知 / 异常 | `notification-center` + `toast-stack` | flows 第 8 节 |
+
+**列表约定**（全站一致）：
+
+- 表格用 `components/custom/data-table`：第一列「序号」（翻页连续，按响应里的 `page` 计算），序号 + 主标识列固定在左；窄屏（≤620）折成卡片时隐藏序号，主标识列当卡片标题。列宽用像素声明、`fitColumns` 换成百分比铺满，放不下时整表横向滚动；19 位单号与完整时间列统一用 `ID_COL_WIDTH` / `TIME_COL_WIDTH`，不换行、不重叠。
+- 排序：分页列表的排序在 URL（`sort` / `order`），服务端排好再分页；一次全量返回的表在前端排序，单元格显示组合文案时用列的 `sortValue` 按显示顺序排。新排序的数据回来前表头仍显示上一次的排序（`useSettledSort`）。
+- 快捷筛选：页面顶部的计数卡（`MetricCard` 的 `selected` / `onSelect`）点一下筛下方列表、再点清除，筛选在 URL 的 `quick`，换筛选回到第 1 页（`lib/use-quick-filter`）。不对应筛选的卡（金额、在营店铺等）不可点、没有悬停效果。
+- 分页脚注用 `components/custom/list-pager`：没有数据整条不显示，只有一页时不显示翻页。
+- 对话框：底部 ghost「取消」在左、主按钮在右；请求进行中不能关闭（`Dialog` 的 `busy`），失败原因留在对话框里。
 
 **Arc 使用约定**：Arc 优先于自建；Free 优先于 Pro；同一控件不混用两套库；
 Pro 组件API 以源码导出的 TypeScript interface 为准，不猜 props。

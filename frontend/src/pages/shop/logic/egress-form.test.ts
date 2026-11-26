@@ -1,4 +1,5 @@
-import { buildEgressRequest, emptyEgressForm, type EgressForm } from "./egress-form";
+import { makeShop } from "@/test/fixtures";
+import { buildEgressRequest, directDisabledReason, emptyEgressForm, type EgressForm } from "./egress-form";
 
 const proxyFields = (o: Partial<EgressForm> = {}): EgressForm => ({
   ...emptyEgressForm(),
@@ -78,5 +79,19 @@ describe("buildEgressRequest", () => {
   it("只有账号没有密码时提示", () => {
     const r = buildEgressRequest(proxyFields({ password: "" }));
     expect(r).toMatchObject({ ok: false, errors: { password: expect.any(String) } });
+  });
+});
+
+describe("directDisabledReason", () => {
+  const direct = makeShop({ id: 2, name: "直连店", egress_mode: "direct" });
+
+  it("别的启用店在直连时给出原因", () => {
+    expect(directDisabledReason([direct])).toBe("已有店铺「直连店」使用直连，最多一家店可直连");
+  });
+
+  it("直连店就是自己、或已停用时不限制", () => {
+    expect(directDisabledReason([direct], 2)).toBeNull();
+    expect(directDisabledReason([{ ...direct, status: "disabled" }])).toBeNull();
+    expect(directDisabledReason([makeShop({ id: 3 })])).toBeNull();
   });
 });

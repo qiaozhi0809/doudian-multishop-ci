@@ -1,4 +1,4 @@
-const EMPTY = "暂无";
+import { EMPTY_TEXT as EMPTY } from "@/lib/empty-text";
 
 const bjFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "Asia/Shanghai",

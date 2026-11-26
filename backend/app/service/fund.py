@@ -23,7 +23,8 @@ from app.adapter.doudian.fund_parsers import (
 from app.service.shop_fanout import fan_out
 from app.service.shop_runner import ShopRunner
 from app.shared.time_bj import BEIJING
-from app.store import fund_store, shop_store
+from app.store import fund_store, shop_profile_store, shop_store
+from app.store.sorting import SortOrder
 
 MAX_PAGES = 20
 DEFAULT_BILL_DAYS = 30
@@ -100,10 +101,12 @@ class FundService:
             fund_store.replace_unsettled(conn, shop_id, items, now)
         with self._engine.connect() as conn:
             shop = shop_store.get(conn, shop_id)
-        biz_id = (shop or {}).get("shop_no")
+            profile = shop_profile_store.get(conn, shop_id)
+        # bizId 即平台店铺ID（api/fund.md F.1c）：优先用店铺ID，为空再回退旧字段 shop_no；
+        # 都没有就不发请求
+        biz_id = (profile or {}).get("platform_shop_id") or (shop or {}).get("shop_no")
         if not biz_id:
-            # bizId 来源未在文档中确认，按店铺编号传入；没有编号就不发请求
-            return _SyncData(len(items), False, note="缺少店铺编号，未同步保证金（bizId 待确认）")
+            return _SyncData(len(items), False, note="缺少店铺ID，未同步保证金")
         resp = await client.call(ep.MARGIN_PAYABLE, params=ep.margin_params(str(biz_id)))
         margin = parse_margin(resp)
         with self._engine.begin() as conn:
@@ -152,9 +155,11 @@ class FundService:
 
     def list_unsettled(
         self, shop_ids: Sequence[int], page: int = 1, page_size: int = 50,
+        sort: str | None = None, order: SortOrder = "asc",
     ) -> tuple[list[dict[str, Any]], int]:
         with self._engine.connect() as conn:
-            rows, total = fund_store.list_unsettled(conn, shop_ids, page, page_size)
+            rows, total = fund_store.list_unsettled(
+                conn, shop_ids, page, page_size, sort, order)
             names = {s["id"]: s["name"] for s in shop_store.list(conn)}
         out = []
         for row in rows:

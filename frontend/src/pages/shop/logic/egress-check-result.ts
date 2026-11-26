@@ -1,4 +1,5 @@
 import type { components } from "@/lib/api-types";
+import { EMPTY_TEXT } from "@/lib/empty-text";
 
 type EgressStatusOut = components["schemas"]["EgressStatusOut"];
 
@@ -11,7 +12,7 @@ export interface CheckResult {
 export function egressCheckResult(out: EgressStatusOut): CheckResult {
   switch (out.egress_status) {
     case "ok":
-      return { tone: "success", text: `出口正常 · ${out.egress_ip ?? "暂无"}` };
+      return { tone: "success", text: `出口正常 · ${out.egress_ip ?? EMPTY_TEXT}` };
     case "unreachable":
       return { tone: "danger", text: "出口不通，请检查代理是否到期或更换代理" };
     case "duplicate":

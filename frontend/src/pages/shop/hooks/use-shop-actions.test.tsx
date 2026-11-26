@@ -137,18 +137,44 @@ describe("其他操作", () => {
       "PUT /api/shops/2/egress": errorResponse(422, "InvalidRequest", "端口必须是数字"),
     });
     const { result } = setup();
-    let ok: { ok: boolean; error: string | null } | undefined;
+    let ok: unknown;
     await act(async () => {
       ok = await result.current.setEgress(1, { mode: "direct" });
     });
-    expect(ok).toEqual({ ok: true, error: null });
+    expect(ok).toEqual({ ok: true });
     await act(async () => {
       ok = await result.current.setEgress(2, { mode: "direct" });
     });
     expect(ok).toEqual({ ok: false, error: "端口必须是数字" });
+    expect(texts(result)).toEqual(["店铺甲：出口已保存"]);
   });
 
-  it("addShop 成功返回新店铺并提示去设置出口", async () => {
+  it("resume 失败把原因交回对话框，不进通知", async () => {
+    mockFetch({ "POST /api/shops/1/resume": errorResponse(409, "Conflict", "仍被风控拦截") });
+    const { result } = setup();
+    let ok: unknown;
+    await act(async () => {
+      ok = await result.current.resume(1);
+    });
+    expect(ok).toEqual({ ok: false, error: "仍被风控拦截" });
+    expect(result.current.notices).toEqual([]);
+  });
+
+  it("setEnabled 从菜单直接发起时失败进通知；从对话框发起时不进", async () => {
+    mockFetch({ "PATCH /api/shops/1": errorResponse(409, "Conflict", "出口已被占用") });
+    const { result } = setup();
+    await act(async () => {
+      await result.current.setEnabled(1, true);
+    });
+    expect(texts(result)).toEqual(["店铺甲：出口已被占用"]);
+    act(() => result.current.dismissNotice(result.current.notices[0].id));
+    await act(async () => {
+      await result.current.setEnabled(1, false, true);
+    });
+    expect(result.current.notices).toEqual([]);
+  });
+
+  it("addShop 成功返回新店铺，提示只写已添加", async () => {
     mockFetch({ "POST /api/shops": jsonResponse(makeShop({ id: 9, name: "新店" }), 201) });
     const { result } = setup();
     let created: unknown;
@@ -156,7 +182,7 @@ describe("其他操作", () => {
       created = await result.current.addShop({ name: "新店" });
     });
     expect(created).toMatchObject({ ok: true, shop: { id: 9 } });
-    expect(texts(result)).toContain("已添加「新店」，请先设置出口并检查通过，再扫码登录");
+    expect(texts(result)).toEqual(["已添加「新店」"]);
   });
 
   it("操作进行中 pending 含对应键，结束后移除", async () => {

@@ -10,6 +10,7 @@ from sqlalchemy import Engine
 from app.domain.audit import CallRecord
 from app.domain.errors import InvalidRequest, NotFound
 from app.domain.session_health import health_from_expiry
+from app.domain.shop_profile_rules import validate_profile
 from app.service.base_data import BaseDataService
 from app.service.egress import EgressConflict, EgressService, ProxyPoolInUse
 from app.service.events import SHOP_STATUS_CHANGED, EventBus
@@ -98,14 +99,18 @@ class ShopAdminService:
     def create(
         self, name: str, entity: str | None = None, shop_no: str | None = None,
         egress: Mapping[str, Any] | None = None, actor: str = "system",
+        platform_shop_id: str | None = None,
     ) -> int:
-        """新增店铺；带 egress 时在同一事务内绑定出口，失败则店铺也不创建。"""
+        """新增店铺；店铺ID 与带 egress 时的出口绑定都在同一事务内，失败则店铺也不创建。"""
         name = self._valid_name(name)
+        shop_ref = self._valid_profile("platform_shop_id", platform_shop_id or "")
         now = self._now()
         new_status: str | None = None
         try:
             with self._engine.begin() as conn:
                 sid = shop_store.create(conn, name, now, entity=entity, shop_no=shop_no)
+                if shop_ref is not None:
+                    shop_profile_store.patch(conn, sid, now, platform_shop_id=shop_ref)
                 if egress is not None:
                     shop = self._get(conn, sid)
                     new_status = self._egress.bind_in(
@@ -134,27 +139,37 @@ class ShopAdminService:
         if name is not None:
             fields["name"] = self._valid_name(name)
         if entity is not None:
-            fields["entity"] = entity
+            fields["entity"] = entity.strip() or None  # 空串 = 清空
         if channel is not None:
             if channel not in CHANNELS:
                 raise InvalidRequest(f"通道只能是 {' / '.join(CHANNELS)}")
             fields["channel"] = channel
+        profile_fields = {
+            key: self._valid_profile(key, value)
+            for key, value in (
+                ("platform_shop_id", platform_shop_id),
+                ("bank_name", bank_name),
+                ("bank_tail", bank_tail),
+            )
+            if value is not None
+        }
         now = self._now()
         new_status: str | None = None
         try:
             with self._engine.begin() as conn:
                 shop = self._get(conn, shop_id)
+                old_profile = shop_profile_store.get(conn, shop_id) or {}
                 shop_store.update_fields(conn, shop_id, now, **fields)
-                profile_fields: dict[str, Any] = {}
-                for key, value in (
-                    ("platform_shop_id", platform_shop_id),
-                    ("bank_name", bank_name),
-                    ("bank_tail", bank_tail),
-                ):
-                    if value is not None:
-                        profile_fields[key] = value.strip() or None
                 if profile_fields:
                     shop_profile_store.patch(conn, shop_id, now, **profile_fields)
+                # 手工改主体 / 店铺ID / 收款信息留痕：只记改了哪些字段名，不记值（敏感）
+                edited = sorted(
+                    [k for k, v in profile_fields.items() if old_profile.get(k) != v]
+                    + (["entity"] if "entity" in fields and fields["entity"] != shop["entity"]
+                       else [])
+                )
+                if edited:
+                    self._audit(conn, shop_id, "shop.profile_edit", actor, now, {"fields": edited})
                 if enabled is False and shop["status"] != DISABLED:
                     shop_store.set_status(conn, shop_id, DISABLED, now)
                     new_status = DISABLED
@@ -205,6 +220,11 @@ class ShopAdminService:
         if not name or len(name) > MAX_NAME_LENGTH:
             raise InvalidRequest(f"店铺名称需为 1~{MAX_NAME_LENGTH} 个字符")
         return name
+
+    @staticmethod
+    def _valid_profile(key: str, value: str) -> str | None:
+        """去首尾空白；空串 = 清空（None）；格式不符抛 InvalidRequest。"""
+        return validate_profile(key, value)
 
     @staticmethod
     def _get(conn: sa.Connection, shop_id: int) -> Mapping[str, Any]:

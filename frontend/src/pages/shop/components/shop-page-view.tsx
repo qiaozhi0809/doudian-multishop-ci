@@ -1,22 +1,30 @@
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { NoticeList } from "@/components/custom/notice/notice-list";
 import type { ShopRow } from "@/lib/use-shops";
 import type { ShopPage } from "../hooks/use-shop-page";
+import { isLoggedIn } from "../logic/shop-status";
 import styles from "../shop-page.module.css";
 import { AddShopDialog } from "./add-shop-dialog";
 import { BackupCard } from "./backup-card";
 import { BaseDataDrawer } from "./base-data-drawer";
+import { ConfirmDialog } from "./confirm-dialog";
 import { EditShopDialog } from "./edit-shop-dialog";
 import { EgressDialog } from "./egress-dialog";
 import { EmptyShops } from "./empty-shops";
-import { NoticeList } from "./notice-list";
-import { ResumeDialog } from "./resume-dialog";
 import { ShopTable } from "./shop-table";
 
 /** 店铺管理页：加载中 / 出错 / 空 / 列表四种状态，以及各个对话框。 */
 export function ShopPageView({ page }: { page: ShopPage }) {
   const { actions, dialogs } = page;
+  const pendingFor = (action: string, shop: ShopRow | null) => (shop ? actions.pending.includes(`${action}:${shop.id}`) : false);
+  /** 停用已登录的店先确认；未登录的直接停用；已停用的直接启用。 */
+  const toggle = (shop: ShopRow) => {
+    if (shop.status === "disabled") void actions.setEnabled(shop.id, true);
+    else if (isLoggedIn(shop)) dialogs.setDisableShopId(shop.id);
+    else void actions.setEnabled(shop.id, false);
+  };
   const rowActions = (shop: ShopRow) => ({
     onLogin: () => void actions.login(shop.id),
     onEgress: () => dialogs.setEgressShopId(shop.id),
@@ -26,7 +34,7 @@ export function ShopPageView({ page }: { page: ShopPage }) {
     onViewBase: () => dialogs.setBaseShopId(shop.id),
     onResume: () => dialogs.setResumeShopId(shop.id),
     onEdit: () => dialogs.setEditShopId(shop.id),
-    onToggle: () => void actions.toggleEnabled(shop),
+    onToggle: () => toggle(shop),
   });
 
   return (
@@ -68,23 +76,30 @@ export function ShopPageView({ page }: { page: ShopPage }) {
       <EgressDialog
         shop={page.egressShop}
         onOpenChange={(open) => !open && dialogs.setEgressShopId(null)}
-        pending={page.egressShop ? actions.pending.includes(`egress:${page.egressShop.id}`) : false}
+        pending={pendingFor("egress", page.egressShop)}
+        shops={page.allShops}
         onSave={(request) => actions.setEgress(page.egressShop!.id, request)}
         onAcceptChange={() => page.egressShop && void actions.checkEgress(page.egressShop.id, true)}
       />
-      <ResumeDialog
+      <ConfirmDialog
         shop={page.resumeShop}
-        pending={page.resumeShop ? actions.pending.includes(`resume:${page.resumeShop.id}`) : false}
+        action="恢复店铺"
+        confirmLabel="确认恢复"
+        pending={pendingFor("resume", page.resumeShop)}
         onOpenChange={(open) => !open && dialogs.setResumeShopId(null)}
-        onConfirm={async () => {
-          if (!page.resumeShop) return;
-          await actions.resume(page.resumeShop.id);
-          dialogs.setResumeShopId(null);
-        }}
+        onConfirm={() => actions.resume(page.resumeShop!.id)}
+      />
+      <ConfirmDialog
+        shop={page.disableShop}
+        action="停用店铺"
+        confirmLabel="确认停用"
+        pending={pendingFor("toggle", page.disableShop)}
+        onOpenChange={(open) => !open && dialogs.setDisableShopId(null)}
+        onConfirm={() => actions.setEnabled(page.disableShop!.id, false, true)}
       />
       <EditShopDialog
         shop={page.editShop}
-        pending={page.editShop ? actions.pending.includes(`edit:${page.editShop.id}`) : false}
+        pending={pendingFor("edit", page.editShop)}
         onOpenChange={(open) => !open && dialogs.setEditShopId(null)}
         onSubmit={(patch) => actions.updateShop(page.editShop!.id, patch)}
       />
@@ -93,12 +108,8 @@ export function ShopPageView({ page }: { page: ShopPage }) {
         onOpenChange={(open) => !open && dialogs.setBaseShopId(null)}
         state={page.base.query}
         onRetry={() => void page.base.query.refetch()}
-        onSyncCard={
-          page.base.shop ? () => void actions.scrapeCard(page.base.shop!.id) : undefined
-        }
-        syncing={
-          page.base.shop ? actions.pending.includes(`scrape:${page.base.shop.id}`) : false
-        }
+        onSyncCard={page.base.shop ? () => void actions.scrapeCard(page.base.shop!.id) : undefined}
+        syncing={pendingFor("scrape", page.base.shop)}
       />
     </div>
   );

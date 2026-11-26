@@ -65,13 +65,12 @@ export function EgressFields({ form, errors, onChange, showEntrySwitch = true }:
             autoComplete="off"
             messages={PASSWORD_LABELS}
             value={form.password}
-            aria-invalid={errors.password ? true : undefined}
-            description={errors.password}
+            error={errors.password}
             onChange={(e) => onChange({ password: e.target.value })}
           />
           <Input
             label="到期日（选填）"
-            placeholder="YYYY-MM-DD"
+            type="date"
             value={form.expiresAt}
             error={errors.expiresAt}
             onChange={(e) => onChange({ expiresAt: e.target.value })}

@@ -1,29 +1,24 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, api } from "@/lib/api-client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ActionResult } from "@/lib/action-result";
+import { api, errorText } from "@/lib/api-client";
 import type { components } from "@/lib/api-types";
 import { queryKeys } from "@/lib/query-keys";
+import { usePoolItems, type PoolItem } from "@/lib/use-pool-items";
 
 type Schemas = components["schemas"];
-export type PoolItem = Schemas["PoolItem"];
+export type { ActionResult, PoolItem };
 export type PoolImportOut = Schemas["PoolImportOut"];
 export type PoolCheckOut = Schemas["PoolCheckOut"];
 export type PoolPatch = Schemas["PoolPatch"];
 
 export type Failure = { error: string };
-export type ActionResult = { ok: true } | { ok: false; error: string };
 
-const FALLBACK_ERROR = "请求失败，请确认本地服务正常后重试";
-const errorText = (e: unknown) => (e instanceof ApiError ? e.message : FALLBACK_ERROR);
-
-/** 代理池：列表、导入、编辑、删除、检测。写操作成功后同时刷新池与店铺（占用关系在两边都可见）。 */
+/** 代理池：列表、导入、编辑、删除、检查。写操作成功后同时刷新池与店铺（占用关系在两边都可见）。 */
 export function useProxyPool() {
   const client = useQueryClient();
   const [pendingIds, setPendingIds] = useState<number[]>([]);
-  const list = useQuery({
-    queryKey: queryKeys.proxyPool(),
-    queryFn: () => api.get<PoolItem[]>("/api/proxy-pool"),
-  });
+  const list = usePoolItems();
   const refresh = () =>
     Promise.all([
       client.invalidateQueries({ queryKey: queryKeys.proxyPool() }),

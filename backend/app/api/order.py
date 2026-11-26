@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.deps import require_admin
+from app.api.list_sort import OrderQuick, OrderSort, SortOrder
 from app.api.order_schemas import (
     LocalStatus,
     OrderCounts,
@@ -27,11 +28,16 @@ def list_orders(
     status: LocalStatus | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    sort: OrderSort | None = None,
+    order: SortOrder = "asc",
+    quick: OrderQuick | None = None,
 ) -> OrderPage:
+    """默认按支付时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。"""
     state = request.app.state
     ids = state.shop_admin.target_ids(parse_shop_ids(shop_ids))
     rows, total = state.order_query.list_orders(
-        ids, LocalOrderStatus(status) if status else None, page, page_size
+        ids, LocalOrderStatus(status) if status else None, page, page_size, sort, order,
+        quick=quick,
     )
     return OrderPage(items=[OrderRow(**r) for r in rows], total=total, page=page,
                      page_size=page_size)

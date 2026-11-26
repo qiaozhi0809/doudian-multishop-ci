@@ -52,3 +52,16 @@ LOCAL_FINAL_STATUSES: frozenset[LocalOrderStatus] = frozenset(
 RECHECK_EXCLUDED_STATUSES: frozenset[LocalOrderStatus] = LOCAL_FINAL_STATUSES | {
     LocalOrderStatus.EXCEPTION
 }
+
+
+# 「状态」列排序按界面显示的顺序（与前端 lib/order-status.ts 的 LOCAL 顺序、筛选下拉一致）
+LOCAL_STATUS_DISPLAY_ORDER: tuple[str, ...] = tuple(s.value for s in (
+    LocalOrderStatus.SYNCED, LocalOrderStatus.PENDING_LABEL, LocalOrderStatus.LABEL_OBTAINED,
+    LocalOrderStatus.PRINTED, LocalOrderStatus.SHIPPED, LocalOrderStatus.EXCEPTION,
+    LocalOrderStatus.CANCELLED, LocalOrderStatus.CLOSED,
+))
+# 平台状态按履约先后：待发货 → 已发货 → 已完成 → 已关闭；未确认的状态码排在后面
+PLATFORM_STATUS_DISPLAY_ORDER: tuple[int, ...] = (
+    int(PlatformOrderStatus.STOCK_UP), int(PlatformOrderStatus.SHIPPED),
+    int(PlatformOrderStatus.COMPLETED), int(PlatformOrderStatus.CLOSED),
+)

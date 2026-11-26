@@ -3632,6 +3632,17 @@
             "title": "Name",
             "type": "string"
           },
+          "platform_shop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Shop Id"
+          },
           "shop_no": {
             "anyOf": [
               {
@@ -3641,6 +3652,7 @@
                 "type": "null"
               }
             ],
+            "description": "旧字段，界面已不用；店铺ID 用 platform_shop_id",
             "title": "Shop No"
           }
         },
@@ -5277,6 +5289,7 @@
   "paths": {
     "/api/aftersale": {
       "get": {
+        "description": "默认按申请时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。",
         "operationId": "list_aftersale_api_aftersale_get",
         "parameters": [
           {
@@ -5358,6 +5371,65 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "type",
+                    "status",
+                    "refund_amount_cents",
+                    "apply_time",
+                    "status_deadline"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "audit",
+                    "due_soon"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -5540,7 +5612,7 @@
     },
     "/api/aftersale/todo": {
       "get": {
-        "description": "跨店待办队列：仍在流转（有处理截止时间）的售后单，按截止时间升序。",
+        "description": "跨店待办队列：仍在流转（有处理截止时间）的售后单，默认按截止时间升序。",
         "operationId": "list_todo_api_aftersale_todo_get",
         "parameters": [
           {
@@ -5580,6 +5652,65 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "type",
+                    "status",
+                    "refund_amount_cents",
+                    "apply_time",
+                    "status_deadline"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "audit",
+                    "due_soon"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -5920,6 +6051,7 @@
     },
     "/api/catalog/products": {
       "get": {
+        "description": "默认按销量倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。",
         "operationId": "list_products_api_catalog_products_get",
         "parameters": [
           {
@@ -5991,6 +6123,68 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "tab",
+                    "price",
+                    "stock_num",
+                    "sell_num",
+                    "sell_num_30d"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "onsale",
+                    "draft",
+                    "audit",
+                    "sell_out_new",
+                    "unpass",
+                    "forbidden"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -6171,6 +6365,7 @@
     },
     "/api/catalog/stock": {
       "get": {
+        "description": "默认按总库存升序（缺货的在前）；sort 指定白名单字段时按该字段排序后再分页；\nquick 为计数卡快捷筛选（alarm 预警 / sold_out 售罄）。",
         "operationId": "list_stock_api_catalog_stock_get",
         "parameters": [
           {
@@ -6220,6 +6415,66 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "total_stock_num",
+                    "spot_stock_num",
+                    "future_stock_num",
+                    "total_occupied_stock_num",
+                    "total_unoccupied_stock_num",
+                    "status",
+                    "synced_at"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "alarm",
+                    "sold_out"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -6649,6 +6904,7 @@
     },
     "/api/fund/unsettled": {
       "get": {
+        "description": "默认最近同步进来的在前；sort 指定白名单字段时按该字段排序后再分页。",
         "operationId": "list_unsettled_api_fund_unsettled_get",
         "parameters": [
           {
@@ -6688,6 +6944,44 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "income_amount_cents",
+                    "platform_service_fee_cents",
+                    "unsettled_amount_cents",
+                    "ecom_order_status",
+                    "synced_at"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
             }
           }
         ],
@@ -6872,6 +7166,7 @@
     },
     "/api/labels/pool": {
       "get": {
+        "description": "默认按支付时间从早到晚；sort 指定白名单字段时按该字段排序后再分页。",
         "operationId": "pool_api_labels_pool_get",
         "parameters": [
           {
@@ -6925,6 +7220,42 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "status",
+                    "amount_cents",
+                    "pay_time"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
             }
           }
         ],
@@ -7081,6 +7412,7 @@
     },
     "/api/orders": {
       "get": {
+        "description": "默认按支付时间倒序；sort 指定白名单字段时按该字段排序后再分页；quick 为计数卡快捷筛选。",
         "operationId": "list_orders_api_orders_get",
         "parameters": [
           {
@@ -7146,6 +7478,66 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "platform_status",
+                    "status",
+                    "amount_cents",
+                    "pay_time",
+                    "exp_ship_time"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "stock_up",
+                    "exp_ship",
+                    "ship_delay",
+                    "in_aftersale"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quick"
             }
           }
         ],
@@ -7680,6 +8072,7 @@
     },
     "/api/reconcile/findings": {
       "get": {
+        "description": "默认最新发现的在前；sort 指定白名单字段时按该字段排序后再分页。",
         "operationId": "findings_api_reconcile_findings_get",
         "parameters": [
           {
@@ -7767,6 +8160,42 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "shop_name",
+                    "kind",
+                    "created_at",
+                    "status"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
             }
           }
         ],
@@ -8470,7 +8899,7 @@
     },
     "/api/shops/{shop_id}/profile/scrape": {
       "post": {
-        "description": "手动读取平台页面上可见、但没有接口的收款信息（开户行 + 卡号尾号）。",
+        "description": "手动读取平台页面上可见、但没有接口的固定信息：店铺ID、主体、收款账户摘要。",
         "operationId": "scrape_profile_api_shops__shop_id__profile_scrape_post",
         "parameters": [
           {

@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/arc/alert/alert";
 import { Button } from "@/components/arc/button/button";
-import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
+import { Dialog, DialogClose, DialogContent } from "@/components/arc/dialog/dialog";
 import { Input } from "@/components/arc/input/input";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import type { components } from "@/lib/api-types";
 import type { ShopRow } from "@/lib/use-shops";
-import { buildEgressRequest, emptyEgressForm, type EgressField, type EgressForm } from "../logic/egress-form";
+import { buildEgressRequest, directDisabledReason, emptyEgressForm, type EgressField, type EgressForm } from "../logic/egress-form";
+import { platformShopIdError } from "../logic/shop-fields";
 import styles from "../shop-page.module.css";
 import { EgressFields } from "./egress-fields";
 
@@ -24,7 +25,7 @@ interface AddShopDialogProps {
 
 export function AddShopDialog({ open, onOpenChange, pending, shops, onSubmit }: AddShopDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} busy={pending}>
       <DialogContent title="添加店铺">
         <AddShopForm pending={pending} shops={shops} onSubmit={onSubmit} onDone={() => onOpenChange(false)} />
       </DialogContent>
@@ -42,14 +43,15 @@ const FORM_PATCH: Record<Exclude<EgressChoice, "none">, Partial<EgressForm>> = {
 function AddShopForm({ pending, shops, onSubmit, onDone }: Pick<AddShopDialogProps, "pending" | "shops" | "onSubmit"> & { onDone: () => void }) {
   const [name, setName] = useState("");
   const [entity, setEntity] = useState("");
-  const [shopNo, setShopNo] = useState("");
+  const [platformShopId, setPlatformShopId] = useState("");
   const [nameError, setNameError] = useState<string>();
+  const [idError, setIdError] = useState<string>();
   const [error, setError] = useState<string | null>(null);
   const [choice, setChoice] = useState<EgressChoice>("none");
   const [egress, setEgress] = useState<EgressForm>(emptyEgressForm);
   const [egressErrors, setEgressErrors] = useState<Partial<Record<EgressField, string>>>({});
 
-  const directHolder = shops.find((s) => s.egress_mode === "direct" && s.status !== "disabled");
+  const directReason = directDisabledReason(shops);
 
   function pick(next: EgressChoice) {
     setChoice(next);
@@ -59,8 +61,10 @@ function AddShopForm({ pending, shops, onSubmit, onDone }: Pick<AddShopDialogPro
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return setNameError("请输入店铺名称");
-    setNameError(undefined);
+    const id = platformShopId.trim();
+    setNameError(name.trim() ? undefined : "请输入店铺名称");
+    setIdError(platformShopIdError(id));
+    if (!name.trim() || platformShopIdError(id)) return;
     let request: ShopCreate["egress"];
     if (choice !== "none") {
       const built = buildEgressRequest(egress);
@@ -70,7 +74,7 @@ function AddShopForm({ pending, shops, onSubmit, onDone }: Pick<AddShopDialogPro
     const result = await onSubmit({
       name: name.trim(),
       ...(entity.trim() ? { entity: entity.trim() } : {}),
-      ...(shopNo.trim() ? { shop_no: shopNo.trim() } : {}),
+      ...(id ? { platform_shop_id: id } : {}),
       ...(request ? { egress: request } : {}),
     });
     if (result.ok) onDone();
@@ -80,21 +84,35 @@ function AddShopForm({ pending, shops, onSubmit, onDone }: Pick<AddShopDialogPro
   return (
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
       <Input label="店铺名称" value={name} error={nameError} onChange={(e) => setName(e.target.value)} />
-      <Input label="营业执照主体（选填）" value={entity} onChange={(e) => setEntity(e.target.value)} />
-      <Input label="平台店铺号（选填）" value={shopNo} onChange={(e) => setShopNo(e.target.value)} />
-      <SegmentedControl
-        label="出口（选填）"
-        showLabel
-        value={choice}
-        onValueChange={(v) => pick(v as EgressChoice)}
-        options={[
-          { value: "none", label: "暂不设置" },
-          { value: "pool", label: "从池选择" },
-          { value: "paste", label: "粘贴代理" },
-          { value: "direct", label: "直连", disabled: directHolder !== undefined },
-        ]}
+      <Input label="主体" optional value={entity} onChange={(e) => setEntity(e.target.value)} />
+      <Input
+        label="店铺ID"
+        optional
+        inputMode="numeric"
+        maxLength={20}
+        value={platformShopId}
+        error={idError}
+        onChange={(e) => {
+          setPlatformShopId(e.target.value);
+          setIdError(undefined);
+        }}
       />
-      {directHolder && <Alert tone="info" title={`已有店铺「${directHolder.name}」使用直连，最多一家店可直连`} />}
+      {/* 直连被别的店占用时禁用该项，原因放在悬停提示里 */}
+      <div title={directReason ?? undefined}>
+        <SegmentedControl
+          label="出口"
+          showLabel
+          optional
+          value={choice}
+          onValueChange={(v) => pick(v as EgressChoice)}
+          options={[
+            { value: "none", label: "暂不设置" },
+            { value: "pool", label: "从池选择" },
+            { value: "paste", label: "粘贴代理" },
+            { value: "direct", label: "直连", disabled: directReason !== null },
+          ]}
+        />
+      </div>
       {choice !== "none" && (
         <EgressFields
           form={egress}
@@ -108,6 +126,11 @@ function AddShopForm({ pending, shops, onSubmit, onDone }: Pick<AddShopDialogPro
       )}
       {error && <Alert tone="danger" title={error} />}
       <div className={styles.formActions}>
+        <DialogClose asChild>
+          <Button type="button" variant="ghost" disabled={pending}>
+            取消
+          </Button>
+        </DialogClose>
         <Button type="submit" loading={pending}>
           添加店铺
         </Button>

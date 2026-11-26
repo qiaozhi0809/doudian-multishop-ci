@@ -3,6 +3,7 @@ import { Drawer, DrawerContent } from "@/components/arc/drawer/drawer";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { formatBjTime } from "@/lib/time-format";
 import styles from "../labeling-page.module.css";
+import { EMPTY_TEXT } from "@/lib/empty-text";
 
 interface ReceiverView {
   orderId: number | null;
@@ -25,13 +26,13 @@ export function ReceiverDrawer({ orderId, pending, data, message, onClose }: Rec
         {!pending && message && <Alert tone="warning" title={message} />}
         {!pending && data && (
           <dl className={styles.receiverGrid}>
-            <dt>收件人</dt><dd>{data.name ?? "暂无"}</dd>
-            <dt>电话</dt><dd className={styles.tabular}>{data.phone ?? "暂无"}</dd>
-            <dt>地区</dt><dd>{data.region ?? "暂无"}</dd>
-            <dt>详细地址</dt><dd>{data.detail ?? "暂无"}</dd>
+            <dt>收件人</dt><dd>{data.name ?? EMPTY_TEXT}</dd>
+            <dt>电话</dt><dd className={styles.tabular}>{data.phone ?? EMPTY_TEXT}</dd>
+            <dt>地区</dt><dd>{data.region ?? EMPTY_TEXT}</dd>
+            <dt>详细地址</dt><dd>{data.detail ?? EMPTY_TEXT}</dd>
             <dt>可用至</dt>
             <dd className={styles.tabular}>
-              {data.expire_at ? formatBjTime(data.expire_at) : "暂无"}
+              {data.expire_at ? formatBjTime(data.expire_at) : EMPTY_TEXT}
               {data.cached ? "（缓存）" : ""}
             </dd>
           </dl>

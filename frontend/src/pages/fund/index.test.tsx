@@ -96,4 +96,20 @@ describe("资金聚合页", () => {
     expect(screen.getByText("¥12.34")).toBeInTheDocument();
     expect(screen.getByText("技术服务费")).toBeInTheDocument();
   });
+
+  it("空状态只写事实，不带操作提示", async () => {
+    mockFetch({
+      "GET /api/shops": jsonResponse([makeShop({ id: 1, name: "店铺甲" })]),
+      "GET /api/fund/summary": summary,
+      "GET /api/fund/unsettled": jsonResponse({ items: [], total: 0, page: 1, page_size: 50 }),
+      "GET /api/fund/bills": jsonResponse({
+        days: 30,
+        shops: [{ shop_id: 1, source: "upstream", total: 0, error: null, fetched_at: null, items: [] }],
+      }),
+    });
+    renderPage();
+    expect(await screen.findByRole("cell", { name: "没有符合条件的待结算订单" })).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "账单" }));
+    expect(await screen.findByText("近 30 天没有账单")).toBeInTheDocument();
+  });
 });
