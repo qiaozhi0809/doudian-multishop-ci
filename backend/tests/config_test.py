@@ -1,5 +1,8 @@
 from pathlib import Path, PureWindowsPath
 
+import pytest
+from pydantic import ValidationError
+
 from app.config import REPO_ROOT, Settings
 
 
@@ -71,3 +74,11 @@ def test_use_cloak_can_be_disabled_by_env(monkeypatch):
     s = Settings(_platform="win32")
 
     assert s.use_cloak is False
+
+
+def test_im_max_browsers_default_and_bounds(tmp_path):
+    assert Settings(data_dir=tmp_path).im_max_browsers == 3
+    assert Settings(data_dir=tmp_path, im_max_browsers=10).im_max_browsers == 10
+    for bad in (0, 11):
+        with pytest.raises(ValidationError):
+            Settings(data_dir=tmp_path, im_max_browsers=bad)

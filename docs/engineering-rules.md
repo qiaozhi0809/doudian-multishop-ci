@@ -19,6 +19,7 @@
 | `adapter/doudian` | 抖店 HTTP 协议（含签名、错误码、分页基准） |
 | `adapter/print` | 官方打印组件 WebSocket |
 | `adapter/browser` | Playwright 扫码登录与兜底 fetch；浏览器进程的登记与回收 |
+| `adapter/flybird` | 飞鸽工作台页面的只读监听、已读拦截、常量与解析 |
 | `store/*` | SQLite 表结构与 CRUD |
 | `domain/order` | 订单状态机与状态枚举 |
 | `domain/aftersale` | 售后状态与待办判定 |
