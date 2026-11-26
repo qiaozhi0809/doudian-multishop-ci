@@ -19,6 +19,7 @@ from app.adapter.flybird import read_guard
 from app.service.events import IM_STOPPED, IM_WAIT_CHANGED
 from app.service.im_watcher import ImWatcher
 from app.store import im_message_store, shop_store
+from tests.adapter.flybird_focus_fakes import FakeFocusPage
 from tests.fakes import NullProcesses
 from tests.service.im_session_test import START, FakeTime
 from tests.service.support import NOW, Env
@@ -111,6 +112,7 @@ class FakeImPage:
         self.on_list = on_list
         self.on_messages = on_messages
         self.reloads = 0
+        self.page = FakeFocusPage()  # 置前用到的 Playwright 页面
 
     @property
     def closed(self) -> bool:

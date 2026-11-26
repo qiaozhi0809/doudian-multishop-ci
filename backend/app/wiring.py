@@ -22,6 +22,7 @@ from app.service.egress import EgressService
 from app.service.egress_probe import FetchIp, Probe, make_fetch_ip, make_probe
 from app.service.events import EventBus
 from app.service.fund import FundService
+from app.service.im_query import ImQueryService
 from app.service.im_watcher import ImWatcher
 from app.service.label_pool import LabelPoolService
 from app.service.label_preview import LabelPreviewService
@@ -89,7 +90,7 @@ def build_services(settings: Settings, engine: Engine, ov: Overrides) -> dict[st
     notifications = NotificationService(engine, events, **clock_kw)
     return {
         "engine": engine, "events": events, "sessions": sessions, "egress": egress,
-        "browsers": browsers, "im": im,
+        "browsers": browsers, "im": im, "im_query": ImQueryService(engine, im, **clock_kw),
         "proxy_pool": ProxyPoolService(
             engine, box, events, ov.probe or make_probe(settings.egress_echo_url), **clock_kw),
         "runner": runner, "base_data": base_data, "shop_profile": shop_profile, "tasks": tasks,

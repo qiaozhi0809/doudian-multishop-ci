@@ -508,6 +508,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/im/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Conversations
+         * @description 默认按买家等待时间倒序。只含正在接收的店在内存里的会话。
+         */
+        get: operations["list_conversations_api_im_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/im/conversations/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count Conversations */
+        get: operations["count_conversations_api_im_conversations_counts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/im/conversations/{shop_id}/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Messages */
+        get: operations["list_messages_api_im_conversations__shop_id___conversation_id__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/im/conversations/{shop_id}/{conversation_id}/open-in-flybird": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open In Flybird
+         * @description 排在该店队列里执行；该店没在接收时拒绝。
+         */
+        post: operations["open_in_flybird_api_im_conversations__shop_id___conversation_id__open_in_flybird_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/im/shops/{shop_id}/restart": {
         parameters: {
             query?: never;
@@ -1631,6 +1705,77 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** ImConversation */
+        ImConversation: {
+            /** Buyer */
+            buyer: string;
+            /** Conversation Id */
+            conversation_id: string;
+            /** Last At */
+            last_at: string | null;
+            /** Preview */
+            preview: string;
+            /** Shop Id */
+            shop_id: number;
+            /** Shop Name */
+            shop_name: string;
+            /** Unread */
+            unread: number;
+            /** Wait Seconds */
+            wait_seconds: number | null;
+            /** Waiting Since */
+            waiting_since: string | null;
+        };
+        /** ImConversationPage */
+        ImConversationPage: {
+            /** Items */
+            items: components["schemas"]["ImConversation"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * ImCounts
+         * @description 计数卡：字段名与 quick 参数的取值一一对应。
+         */
+        ImCounts: {
+            /** Overdue */
+            overdue: number;
+            /** Today */
+            today: number;
+            /** Unread */
+            unread: number;
+            /** Waiting */
+            waiting: number;
+        };
+        /**
+         * ImFocusResult
+         * @description 「在飞鸽中回复」的结果；not_found = 飞鸽会话列表里没定位到唯一的会话。
+         */
+        ImFocusResult: {
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "opened" | "not_found";
+        };
+        /** ImMessage */
+        ImMessage: {
+            /** Message Id */
+            message_id: string;
+            /**
+             * Sender Role
+             * @enum {string}
+             */
+            sender_role: "buyer" | "agent" | "robot" | "platform";
+            /** Sent At */
+            sent_at: string;
+            /** Text */
+            text: string;
+        };
         /** ImShopStatus */
         ImShopStatus: {
             /** Last Error */
@@ -1650,6 +1795,15 @@ export interface components {
             state: "off" | "queued" | "starting" | "running" | "backoff" | "needs_refresh" | "stopped";
             /** State Label */
             state_label: string;
+        };
+        /** ImThread */
+        ImThread: {
+            /** Conversation Id */
+            conversation_id: string;
+            /** Items */
+            items: components["schemas"]["ImMessage"][];
+            /** Shop Id */
+            shop_id: number;
         };
         /** LabelOrderRow */
         LabelOrderRow: {
@@ -3812,6 +3966,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_conversations_api_im_conversations_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+                unread?: boolean;
+                quick?: ("unread" | "waiting" | "overdue" | "today") | null;
+                sort?: ("waiting" | "last_at" | "unread" | "shop_name") | null;
+                order?: "asc" | "desc";
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImConversationPage"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    count_conversations_api_im_conversations_counts_get: {
+        parameters: {
+            query?: {
+                shop_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImCounts"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_messages_api_im_conversations__shop_id___conversation_id__messages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImThread"];
+                };
+            };
+            /** @description 错误信封 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    open_in_flybird_api_im_conversations__shop_id___conversation_id__open_in_flybird_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shop_id: number;
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImFocusResult"];
                 };
             };
             /** @description 错误信封 */
